@@ -13,6 +13,32 @@ router.get('/get_club', async (req, res) => {
   }
 });
 
+
+router.get('/get_club/:id', async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({ message: 'El ID del club debe ser proporcionado' });
+  }
+
+  try {
+    const request = new sql.Request();
+    request.input('id', sql.Int, id);
+
+    const result = await request.query('SELECT id, nombre, descripcion, fecha_registro, fecha_actualizacion, eliminado, user_id FROM Club WHERE id = @id AND eliminado = \'N\'');
+
+    if (result.recordset.length > 0) {
+      res.status(200).json(result.recordset[0]);
+    } else {
+      res.status(404).json({ message: 'Club no encontrado' });
+    }
+  } catch (err) {
+    console.error('Error:', err.message);
+    res.status(500).json({ message: 'Error al obtener el club', error: err.message });
+  }
+});
+
+
 router.post('/post_club', async (req, res) => {
   const { nombre, descripcion, user_id } = req.body;
 

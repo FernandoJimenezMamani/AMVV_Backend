@@ -6,13 +6,45 @@ const router = express.Router();
 router.get('/get_equipo', async (req, res) => {
   try {
     const request = new sql.Request();
-    const result = await request.query('SELECT id, nombre, club_id, categoria_id FROM Equipo WHERE eliminado = \'N\'');
+    const result = await request.query(`
+      SELECT Equipo.id, Equipo.nombre, Club.nombre AS club_nombre, Categoria.nombre AS categoria_nombre
+      FROM Equipo
+      INNER JOIN Club ON Equipo.club_id = Club.id
+      INNER JOIN Categoria ON Equipo.categoria_id = Categoria.id
+      WHERE Equipo.eliminado = 'N'
+    `);
     res.status(200).json(result.recordset);
   } catch (err) {
     console.error('Error:', err.message);
     res.status(500).json({ message: 'Error al obtener equipos', error: err.message });
   }
 });
+
+// Obtener un equipo por ID
+router.get('/get_equipo/:id', async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({ message: 'El ID del equipo debe ser proporcionado' });
+  }
+
+  try {
+    const request = new sql.Request();
+    request.input('id', sql.Int, id);
+
+    const result = await request.query('SELECT id, nombre, club_id, categoria_id FROM Equipo WHERE id = @id AND eliminado = \'N\'');
+
+    if (result.recordset.length > 0) {
+      res.status(200).json(result.recordset[0]);
+    } else {
+      res.status(404).json({ message: 'Equipo no encontrado' });
+    }
+  } catch (err) {
+    console.error('Error:', err.message);
+    res.status(500).json({ message: 'Error al obtener el equipo', error: err.message });
+  }
+});
+
 
 // Crear equipo
 router.post('/post_equipo', async (req, res) => {

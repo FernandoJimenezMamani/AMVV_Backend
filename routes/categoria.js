@@ -13,6 +13,32 @@ router.get('/get_categoria', async (req, res) => {
   }
 });
 
+
+router.get('/get_categoria/:id', async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({ message: 'El ID de la categoría debe ser proporcionado' });
+  }
+
+  try {
+    const request = new sql.Request();
+    request.input('id', sql.Int, id);
+    
+    const result = await request.query('SELECT id, nombre, fecha_registro, fecha_actualizacion, eliminado, user_id FROM Categoria WHERE id = @id AND eliminado = \'N\'');
+    
+    if (result.recordset.length > 0) {
+      res.status(200).json(result.recordset[0]);
+    } else {
+      res.status(404).json({ message: 'Categoría no encontrada' });
+    }
+  } catch (err) {
+    console.error('Error:', err.message);
+    res.status(500).json({ message: 'Error al obtener la categoría', error: err.message });
+  }
+});
+
+
 router.post('/post_categoria', async (req, res) => {
   const { nombre, user_id } = req.body;
 
@@ -115,8 +141,5 @@ router.put('/delete_categoria/:id', async (req, res) => {
     res.status(500).json({ message: 'Error al eliminar lógicamente la categoría', error: err.message });
   }
 });
-
-module.exports = router;
-
 
 module.exports = router;
