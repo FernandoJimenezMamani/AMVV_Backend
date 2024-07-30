@@ -12,29 +12,57 @@ router.post('/login', async (req, res) => {
   }
 
   // Encriptar la contraseña usando SHA-256
-  const hash = crypto.createHash('sha256');
-  hash.update(contraseña);
-  const hashedPassword = hash.digest('hex');
+  //const hash = crypto.createHash('sha256');
+  //hash.update(contraseña);
+  //const hashedPassword = hash.digest('hex');
 
   try {
     const pool = await sql.connect();
     const request = new sql.Request(pool);
 
     // Verificar las credenciales del usuario
-    const result = await request
+    const userResult = await request
       .input('usuario', sql.VarChar(255), usuario)
-      .input('contraseña', sql.VarChar(255), hashedPassword)
+      .input('contraseña', sql.VarChar(255), contraseña)
       .query(`
-        SELECT id, usuario, correo 
-        FROM Usuario 
-        WHERE usuario = @usuario AND contraseña = @contraseña
+        SELECT u.id, u.usuario, u.correo, p.nombre, p.apellido, p.fecha_nacimiento, p.ci, p.direccion, ip.persona_image
+        FROM Usuario u
+        JOIN Persona p ON u.id = p.id
+        LEFT JOIN ImagenPersona ip ON p.id = ip.persona_id
+        WHERE u.usuario = @usuario AND u.contraseña = @contraseña
       `);
 
-    if (result.recordset.length > 0) {
-      // Credenciales correctas
-      res.status(200).json({ message: 'Inicio de sesión exitoso', user: result.recordset[0] });
+    if (userResult.recordset.length > 0) {
+      const user = userResult.recordset[0];
+
+      // Obtener información de roles del usuario
+      const rolesResult = await request
+        .input('personaId', sql.Int, user.id)
+        .query(`
+          SELECT r.nombre AS rol
+          FROM Rol r
+          JOIN PersonaRol pr ON pr.rol_id = r.id
+          WHERE pr.persona_id = @personaId
+        `);
+
+      const roles = rolesResult.recordset.map(role => role.rol);
+
+      // Almacenar la información del usuario en la sesión
+      req.session.user = {
+        id: user.id,
+        usuario: user.usuario,
+        correo: user.correo,
+        nombre: user.nombre,
+        apellido: user.apellido,
+        fecha_nacimiento: user.fecha_nacimiento,
+        ci: user.ci,
+        direccion: user.direccion,
+        imagen: user.persona_image,
+        roles: roles
+      };
+
+      res.status(200).json({ message: 'Inicio de sesión exitoso', user: req.session.user });
     } else {
-      // Credenciales incorrectas
       res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
     }
 
