@@ -55,7 +55,7 @@ const jugadoresRoutes = require('./routes/jugadores');
 const inicioDeSesionRoutes = require('./routes/sesion');
 const campeonatoRoutes = require('./routes/Campeonatos');
 
- Fernando
+ //Fernando
 app.use('/api/jugadores', jugadoresRoutes);
 //Login
 app.use('/api/sesion', inicioDeSesionRoutes);
@@ -71,8 +71,15 @@ app.use('/api/categoria', categoriaRoutes);
 //Equipo
 const equipoRoutes = require('./routes/equipo');
 app.use('/api/equipo', equipoRoutes);
-
-
+//Persona
+const personaRoutes = require('./routes/persona');
+app.use('/api/persona', personaRoutes);
+//Presidente Club
+const presidenteClubRoutes = require('./routes/presidenteClub');
+app.use('/api/presidente_club', presidenteClubRoutes);
+//Jugador
+const jugadorRoutes = require('./routes/jugador');
+app.use('/api/jugador', jugadorRoutes);
 
 const PORT = process.env.PORT || 5002;
 

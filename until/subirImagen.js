@@ -2,15 +2,18 @@ const { ref, getDownloadURL, uploadBytesResumable, deleteObject } = require('fir
 const { storage } = require('../config/firebase');
 const sharp = require('sharp');
 
-async function uploadFile(file, previousFileRef = null) {
+async function uploadFile(file, customFileName = null, previousFileRef = null, folder = 'FilesClubs') {
   try {
     // Procesar el archivo con sharp
     let fileBuffer = await sharp(file.buffer)
       .resize({ width: 200, height: 200, fit: 'cover' })
       .toBuffer();
 
-    // Referencia al archivo en Firebase Storage
-    const fileRef = ref(storage, `files/${file.originalname}-${Date.now()}`);
+    // Usar el nombre personalizado si se proporciona, de lo contrario, usar el original
+    const fileName = customFileName ? `${customFileName}-${Date.now()}.jpeg` : `${file.originalname}-${Date.now()}`;
+
+    // Referencia al archivo en Firebase Storage en la carpeta especificada
+    const fileRef = ref(storage, `${folder}/${fileName}`);
     const fileMetadata = {
       contentType: file.mimetype,
     };
