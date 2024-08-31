@@ -2,23 +2,35 @@ const express = require('express');
 const sql = require('mssql');
 const router = express.Router();
 
+
 // Obtener equipos
-router.get('/get_equipo', async (req, res) => {
+router.get('/get_equipo/:categoria_id', async (req, res) => {
+  const { categoria_id } = req.params; // Get the category ID from the URL parameters
+
   try {
     const request = new sql.Request();
-    const result = await request.query(`
-      SELECT Equipo.id, Equipo.nombre, Club.nombre AS club_nombre, Categoria.nombre AS categoria_nombre
+
+    // Prepare the SQL query
+    const query = `
+      SELECT Equipo.id, Equipo.nombre, Club.nombre AS club_nombre, Categoria.nombre AS categoria_nombre, ImagenClub.club_imagen
       FROM Equipo
       INNER JOIN Club ON Equipo.club_id = Club.id
       INNER JOIN Categoria ON Equipo.categoria_id = Categoria.id
-      WHERE Equipo.eliminado = 'N'
-    `);
+      LEFT JOIN ImagenClub ON Club.id = ImagenClub.club_id
+      WHERE Equipo.eliminado = 'N' AND Equipo.categoria_id = @categoria_id
+    `;
+
+    // Set the input parameter for categoria_id
+    request.input('categoria_id', sql.Int, categoria_id);
+
+    const result = await request.query(query);
     res.status(200).json(result.recordset);
   } catch (err) {
     console.error('Error:', err.message);
     res.status(500).json({ message: 'Error al obtener equipos', error: err.message });
   }
 });
+
 
 // Obtener un equipo por ID
 router.get('/get_equipo/:id', async (req, res) => {

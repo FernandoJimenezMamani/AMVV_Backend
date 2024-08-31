@@ -5,11 +5,38 @@ const router = express.Router();
 router.get('/get_categoria', async (req, res) => {
   try {
     const request = new sql.Request();
-    const result = await request.query('SELECT id, nombre, fecha_registro, fecha_actualizacion, eliminado, user_id FROM Categoria WHERE eliminado = \'N\'');
+    const result = await request.query('SELECT id, nombre,genero,division, fecha_registro, fecha_actualizacion, eliminado, user_id FROM Categoria WHERE eliminado = \'N\'');
     res.status(200).json(result.recordset);
   } catch (err) {
     console.error('Error:', err.message);
     res.status(500).json({ message: 'Error al obtener categorías', error: err.message });
+  }
+});
+
+router.get('/get_categoria_my', async (req, res) => {
+  try {
+    const request = new sql.Request();
+    const result = await request.query(
+      "SELECT id, nombre, fecha_registro, fecha_actualizacion, eliminado, user_id FROM Categoria WHERE division = 'MY' AND eliminado = 'N'"
+    );
+    res.status(200).json(result.recordset);
+  } catch (err) {
+    console.error('Error:', err.message);
+    res.status(500).json({ message: 'Error al obtener categorías MY', error: err.message });
+  }
+});
+
+// New route to get categories where division is 'MN'
+router.get('/get_categoria_mn', async (req, res) => {
+  try {
+    const request = new sql.Request();
+    const result = await request.query(
+      "SELECT id, nombre, fecha_registro, fecha_actualizacion, eliminado, user_id FROM Categoria WHERE division = 'MN' AND eliminado = 'N'"
+    );
+    res.status(200).json(result.recordset);
+  } catch (err) {
+    console.error('Error:', err.message);
+    res.status(500).json({ message: 'Error al obtener categorías MN', error: err.message });
   }
 });
 

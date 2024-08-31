@@ -49,6 +49,41 @@ router.post('/insert', async (req, res) => {
   }
 });
 
+
+
+router.get('/get_campeonato_categoria/:campeonato_id/:categoria_id', async (req, res) => {
+  const { campeonato_id, categoria_id } = req.params; // Obtener los parámetros desde la URL
+
+  try {
+    const request = new sql.Request();
+
+    // Preparar la consulta SQL
+    const query = `
+      SELECT C.nombre AS campeonato_nombre, CT.nombre AS categoria_nombre
+      FROM Campeonato C
+      INNER JOIN EquipoCampeonato EC ON EC.campeonatoId = C.id
+      INNER JOIN Equipo E ON EC.equipoId = E.id
+      INNER JOIN Categoria CT ON E.categoria_id = CT.id
+      WHERE C.id = @campeonato_id AND CT.id = @categoria_id
+    `;
+
+    // Establecer los parámetros de entrada
+    request.input('campeonato_id', sql.Int, campeonato_id);
+    request.input('categoria_id', sql.SmallInt, categoria_id);
+
+    const result = await request.query(query);
+
+    if (result.recordset.length > 0) {
+      res.status(200).json(result.recordset[0]); // Devolver el primer (y único) resultado
+    } else {
+      res.status(404).json({ message: 'Campeonato o Categoría no encontrados' });
+    }
+  } catch (err) {
+    console.error('Error:', err.message);
+    res.status(500).json({ message: 'Error al obtener los nombres del campeonato y categoría', error: err.message });
+  }
+});
+
 router.get('/select', async (req, res) => {
   try {
     const request = new sql.Request();
