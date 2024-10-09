@@ -165,7 +165,7 @@ router.get('/:id', async (req, res) => {
     const request = new sql.Request();
     const result = await request
       .input('id', sql.Int, id)
-      .query('SELECT id, campeonato_id, equipo_local_id, equipo_visitante_id, fecha, lugar_id, resultado FROM Partido WHERE id = @id');
+      .query('SELECT id, campeonato_id, equipo_local_id, equipo_visitante_id, fecha, lugar_id FROM Partido WHERE id = @id');
 
     if (result.recordset.length === 0) {
       return res.status(404).json({ message: 'Partido no encontrado' });
