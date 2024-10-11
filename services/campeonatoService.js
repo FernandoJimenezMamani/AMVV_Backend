@@ -1,17 +1,108 @@
-const express = require('express');
-const sql = require('mssql');
-const router = express.Router();
+const { Campeonato, EquipoCampeonato, Equipo, Categoria } = require('../models');
+const sequelize = require('../config/sequelize');
 
-// Obtener equipos por categoría y campeonato
-router.get('/get_positions/:categoria_id/:campeonato_id', async (req, res) => {
-  const { categoria_id, campeonato_id } = req.params;
+exports.createCampeonato = async (nombre, fecha_inicio, fecha_fin) => {
+  const normalizedNombre = nombre.replace(/\s+/g, '').toUpperCase();
 
+  // Check if the championship name already exists
+  const existingCampeonato = await Campeonato.findOne({
+    where: sequelize.where(
+      sequelize.fn('REPLACE', sequelize.fn('UPPER', sequelize.col('nombre')), ' ', ''),
+      normalizedNombre
+    )
+  });
+
+  if (existingCampeonato) {
+    throw new Error('El nombre del campeonato ya existe');
+  }
+
+  // Create Campeonato
+  const campeonato = await Campeonato.create({ nombre, fecha_inicio, fecha_fin });
+  return campeonato;
+};
+
+exports.getCampeonatoCategoria = async (campeonato_id, categoria_id) => {
+  const campeonato = await Campeonato.findOne({
+    where: { id: campeonato_id },
+    include: [
+      {
+        model: EquipoCampeonato,
+        as: 'equipos', 
+        include: [
+          {
+            model: Equipo,
+            as: 'equipo', 
+            include: [
+              {
+                model: Categoria,
+                where: { id: categoria_id },
+                attributes: ['nombre'],
+                as: 'categoria', 
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  if (!campeonato) {
+    throw new Error('Campeonato o Categoría no encontrados');
+  }
+
+  return {
+    campeonato_nombre: campeonato.nombre,
+    categoria_nombre: campeonato.equipos[0]?.equipo.categoria.nombre, 
+  };
+};
+
+
+exports.getAllCampeonatos = async () => {
+  const campeonatos = await Campeonato.findAll({
+    attributes: ['id', 'nombre', 'fecha_inicio', 'fecha_fin'],
+  });
+  return campeonatos;
+};
+
+exports.getCampeonatoById = async (id) => {
+  const campeonato = await Campeonato.findByPk(id, {
+    attributes: ['id', 'nombre', 'fecha_inicio', 'fecha_fin'],
+  });
+
+  if (!campeonato) {
+    throw new Error('Campeonato no encontrado');
+  }
+
+  return campeonato;
+};
+
+exports.updateCampeonato = async (id, nombre, fecha_inicio, fecha_fin) => {
+  const normalizedNombre = nombre.replace(/\s+/g, '').toUpperCase();
+
+  // Check if the championship name already exists for another record
+  const existingCampeonato = await Campeonato.findOne({
+    where: {
+      id: { [sequelize.Op.ne]: id },
+      [sequelize.Op.and]: sequelize.where(
+        sequelize.fn('REPLACE', sequelize.fn('UPPER', sequelize.col('nombre')), ' ', ''),
+        normalizedNombre
+      ),
+    },
+  });
+
+  if (existingCampeonato) {
+    throw new Error('El nombre del campeonato ya existe para otro registro');
+  }
+
+  // Update Campeonato
+  await Campeonato.update({ nombre, fecha_inicio, fecha_fin }, { where: { id } });
+};
+
+
+exports.getChampionshipPositions = async (categoriaId,campeonato_id) => {
   try {
-    const request = new sql.Request();
-
-    // Prepare the SQL query
-    const query = `
-      SELECT 
+    const positions = await sequelize.query(`
+       SELECT 
     e.id AS equipo_id,
     e.nombre AS equipo_nombre,
     COALESCE(SUM(CASE WHEN p.estado = 'J' THEN 1 ELSE 0 END), 0) AS partidos_jugados,
@@ -145,24 +236,20 @@ router.get('/get_positions/:categoria_id/:campeonato_id', async (req, res) => {
     LEFT JOIN
         ImagenClub ic ON c.id = ic.club_id
     WHERE 
-        ec.campeonatoid = 1 AND ec.estado = 'C' AND e.categoria_id = 4
+        ec.campeonatoid = :campeonato_id AND ec.estado = 'C' AND e.categoria_id = :categoriaId
     GROUP BY 
         e.id, e.nombre, ic.club_imagen
     ORDER BY 
         pts DESC, sets_a_favor DESC, diferencia_sets DESC, diferencia_puntos DESC;
+    `, {
+      replacements: { categoriaId , campeonato_id},  
+      type: sequelize.QueryTypes.SELECT 
+    });
 
-    `;
-
-    // Set the input parameters for categoria_id and campeonato_id
-    request.input('categoria_id', sql.Int, categoria_id);
-    request.input('campeonato_id', sql.Int, campeonato_id);
-
-    const result = await request.query(query);
-    res.status(200).json(result.recordset);
-  } catch (err) {
-    console.error('Error:', err.message);
-    res.status(500).json({ message: 'Error al obtener equipos', error: err.message });
+    return positions;
+  } catch (error) {
+    console.error('Error al obtener los próximos partidos:', error);
+    throw new Error('Error al obtener los partidos');
   }
-});
+};
 
-module.exports = router;
