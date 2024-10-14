@@ -4,6 +4,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 // Importar rutas
+const userRoutes = require('./routes/authRoutes');
 const campeonatoRoutes = require('./routes/campeonatoRoutes');
 const categoriasRoutes = require('./routes/categoriaRoutes');
 const clubesRoutes = require('./routes/clubRoutes');
@@ -40,6 +41,7 @@ app.use(session({
 }));
 
 // Rutas
+app.use('/api/sesion', userRoutes);
 app.use('/api/campeonatos', campeonatoRoutes);
 app.use('/api/categoria', categoriasRoutes);
 app.use('/api/club', clubesRoutes);

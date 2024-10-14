@@ -60,13 +60,15 @@ exports.login = async (correo, contraseña) => {
   }
 
   const roles = usuario.persona.roles.map((rol) => rol.nombre);
-  const imagen = usuario.persona.imagenes.length > 0 ? usuario.persona.imagenes[0].persona_imagen : null;
 
   // Obtener datos del club donde es jugador (si tiene rol de jugador)
   const clubJugador = usuario.persona.jugador ? usuario.persona.jugador.club : null;
 
   // Obtener datos del club donde es presidente (si tiene rol de presidente)
   const clubPresidente = usuario.persona.presidente ? usuario.persona.presidente.club : null;
+
+  // Verificamos si hay imágenes asociadas
+  const imagen = usuario.persona.imagenes.length > 0 ? usuario.persona.imagenes[0].persona_imagen : null;
 
   const payload = {
     id: usuario.id,
