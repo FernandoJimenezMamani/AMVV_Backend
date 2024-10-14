@@ -1,7 +1,6 @@
 const bcrypt = require('bcrypt'); 
 const jwt = require('jsonwebtoken');
-const { Usuario, Persona, Rol } = require('../models');
-const ImagenPersona = require('../models/ImagenPersona');
+const { Usuario, Persona, Rol ,ImagenPersona} = require('../models');
 require('dotenv').config();
 
 exports.login = async (correo, contraseña) => {
@@ -28,6 +27,7 @@ exports.login = async (correo, contraseña) => {
       },
     ],
   });
+
   if (!usuario) {
     throw new Error('Correo o contraseña incorrectos');
   }
@@ -38,6 +38,9 @@ exports.login = async (correo, contraseña) => {
 
   const roles = usuario.persona.roles.map((rol) => rol.nombre);
 
+  // Verificamos si hay imágenes asociadas
+  const imagen = usuario.persona.imagenes.length > 0 ? usuario.persona.imagenes[0].persona_imagen : null;
+
   const payload = {
     id: usuario.id,
     correo: usuario.correo,
@@ -46,12 +49,12 @@ exports.login = async (correo, contraseña) => {
     fecha_nacimiento: usuario.persona.fecha_nacimiento,
     ci: usuario.persona.ci,
     direccion: usuario.persona.direccion,
-    imagen: usuario.imagenPersona ? usuario.imagenPersona.persona_imagen : null, 
+    imagen: imagen,  // Asignar la imagen
     roles: roles,
   };
 
   const token = jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRATION || '1h', 
+    expiresIn: process.env.JWT_EXPIRATION || '1h',
   });
 
   return token;

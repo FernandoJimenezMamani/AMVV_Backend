@@ -77,6 +77,18 @@ exports.updatePersona = async (req, res) => {
   }
 };
 
+exports.updatePersonaImage = async (req, res) => {
+  const { id } = req.params;
+  const imagen = req.file;
+
+  try {
+    const result = await personaService.updatePersonaImage(id, imagen);
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al actualizar la imagen de la persona', error: error.message });
+  }
+};
+
 exports.deletePersona = async (req, res) => {
   const { id } = req.params;
   const { user_id } = req.body;
