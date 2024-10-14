@@ -1,5 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/sequelize');
+const Persona = require('./Persona'); // Importar Persona
+const Rol = require('./Rol'); // Importar Rol
 
 const PersonaRol = sequelize.define('PersonaRol', {
   id: {
@@ -10,14 +12,14 @@ const PersonaRol = sequelize.define('PersonaRol', {
   persona_id: {
     type: DataTypes.INTEGER,
     references: {
-      model: 'Persona',
+      model: Persona,
       key: 'id'
     }
   },
   rol_id: {
     type: DataTypes.INTEGER,
     references: {
-      model: 'Rol',
+      model: Rol,
       key: 'id'
     }
   }
@@ -25,5 +27,11 @@ const PersonaRol = sequelize.define('PersonaRol', {
   tableName: 'PersonaRol',
   timestamps: false,
 });
+
+// Definir la relación inversa con Persona y Rol
+PersonaRol.associate = function(models) {
+  PersonaRol.belongsTo(models.Persona, { foreignKey: 'persona_id', as: 'persona' });
+  PersonaRol.belongsTo(models.Rol, { foreignKey: 'rol_id', as: 'rol' });
+};
 
 module.exports = PersonaRol;

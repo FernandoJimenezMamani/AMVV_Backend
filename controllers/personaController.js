@@ -1,5 +1,6 @@
 const personaService = require('../services/personaService');
 const { uploadFile } = require('../utils/subirImagen');
+const nodemailer = require('nodemailer');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
@@ -26,22 +27,38 @@ exports.getPersonaById = async (req, res) => {
   }
 };
 
+// Configuración de nodemailer
+const transporter = nodemailer.createTransport({
+  service: 'gmail', // O cualquier servicio que estés utilizando (Gmail, Outlook, etc.)
+  auth: {
+    user: 'ferjimenezm933@gmail.com', // Cambia por el correo que utilizarás para enviar los emails
+    pass: 'rssd pwxw cpuh jpwc', // Cambia por la contraseña de tu correo
+  }
+});
+
 exports.createPersona = async (req, res) => {
-  const { nombre, apellido, fecha_nacimiento, ci, direccion, contrasena, correo } = req.body;
+  const { nombre, apellido, fecha_nacimiento, ci, direccion, correo } = req.body;
   const imagen = req.file;
 
-  if (!nombre || !apellido || !ci || !contrasena || !correo) {
+  // Validar los campos obligatorios
+  if (!nombre || !apellido || !ci || !correo) {
     return res.status(400).json({ message: 'Todos los campos requeridos deben ser proporcionados' });
   }
 
   try {
+    // Verificar si el correo ya existe
     const emailExists = await personaService.emailExists(correo);
     if (emailExists) {
       return res.status(400).json({ message: 'El correo ya está registrado' });
     }
 
-    const hashedPassword = await bcrypt.hash(contrasena, saltRounds);
+    // Generar una contraseña aleatoria de 6 dígitos
+    const generatedPassword = generatePassword();
 
+    // Hashear la contraseña generada
+    const hashedPassword = await bcrypt.hash(generatedPassword, saltRounds);
+
+    // Subir imagen si está disponible
     let downloadURL = null;
     if (imagen) {
       const fileName = `${nombre}_${apellido}_image`;
@@ -49,17 +66,51 @@ exports.createPersona = async (req, res) => {
       downloadURL = url;
     }
 
+    // Crear la nueva persona
     const nuevaPersona = await personaService.createPersona(
       { nombre, apellido, fecha_nacimiento, ci, direccion, correo },
       downloadURL,
       hashedPassword
     );
 
-    res.status(201).json({ message: 'Persona creada correctamente', personaId: nuevaPersona.id });
+    if (!nuevaPersona) {
+      throw new Error('Error al crear la persona');
+    }
+
+    // Enviar el correo con la contraseña generada
+    const mailOptions = {
+      from: 'tu-correo@gmail.com', // Correo del remitente
+      to: correo, // Correo del destinatario
+      subject: 'Bienvenido! Aquí está tu contraseña',
+      text: `Hola ${nombre},\n\nTu cuenta ha sido creada exitosamente. Aquí está tu contraseña: ${generatedPassword}\nPor favor, cámbiala después de iniciar sesión.\n\nSaludos,\nEl equipo`
+    };
+
+    // Enviar el correo
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error('Error enviando el correo:', error);
+        return res.status(500).json({ message: 'Persona creada pero fallo al enviar el correo' });
+      } else {
+        console.log('Correo enviado:', info.response);
+        return res.status(201).json({ message: 'Persona creada correctamente y contraseña enviada por correo', personaId: nuevaPersona.id });
+      }
+    });
   } catch (err) {
+    console.error('Error al crear la persona:', err);
     res.status(500).json({ message: 'Error al crear la persona', error: err.message });
   }
 };
+
+// Función para generar una contraseña aleatoria de 6 dígitos
+function generatePassword() {
+  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let password = '';
+  for (let i = 0; i < 6; i++) {
+    const randomIndex = Math.floor(Math.random() * charset.length);
+    password += charset[randomIndex];
+  }
+  return password;
+}
 
 exports.updatePersona = async (req, res) => {
   const { id } = req.params;
@@ -113,5 +164,17 @@ exports.searchPersonas = async (req, res) => {
     res.status(200).json(personas);
   } catch (err) {
     res.status(500).json({ message: 'Error al buscar personas', error: err.message });
+  }
+};
+
+
+exports.searchPersonasSinRolJugador = async (req, res) => {
+  const { searchTerm } = req.query;
+
+  try {
+    const personas = await personaService.searchPersonasSinRolJugador(searchTerm);
+    res.status(200).json(personas);
+  } catch (err) {
+    res.status(500).json({ message: 'Error al buscar personas sin rol de jugador', error: err.message });
   }
 };

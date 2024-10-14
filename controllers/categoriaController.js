@@ -36,14 +36,16 @@ exports.getCategoriaById = async (req, res) => {
 };
 
 exports.createCategoria = async (req, res) => {
-  const { nombre, user_id } = req.body;
+  const { nombre, genero, division, user_id } = req.body;
 
-  if (!nombre || !user_id) {
-    return res.status(400).json({ message: 'Los campos nombre y user_id deben ser proporcionados' });
+  // Verificar si todos los campos requeridos están presentes
+  if (!nombre || !genero || !division || !user_id) {
+    return res.status(400).json({ message: 'Los campos nombre, genero, division y user_id deben ser proporcionados' });
   }
 
   try {
-    const nuevaCategoria = await categoriaService.createCategoria(nombre, user_id);
+    // Llamar al servicio con los nuevos campos genero y division
+    const nuevaCategoria = await categoriaService.createCategoria(nombre, genero, division, user_id);
     res.status(201).json({ message: 'Categoría creada', categoriaId: nuevaCategoria.id });
   } catch (err) {
     res.status(500).json({ message: 'Error al crear categoría', error: err.message });

@@ -17,13 +17,14 @@ const Rol = sequelize.define('Rol', {
   timestamps: false,
 });
 
+// Asociaciones
 Rol.associate = function(models) {
   Rol.belongsToMany(models.Persona, {
-    through: models.PersonaRol,
+    through: models.PersonaRol, // Relación a través de PersonaRol
     foreignKey: 'rol_id',
-    as: 'personas'  
+    otherKey: 'persona_id', // Esto especifica el otro campo en la tabla intermedia
+    as: 'personas' // Alias para obtener las personas relacionadas con el rol
   });
 };
-
 
 module.exports = Rol;

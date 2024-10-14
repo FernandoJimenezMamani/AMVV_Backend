@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/sequelize');
-const Rol = require('./Rol');
 const PersonaRol = require('./PersonaRol');
+const Rol = require('./Rol');
 
 const Persona = sequelize.define('Persona', {
   id: {
@@ -51,12 +51,8 @@ const Persona = sequelize.define('Persona', {
 });
 
 Persona.associate = function(models) {
-  Persona.belongsToMany(models.Rol, {
-    through: models.PersonaRol,
-    foreignKey: 'persona_id',
-    as: 'roles'  
-  });
+  // Persona tiene muchos roles a través de PersonaRol
+  Persona.hasMany(models.PersonaRol, { foreignKey: 'persona_id', as: 'personaRoles' });
 };
-
 
 module.exports = Persona;

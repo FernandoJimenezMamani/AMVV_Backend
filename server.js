@@ -16,6 +16,7 @@ const partidoRoutes = require('./routes/partidoRoutes');
 const personaRoutes = require('./routes/personaRoutes');
 const rolesRoutes = require('./routes/rolRoutes');
 const presidenteRoutes = require('./routes/presidenteClubRoutes');
+const arbitroRoutes = require('./routes/arbitroRoutes'); 
 
 // Inicializar la app
 const app = express();
@@ -45,12 +46,13 @@ app.use('/api/categoria', categoriasRoutes);
 app.use('/api/club', clubesRoutes);
 app.use('/auth', authRoutes);
 app.use('/api/equipo', equipoRoutes);
-app.use('/api/jugadores', jugadorRoutes);
+app.use('/api/jugador', jugadorRoutes);
 app.use('/api/lugar', lugarRoutes);
 app.use('/api/partidos', partidoRoutes);
 app.use('/api/persona', personaRoutes);
 app.use('/api/roles', rolesRoutes);
 app.use('/api/presidente_club', presidenteRoutes);
+app.use('/api/arbitro', arbitroRoutes); // Usa la ruta
 
 // Ruta de prueba
 app.get('/', (req, res) => {
