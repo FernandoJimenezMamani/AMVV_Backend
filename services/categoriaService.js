@@ -29,9 +29,12 @@ exports.getCategoriaById = async (id) => {
 };
 
 
-exports.createCategoria = async (nombre, user_id) => {
+exports.createCategoria = async (nombre, genero, division, user_id) => {
+  console.log("Género recibido:", genero);
   const nuevaCategoria = await Categoria.create({
     nombre,
+    genero, // Guardar V, D, M para Varones, Damas, Mixto
+    division, // Guardar MY, MN para Mayores, Menores
     fecha_registro: Sequelize.fn('GETDATE'),
     fecha_actualizacion: Sequelize.fn('GETDATE'),
     eliminado: 'N',
@@ -44,6 +47,7 @@ exports.updateCategoria = async (id, nombre, user_id) => {
   const updatedCategoria = await Categoria.update(
     {
       nombre,
+      genero,
       fecha_actualizacion: Sequelize.fn('GETDATE'),
       user_id,
     },

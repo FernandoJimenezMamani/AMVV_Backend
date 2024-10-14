@@ -183,4 +183,44 @@ exports.searchPersonas = async (searchTerm) => {
     throw new Error('Error al obtener persona');
   }
 };
+exports.searchPersonasSinRolJugador = async (searchTerm) => {
+  try {
+    const personas = await sequelize.query(`
+      SELECT
+        Persona.id,
+        Persona.nombre,
+        Persona.apellido,
+        Persona.fecha_nacimiento,
+        Persona.ci,
+        Persona.direccion,
+        ImagenPersona.persona_imagen,
+        Usuario.correo
+      FROM
+        Persona
+      LEFT JOIN
+        ImagenPersona
+      ON
+        Persona.id = ImagenPersona.persona_id
+      LEFT JOIN
+        Usuario
+      ON
+        Persona.id = Usuario.id
+      LEFT JOIN
+        PersonaRol
+      ON
+        Persona.id = PersonaRol.persona_id
+      WHERE
+        (Persona.nombre LIKE :searchTerm OR Persona.apellido LIKE :searchTerm)
+        AND Persona.eliminado = 'N'
+        AND (PersonaRol.rol_id IS NULL OR PersonaRol.rol_id != 5)  -- Excluir personas con rol de jugador
+    `, {
+      replacements: { searchTerm: `%${searchTerm}%` },
+      type: sequelize.QueryTypes.SELECT
+    });
 
+    return personas;
+  } catch (error) {
+    console.error('Error al buscar personas sin rol de jugador:', error);
+    throw new Error('Error al buscar personas sin rol de jugador');
+  }
+};

@@ -10,4 +10,7 @@ router.put('/update_persona/:id', personaController.updatePersona);
 router.put('/delete_persona/:id', personaController.deletePersona);
 router.get('/search_persona', personaController.searchPersonas);
 
+// Buscar solo las personas que no tienen el rol de jugador
+router.get('/search_personas_sin_jugador', personaController.searchPersonasSinRolJugador);
+
 module.exports = router;
