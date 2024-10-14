@@ -1,88 +1,61 @@
 const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
 const session = require('express-session');
-const SequelizeStore = require('connect-session-sequelize')(session.Store);
-const connectDB = require('./config/db');
-const sequelize = require('./config/sequelize'); // Importamos la configuración de Sequelize
-
-const app = express();
-
-// Conectar a la base de datos
-connectDB();
-
-// Sincronizar la base de datos con Sequelize
-sequelize.authenticate()
-  .then(() => {
-    console.log('Connection has been established successfully.');
-  })
-  .catch(err => {
-    console.error('Unable to connect to the database:', err);
-  });
-
-const store = new SequelizeStore({
-  db: sequelize,
-});
-
-app.use(session({
-  secret: 'tu_secreto_de_sesion',
-  store: store,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    maxAge: 30 * 60 * 1000, // 30 minutos
-  },
-}));
-
-// Sincronizar la base de datos de sesiones
-store.sync();
-
-// Configurar CORS
-app.use(cors({
-  origin: 'http://localhost:3000', // Permitir solicitudes desde este origen
-  credentials: true // Permitir el envío de cookies y credenciales
-}));
-
-app.use(bodyParser.json());
+const cors = require('cors');
+require('dotenv').config();
 
 // Importar rutas
-//Rol
-const rolesRoutes = require('./routes/roles');
-app.use('/api/roles', rolesRoutes);
-//Jugadores
-const jugadoresRoutes = require('./routes/jugadores');
+const campeonatoRoutes = require('./routes/campeonatoRoutes');
+const categoriasRoutes = require('./routes/categoriaRoutes');
+const clubesRoutes = require('./routes/clubRoutes');
+const authRoutes = require('./routes/authRoutes');
+const equipoRoutes = require('./routes/equipoRoutes');
+const jugadorRoutes = require('./routes/jugadorRoutes');
+const lugarRoutes = require('./routes/lugarRoutes');
+const partidoRoutes = require('./routes/partidoRoutes');
+const personaRoutes = require('./routes/personaRoutes');
+const rolesRoutes = require('./routes/rolRoutes');
+const presidenteRoutes = require('./routes/presidenteClubRoutes');
 
-const inicioDeSesionRoutes = require('./routes/sesion');
-const campeonatoRoutes = require('./routes/Campeonatos');
-
- //Fernando
-app.use('/api/jugadores', jugadoresRoutes);
-//Login
-app.use('/api/sesion', inicioDeSesionRoutes);
-
-app.use('/api/Campeonatos', campeonatoRoutes);
-
-//Club
-const clubRoutes = require('./routes/club');
-app.use('/api/club', clubRoutes);
-//Categoria
-const categoriaRoutes = require('./routes/categoria');
-app.use('/api/categoria', categoriaRoutes);
-//Equipo
-const equipoRoutes = require('./routes/equipo');
-app.use('/api/equipo', equipoRoutes);
-//Persona
-const personaRoutes = require('./routes/persona');
-app.use('/api/persona', personaRoutes);
-//Presidente Club
-const presidenteClubRoutes = require('./routes/presidenteClub');
-app.use('/api/presidente_club', presidenteClubRoutes);
-//Jugador
-const jugadorRoutes = require('./routes/jugador');
-app.use('/api/jugador', jugadorRoutes);
-
+// Inicializar la app
+const app = express();
 const PORT = process.env.PORT || 5002;
 
+// Middleware para CORS
+app.use(cors({
+  origin: 'http://localhost:3000',
+  credentials: true,
+}));
+
+// Middleware para parsear JSON
+app.use(express.json());
+
+// Configuración de sesiones
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'mi_secreto',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: process.env.NODE_ENV === 'production' },
+}));
+
+// Rutas
+app.use('/api/campeonatos', campeonatoRoutes);
+app.use('/api/categoria', categoriasRoutes);
+app.use('/api/club', clubesRoutes);
+app.use('/auth', authRoutes);
+app.use('/api/equipo', equipoRoutes);
+app.use('/api/jugadores', jugadorRoutes);
+app.use('/api/lugar', lugarRoutes);
+app.use('/api/partidos', partidoRoutes);
+app.use('/api/persona', personaRoutes);
+app.use('/api/roles', rolesRoutes);
+app.use('/api/presidente_club', presidenteRoutes);
+
+// Ruta de prueba
+app.get('/', (req, res) => {
+  res.send('¡Servidor funcionando correctamente!');
+});
+
+// Iniciar servidor
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
