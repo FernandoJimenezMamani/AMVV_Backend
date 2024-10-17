@@ -42,7 +42,7 @@ app.use(session({
 app.use('/api/campeonatos', campeonatoRoutes);
 app.use('/api/categoria', categoriasRoutes);
 app.use('/api/club', clubesRoutes);
-app.use('/auth', authRoutes);
+app.use('/api/sesion', authRoutes);
 app.use('/api/equipo', equipoRoutes);
 app.use('/api/jugador', jugadorRoutes);
 app.use('/api/lugar', lugarRoutes);

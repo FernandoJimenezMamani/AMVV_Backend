@@ -28,10 +28,4 @@ const PersonaRol = sequelize.define('PersonaRol', {
   timestamps: false,
 });
 
-// Definir la relación inversa con Persona y Rol
-PersonaRol.associate = function(models) {
-  PersonaRol.belongsTo(models.Persona, { foreignKey: 'persona_id', as: 'persona' });
-  PersonaRol.belongsTo(models.Rol, { foreignKey: 'rol_id', as: 'rol' });
-};
-
 module.exports = PersonaRol;

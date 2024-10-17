@@ -1,4 +1,4 @@
-const { Persona, PersonaRol, Rol } = require('../models');
+const { Persona, PersonaRol, Rol, Arbitro } = require('../models');
 const sequelize = require('../config/sequelize');
 
 exports.getArbitros = async () => {

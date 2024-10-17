@@ -1,4 +1,5 @@
 const { Jugador, Persona, Club, PersonaRol, ImagenPersona } = require('../models');
+const { sequelize } = require('../models');
 
 exports.createJugador = async (persona_id, club_id) => {
   const transaction = await Jugador.sequelize.transaction();
@@ -25,21 +26,27 @@ exports.createJugador = async (persona_id, club_id) => {
 };
 
 exports.getJugadoresByClubId = async (club_id) => {
-  return await Jugador.findAll({
-    where: { club_id },
-    include: [
-      {
-        model: Persona,
-        as: 'persona',
-        attributes: ['nombre', 'apellido', 'ci', 'fecha_nacimiento'],
-        include: [
-          {
-            model: ImagenPersona,
-            as: 'imagenes',
-            attributes: ['persona_imagen']
-          }
-        ]
-      }
-    ]
-  });
+  const jugadores = await sequelize.query(
+    `SELECT 
+      j.id AS jugador_id,
+      p.nombre AS nombre_persona,
+      p.apellido AS apellido_persona,
+      p.ci AS ci_persona,
+      p.fecha_nacimiento AS fecha_nacimiento_persona,
+      ip.persona_imagen AS imagen_persona
+    FROM 
+      Jugador j
+    JOIN 
+      Persona p ON j.id = p.id
+    LEFT JOIN 
+      ImagenPersona ip ON p.id = ip.persona_id
+    WHERE 
+      j.club_id =:club_id`, 
+    {
+      replacements: { club_id },
+      type: sequelize.QueryTypes.SELECT
+    }
+  );
+
+  return jugadores;
 };

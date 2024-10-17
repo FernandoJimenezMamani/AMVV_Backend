@@ -30,17 +30,49 @@ exports.getCategoriaById = async (id) => {
 
 
 exports.createCategoria = async (nombre, genero, division, user_id) => {
-  console.log("Género recibido:", genero);
-  const nuevaCategoria = await Categoria.create({
-    nombre,
-    genero, // Guardar V, D, M para Varones, Damas, Mixto
-    division, // Guardar MY, MN para Mayores, Menores
-    fecha_registro: Sequelize.fn('GETDATE'),
-    fecha_actualizacion: Sequelize.fn('GETDATE'),
-    eliminado: 'N',
-    user_id,
-  });
-  return nuevaCategoria;
+  let transaction;
+
+  try {
+    // Verificar si ya existe una categoría con el mismo nombre y género
+    const existingCategoria = await Categoria.findOne({
+      where: {
+        nombre,
+        genero
+      }
+    });
+
+    if (existingCategoria) {
+      throw new Error('Ya existe una categoría con el mismo nombre y género');
+    }
+
+    // Iniciar una transacción
+    transaction = await sequelize.transaction();
+
+    // Crear la nueva categoría
+    const nuevaCategoria = await Categoria.create({
+      nombre,
+      genero, // Guardar V, D, M para Varones, Damas, Mixto
+      division, // Guardar MY, MN para Mayores, Menores
+      fecha_registro: Sequelize.fn('GETDATE'),
+      fecha_actualizacion: Sequelize.fn('GETDATE'),
+      eliminado: 'N',
+      user_id,
+    }, { transaction });
+
+    // Confirmar la transacción
+    await transaction.commit();
+
+    return nuevaCategoria;
+
+  } catch (error) {
+    console.error("Error al crear la categoría:", error);
+
+    // Si algo sale mal, revertir la transacción
+    if (transaction) await transaction.rollback();
+
+    // Propagar el error para que el controlador lo maneje
+    throw error;
+  }
 };
 
 exports.updateCategoria = async (id, nombre, user_id) => {

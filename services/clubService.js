@@ -111,34 +111,57 @@ exports.getClubTeams = async (id) => {
 
 exports.createClub = async (nombre, descripcion, user_id, imagen) => {
   let transaction;
+
   try {
+    // Verificar si ya existe un club con el mismo nombre
+    const existingClub = await Club.findOne({ where: { nombre } });
+
+    if (existingClub) {
+      throw new Error('El nombre del club ya existe');
+    }
+
+    // Iniciar una transacción
     transaction = await sequelize.transaction();
 
+    // Crear el club
     const newClub = await Club.create({
       nombre,
       descripcion,
       fecha_registro: Sequelize.fn('GETDATE'),
-      fecha_actualizacion: Sequelize.fn('GETDATE'),      
+      fecha_actualizacion: Sequelize.fn('GETDATE'),
       eliminado: 'N',
       user_id,
       presidente_asignado: 'N',
     }, { transaction });
 
+    // Preparar el nombre del archivo basado en el nombre del club
     const fileName = `${nombre.replace(/\s+/g, '_')}_image`;
+
+    // Subir la imagen del club y obtener la URL de descarga
     const { downloadURL } = await uploadFile(imagen, fileName, null, 'FilesClubs');
 
+    // Crear la referencia de la imagen del club en la tabla ImagenClub
     await ImagenClub.create({
       club_id: newClub.id,
       club_imagen: downloadURL
     }, { transaction });
+
+    // Confirmar la transacción
     await transaction.commit();
+
     return newClub;
+
   } catch (error) {
     console.error("Error durante la transacción:", error);
+
+    // Si algo sale mal, revertir la transacción
     if (transaction) await transaction.rollback();
+
+    // Propagar el error para que el controlador lo maneje
     throw error;
   }
 };
+
 
 exports.updateClub = async (id, nombre, descripcion, user_id) => {
   const club = await Club.update(

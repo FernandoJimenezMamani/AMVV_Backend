@@ -2,6 +2,9 @@ const { Persona, Usuario, ImagenPersona, PersonaRol, Rol ,Sequelize} = require('
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const sequelize = require('../config/sequelize');
+const { uploadFile } = require('../utils/subirImagen');
+const { ref, deleteObject } = require('firebase/storage');
+const { storage } = require('../config/firebase');
 
 exports.getAllPersonas = async () => {
   const personas = await sequelize.query(`
@@ -222,5 +225,73 @@ exports.searchPersonasSinRolJugador = async (searchTerm) => {
   } catch (error) {
     console.error('Error al buscar personas sin rol de jugador:', error);
     throw new Error('Error al buscar personas sin rol de jugador');
+  }
+};
+
+
+exports.updatePersonaImage = async (id, imagen) => {
+  if (!id) {
+    console.log('Error: El ID de la persona no fue proporcionado');
+    throw new Error('El ID de la persona debe ser proporcionado');
+  }
+
+  if (!imagen) {
+    console.log('Error: No se proporcionó ninguna imagen');
+    throw new Error('No se proporcionó ninguna imagen');
+  }
+
+  const transaction = await sequelize.transaction();
+  console.log('Iniciando transacción...');
+
+  try {
+    // Subir la nueva imagen a Firebase
+    console.log('Subiendo la nueva imagen a Firebase...');
+    const { downloadURL } = await uploadFile(imagen, null, null, 'FilesPersonas');
+    console.log('Imagen subida, URL:', downloadURL);
+
+    // Obtener la referencia de la imagen actual
+    console.log('Buscando imagen existente para la persona con ID:', id);
+    const persona = await ImagenPersona.findOne({
+      where: { persona_id: id }
+    }, { transaction });
+
+    if (persona) {
+      console.log('Imagen actual encontrada:', persona.persona_imagen);
+      const previousImageURL = persona.persona_imagen;
+
+      // Eliminar la imagen anterior de Firebase Storage
+      console.log('Eliminando la imagen anterior de Firebase Storage:', previousImageURL);
+      const previousImageRef = ref(storage, previousImageURL);
+      await deleteObject(previousImageRef); 
+
+      // Actualizar la imagen en la base de datos
+      console.log('Actualizando la nueva URL de la imagen en la base de datos...');
+      await ImagenPersona.update(
+        { persona_imagen: downloadURL },
+        { where: { persona_id: id }, transaction }
+      );
+    } else {
+      console.log('No se encontró imagen existente, creando nueva entrada...');
+      // Insertar una nueva imagen si no existe
+      await ImagenPersona.create(
+        { persona_id: id, persona_imagen: downloadURL },
+        { transaction }
+      );
+    }
+
+    // Commit de la transacción
+    console.log('Realizando commit de la transacción...');
+    await transaction.commit();
+    console.log('Transacción completada con éxito.');
+    return { message: 'Imagen de la persona actualizada correctamente' };
+  } catch (error) {
+    console.log('Error durante la transacción:', error.message);
+    
+    // Rollback de la transacción
+    if (transaction) {
+      console.log('Realizando rollback de la transacción...');
+      await transaction.rollback();
+    }
+    throw new Error('Error al actualizar la imagen de la persona');
   }
 };
