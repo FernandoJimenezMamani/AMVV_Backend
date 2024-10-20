@@ -88,3 +88,21 @@ exports.deletePartido = async (req, res) => {
     res.status(500).json({ message: 'Error al eliminar el Partido', error: err.message });
   }
 };
+
+exports.submitResultados = async (req, res) => {
+  const { partido_id, resultadoLocal, resultadoVisitante ,walkover } = req.body;
+
+  if (!partido_id || !resultadoLocal || !resultadoVisitante) {
+    return res.status(400).json({ message: 'Todos los campos requeridos deben ser proporcionados' });
+  }
+
+  try {
+    const resultados = await partidoService.submitResultados({ partido_id, resultadoLocal, resultadoVisitante,walkover });
+    res.status(201).json({
+      message: 'Resultados registrados exitosamente',
+      resultados
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Error al registrar los resultados', error: err.message });
+  }
+};

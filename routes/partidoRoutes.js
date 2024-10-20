@@ -3,6 +3,7 @@ const router = express.Router();
 const partidoController = require('../controllers/partidoController');
 
 router.post('/insert', partidoController.createPartido);
+router.post('/submitResultados', partidoController.submitResultados);
 router.get('/select/:categoriaId', partidoController.getPartidosByCategoriaId);
 router.get('/get_upcoming_matches/:categoria', partidoController.getUpcomingMatchesByCategoria);
 router.get('/get_all_matches/:categoria', partidoController.getAllMatchesExceptUpcoming);
