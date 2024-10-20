@@ -34,6 +34,21 @@ exports.getEquipoById = async (id) => {
 };
 
 exports.createEquipo = async ({ nombre, club_id, categoria_id, user_id }) => {
+  // Verificar si ya existe un equipo con el mismo nombre y categoría
+  const existingEquipo = await Equipo.findOne({
+    where: {
+      nombre,
+      categoria_id,
+      eliminado: 'N' // Asegurarse de que no esté marcado como eliminado
+    }
+  });
+
+  if (existingEquipo) {
+    // Si existe, lanzar un error o devolver un mensaje indicando que ya existe
+    throw new Error(`Ya existe un equipo con el nombre "${nombre}" en la misma categoría.`);
+  }
+
+  // Si no existe, crear el nuevo equipo
   return await Equipo.create({
     nombre,
     club_id,
@@ -44,6 +59,7 @@ exports.createEquipo = async ({ nombre, club_id, categoria_id, user_id }) => {
     user_id
   });
 };
+
 
 exports.updateEquipo = async (id, data) => {
   const { nombre, club_id, categoria_id, user_id } = data;
