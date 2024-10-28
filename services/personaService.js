@@ -58,6 +58,7 @@ exports.getPersonaById = async (id) => {
         Persona.apellido,
         Persona.fecha_nacimiento,
         Persona.ci,
+        Persona.genero,
         Persona.direccion,
         Persona.fecha_registro,
         Persona.fecha_actualizacion,
@@ -91,7 +92,7 @@ exports.getPersonaById = async (id) => {
 };
 
 exports.createPersona = async (data, imagen, hashedPassword) => {
-  const { nombre, apellido, fecha_nacimiento, ci, direccion, correo } = data;
+  const { nombre, apellido, fecha_nacimiento, ci, direccion, genero, correo } = data;
   
   const transaction = await Persona.sequelize.transaction();
   
@@ -102,6 +103,7 @@ exports.createPersona = async (data, imagen, hashedPassword) => {
       fecha_nacimiento,
       ci,
       direccion,
+      genero,  // Asegurarse de incluir este campo
       fecha_registro: Sequelize.fn('GETDATE'),
       fecha_actualizacion: Sequelize.fn('GETDATE'),
       eliminado: 'N'

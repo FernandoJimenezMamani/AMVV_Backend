@@ -37,7 +37,7 @@ const transporter = nodemailer.createTransport({
 });
 
 exports.createPersona = async (req, res) => {
-  const { nombre, apellido, fecha_nacimiento, ci, direccion, correo } = req.body;
+  const { nombre, apellido, fecha_nacimiento, ci, direccion, genero, correo } = req.body;  // Agregar genero
   const imagen = req.file;
 
   // Validar los campos obligatorios
@@ -68,7 +68,7 @@ exports.createPersona = async (req, res) => {
 
     // Crear la nueva persona
     const nuevaPersona = await personaService.createPersona(
-      { nombre, apellido, fecha_nacimiento, ci, direccion, correo },
+      { nombre, apellido, fecha_nacimiento, ci, direccion, genero, correo }, // Asegurarse de incluir genero
       downloadURL,
       hashedPassword
     );
@@ -79,13 +79,12 @@ exports.createPersona = async (req, res) => {
 
     // Enviar el correo con la contraseña generada
     const mailOptions = {
-      from: 'tu-correo@gmail.com', // Correo del remitente
-      to: correo, // Correo del destinatario
+      from: 'tu-correo@gmail.com',
+      to: correo,
       subject: 'Bienvenido! Aquí está tu contraseña',
       text: `Hola ${nombre},\n\nTu cuenta ha sido creada exitosamente. Aquí está tu contraseña: ${generatedPassword}\nPor favor, cámbiala después de iniciar sesión.\n\nSaludos,\nEl equipo`
     };
 
-    // Enviar el correo
     transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
         console.error('Error enviando el correo:', error);

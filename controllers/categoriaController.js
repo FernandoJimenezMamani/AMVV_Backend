@@ -36,16 +36,16 @@ exports.getCategoriaById = async (req, res) => {
 };
 
 exports.createCategoria = async (req, res) => {
-  const { nombre, genero, division, user_id } = req.body;
+  const { nombre, genero, division, edad_minima, edad_maxima, costo_traspaso, user_id } = req.body;
 
   // Verificar si todos los campos requeridos están presentes
-  if (!nombre || !genero || !division || !user_id) {
-    return res.status(400).json({ message: 'Los campos nombre, genero, division y user_id deben ser proporcionados' });
+  if (!nombre || !genero || !division || !user_id || costo_traspaso === undefined) {
+    return res.status(400).json({ message: 'Los campos nombre, genero, division, costo_traspaso y user_id deben ser proporcionados' });
   }
 
   try {
-    // Llamar al servicio con los nuevos campos genero y division
-    const nuevaCategoria = await categoriaService.createCategoria(nombre, genero, division, user_id);
+    // Llamar al servicio con los nuevos campos
+    const nuevaCategoria = await categoriaService.createCategoria(nombre, genero, division, edad_minima, edad_maxima, costo_traspaso, user_id);
     res.status(201).json({ message: 'Categoría creada', categoriaId: nuevaCategoria.id });
   } catch (err) {
     res.status(500).json({ message: 'Error al crear categoría', error: err.message });
@@ -54,14 +54,14 @@ exports.createCategoria = async (req, res) => {
 
 exports.updateCategoria = async (req, res) => {
   const { id } = req.params;
-  const { nombre, user_id } = req.body;
+  const { nombre, genero, division, edad_minima, edad_maxima, costo_traspaso, user_id } = req.body;
 
-  if (!id || !nombre || !user_id) {
-    return res.status(400).json({ message: 'ID, nombre y user_id son necesarios' });
+  if (!id || !nombre || !user_id || costo_traspaso === undefined) {
+    return res.status(400).json({ message: 'ID, nombre, user_id y costo_traspaso son necesarios' });
   }
 
   try {
-    const updated = await categoriaService.updateCategoria(id, nombre, user_id);
+    const updated = await categoriaService.updateCategoria(id, nombre, genero, division, edad_minima, edad_maxima, costo_traspaso, user_id);
     if (updated[0] > 0) {
       res.status(200).json({ message: 'Categoría actualizada correctamente' });
     } else {

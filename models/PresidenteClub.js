@@ -30,6 +30,6 @@ PresidenteClub.belongsTo(Persona, { foreignKey: 'id', as: 'persona' });
 Persona.hasOne(PresidenteClub, { foreignKey: 'id', as: 'presidente' });  
 
 PresidenteClub.belongsTo(Club, {foreignKey: 'club_id',as: 'club'});
-Club.hasMany(PresidenteClub, {foreignKey: 'club_id',as: 'presidente'});
+Club.hasMany(PresidenteClub, {foreignKey: 'club_id',as: 'presidentes'});
 
 module.exports = PresidenteClub;
