@@ -16,10 +16,10 @@ exports.createPartido = async (req, res) => {
 };
 
 exports.getPartidosByCategoriaId = async (req, res) => {
-  const { categoriaId } = req.params;
+  const { categoriaId ,campeonatoId } = req.params;
 
   try {
-    const partidos = await partidoService.getPartidosByCategoriaId(categoriaId);
+    const partidos = await partidoService.getPartidosByCategoriaId(categoriaId,campeonatoId);
     res.status(200).json(partidos);
   } catch (err) {
     res.status(500).json({ message: 'Error al obtener los partidos', error: err.message });
@@ -90,19 +90,72 @@ exports.deletePartido = async (req, res) => {
 };
 
 exports.submitResultados = async (req, res) => {
-  const { partido_id, resultadoLocal, resultadoVisitante ,walkover } = req.body;
+  let { partido_id, resultadoLocal, resultadoVisitante, walkover, tarjetas } = req.body;
+  const imagenPlanilla = req.file;
 
+  // Validar los campos requeridos
   if (!partido_id || !resultadoLocal || !resultadoVisitante) {
     return res.status(400).json({ message: 'Todos los campos requeridos deben ser proporcionados' });
   }
 
   try {
-    const resultados = await partidoService.submitResultados({ partido_id, resultadoLocal, resultadoVisitante,walkover });
+    // Parsear los datos si llegan como strings
+    resultadoLocal = JSON.parse(resultadoLocal);
+    resultadoVisitante = JSON.parse(resultadoVisitante);
+    tarjetas = JSON.parse(tarjetas);
+
+    // Llamar al servicio para registrar los resultados
+    const resultados = await partidoService.submitResultados({
+      partido_id,
+      resultadoLocal,
+      resultadoVisitante,
+      walkover,
+      tarjetas,
+      imagenPlanilla
+    });
+
     res.status(201).json({
-      message: 'Resultados registrados exitosamente',
+      message: 'Resultados, tarjetas e imagen de la planilla registrados exitosamente',
       resultados
     });
-  } catch (err) {
-    res.status(500).json({ message: 'Error al registrar los resultados', error: err.message });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al registrar los resultados', error: error.message });
+  }
+};
+exports.getPartidoCompletoById = async (req, res) => {
+  const { partidoId } = req.params;
+
+  try {
+    const partido = await partidoService.getPartidoCompletoById(partidoId);
+    if (!partido) {
+      return res.status(404).json({ message: 'Partido no encontrado' });
+    }
+    res.status(200).json(partido);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener la información del partido', error: error.message });
+  }
+};
+
+// Obtener los jugadores de un equipo por su ID
+exports.getJugadoresByEquipoId = async (req, res) => {
+  const { equipoId } = req.params;
+
+  try {
+    const jugadores = await partidoService.getJugadoresByEquipoId(equipoId);
+    res.status(200).json(jugadores);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener los jugadores del equipo', error: error.message });
+  }
+};
+
+// Obtener los árbitros asignados a un partido por su ID
+exports.getArbitrosByPartidoId = async (req, res) => {
+  const { partidoId } = req.params;
+
+  try {
+    const arbitros = await partidoService.getArbitrosByPartidoId(partidoId);
+    res.status(200).json(arbitros);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener los árbitros del partido', error: error.message });
   }
 };

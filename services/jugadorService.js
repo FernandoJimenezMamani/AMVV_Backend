@@ -50,3 +50,35 @@ exports.getJugadoresByClubId = async (club_id) => {
 
   return jugadores;
 };
+
+exports.getJugadoresByEquipoId = async (equipo_id) => {
+  try {
+    const jugadores = await sequelize.query(`
+      SELECT 
+        j.id AS jugador_id,
+        p.nombre AS nombre_persona,
+        p.apellido AS apellido_persona,
+        p.ci AS ci_persona,
+        p.fecha_nacimiento AS fecha_nacimiento_persona,
+        ip.persona_imagen AS imagen_persona
+      FROM 
+        JugadorEquipo je
+      JOIN 
+        Jugador j ON je.jugador_id = j.id
+      JOIN 
+        Persona p ON j.id = p.id
+      LEFT JOIN 
+        ImagenPersona ip ON p.id = ip.persona_id
+      WHERE 
+        je.equipo_id = :equipo_id
+    `, {
+      replacements: { equipo_id },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    return jugadores;
+  } catch (error) {
+    console.error('Error al obtener los jugadores por equipo:', error);
+    throw new Error('Error al obtener los jugadores por equipo');
+  }
+};

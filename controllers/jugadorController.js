@@ -29,3 +29,15 @@ exports.getJugadoresByClubId = async (req, res) => {
     res.status(500).json({ message: 'Error al obtener los jugadores del club', error: err.message });
   }
 };
+
+exports.getJugadoresByEquipo = async (req, res) => {
+  const { equipo_id } = req.params;
+
+  try {
+    const jugadores = await jugadorService.getJugadoresByEquipoId(equipo_id);
+    return res.status(200).json(jugadores);
+  } catch (error) {
+    console.error('Error en getJugadoresByEquipo:', error);
+    return res.status(500).json({ error: 'Error al obtener los jugadores por equipo' });
+  }
+};

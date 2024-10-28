@@ -209,17 +209,18 @@ exports.getChampionshipPositions = async (categoriaId,campeonato_id) => {
         END)
     ), 0) AS diferencia_puntos,
     COALESCE(SUM(
-        CASE 
-            WHEN p.estado = 'J' AND e.id = p.equipo_local_id AND rl.resultado = 'G' THEN 2 
-            WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id AND rv.resultado = 'G' THEN 2 
-            ELSE 0 
-        END +
-        CASE 
-            WHEN p.estado = 'J' AND e.id = p.equipo_local_id AND rl.resultado = 'P' THEN 1 
-            WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id AND rv.resultado = 'P' THEN 1 
-            ELSE 0 
-        END
-    ), 0) AS pts,
+    CASE 
+        WHEN p.estado = 'J' AND e.id = p.equipo_local_id AND rv.walkover = 'Y' THEN 2
+        WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id AND rl.walkover = 'Y' THEN 2
+        WHEN p.estado = 'J' AND e.id = p.equipo_local_id AND rl.walkover = 'Y' THEN 0
+        WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id AND rv.walkover = 'Y' THEN 0
+        WHEN p.estado = 'J' AND e.id = p.equipo_local_id AND rl.resultado = 'G' THEN 2 
+        WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id AND rv.resultado = 'G' THEN 2 
+        WHEN p.estado = 'J' AND e.id = p.equipo_local_id AND rl.resultado = 'P' THEN 1 
+        WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id AND rv.resultado = 'P' THEN 1 
+        ELSE 0 
+    END
+), 0) AS pts,
         ic.club_imagen AS escudo
     FROM 
         EquipoCampeonato ec

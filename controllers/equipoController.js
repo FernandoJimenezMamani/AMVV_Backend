@@ -85,3 +85,15 @@ exports.deleteEquipo = async (req, res) => {
     res.status(500).json({ message: 'Error al eliminar lógicamente el equipo', error: err.message });
   }
 };
+
+exports.getEquiposPorPartido = async (req, res) => {
+  const { partido_id } = req.params;
+
+  try {
+    const equipos = await equipoService.getEquiposByPartidoId(partido_id);
+    return res.status(200).json(equipos);
+  } catch (error) {
+    console.error('Error en el controlador getEquiposPorPartido:', error);
+    return res.status(500).json({ error: 'Error al obtener los equipos por partido' });
+  }
+};

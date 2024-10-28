@@ -82,3 +82,30 @@ exports.deleteEquipo = async (id, user_id) => {
     { where: { id } }
   );
 };
+
+exports.getEquiposByPartidoId = async (partido_id) => {
+  try {
+    const equipos = await sequelize.query(`
+      SELECT 
+        e.id AS equipo_id, 
+        e.nombre AS equipo_nombre, 
+        c.nombre AS club_nombre, 
+        cat.nombre AS categoria_nombre, 
+        ic.club_imagen
+      FROM Partido p
+      INNER JOIN Equipo e ON e.id = p.equipo_local_id OR e.id = p.equipo_visitante_id
+      INNER JOIN Club c ON e.club_id = c.id
+      INNER JOIN Categoria cat ON e.categoria_id = cat.id
+      LEFT JOIN ImagenClub ic ON c.id = ic.club_id
+      WHERE p.id = :partido_id AND e.eliminado = 'N'
+    `, {
+      replacements: { partido_id },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    return equipos;
+  } catch (error) {
+    console.error('Error al obtener los equipos por partido:', error);
+    throw new Error('Error al obtener los equipos por partido');
+  }
+};

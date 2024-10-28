@@ -50,10 +50,6 @@ const Partido = sequelize.define('Partido', {
     type: DataTypes.CHAR(1),
     allowNull: true,
   },
-  walkover: {
-    type: DataTypes.CHAR(1),
-    allowNull: true,
-  },
 }, {
   tableName: 'Partido',
   timestamps: false,

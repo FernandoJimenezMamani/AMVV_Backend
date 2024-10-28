@@ -32,6 +32,10 @@ const ResultadoLocal = sequelize.define('ResultadoLocal', {
     type: DataTypes.CHAR(1),
     allowNull: true,
   },
+  walkover: {
+    type: DataTypes.CHAR(1),
+    allowNull: true,
+  },
 }, {
   tableName: 'ResultadoLocal',
   timestamps: false,
