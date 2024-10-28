@@ -200,8 +200,8 @@ exports.searchJugadoresByClubId = async (club_id, searchTerm, genero) => {
 
 exports.getJugadoresByEquipoId = async (equipo_id) => {
   try {
-    const jugadores = await sequelize.query(
-      `SELECT 
+    const jugadores = await sequelize.query(`
+      SELECT 
         j.id AS jugador_id,
         p.nombre AS nombre_persona,
         p.apellido AS apellido_persona,
@@ -227,5 +227,6 @@ exports.getJugadoresByEquipoId = async (equipo_id) => {
     return jugadores;
   } catch (err) {
     throw new Error('Error al obtener los jugadores del equipo: ' + err.message);
+
   }
 };

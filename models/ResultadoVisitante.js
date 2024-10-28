@@ -32,6 +32,10 @@ const ResultadoVisitante = sequelize.define('ResultadoVisitante', {
     type: DataTypes.CHAR(1),
     allowNull: true,
   },
+  walkover: {
+    type: DataTypes.CHAR(1),
+    allowNull: true,
+  },
 }, {
   tableName: 'ResultadoVisitante',
   timestamps: false,
