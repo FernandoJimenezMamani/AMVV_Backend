@@ -1,9 +1,9 @@
-const { Equipo, Club, Categoria, ImagenClub,Sequelize } = require('../models');
+const { Equipo, Club, Categoria, ImagenClub, Sequelize } = require('../models');
 const sequelize = require('../config/sequelize');
 
 exports.getEquiposByCategoriaId = async (categoria_id) => {
   try {
-    const resultPartidos = await sequelize.query(`
+    const equipos = await sequelize.query(`
       SELECT Equipo.id, Equipo.nombre, Club.nombre AS club_nombre, Categoria.nombre AS categoria_nombre, ImagenClub.club_imagen
       FROM Equipo
       INNER JOIN Club ON Equipo.club_id = Club.id
@@ -11,14 +11,14 @@ exports.getEquiposByCategoriaId = async (categoria_id) => {
       LEFT JOIN ImagenClub ON Club.id = ImagenClub.club_id
       WHERE Equipo.eliminado = 'N' AND Equipo.categoria_id = :categoria_id
     `, {
-      replacements: { categoria_id }, 
-      type: sequelize.QueryTypes.SELECT 
+      replacements: { categoria_id },
+      type: sequelize.QueryTypes.SELECT
     });
 
-    return resultPartidos;
+    return equipos;
   } catch (error) {
-    console.error('Error al obtener los partidos:', error);
-    throw new Error('Error al obtener los partidos');
+    console.error('Error al obtener los equipos:', error);
+    throw new Error('Error al obtener los equipos');
   }
 };
 
@@ -27,28 +27,41 @@ exports.getEquipoById = async (id) => {
     where: { id, eliminado: 'N' },
     attributes: ['id', 'nombre', 'club_id', 'categoria_id'],
     include: [
-      { model: Club, as: 'club', attributes: ['nombre'] },
-      { model: Categoria, as: 'categoria', attributes: ['nombre'] }
+      {
+        model: Club,
+        as: 'club',
+        attributes: ['nombre'],
+        include: [
+          {
+            model: ImagenClub,
+            as: 'imagenClub',
+            attributes: ['club_imagen'] // Agregar la imagen del club
+          }
+        ]
+      },
+      {
+        model: Categoria,
+        as: 'categoria',
+        attributes: ['nombre', 'genero'] // Incluir también el género de la categoría
+      }
     ]
   });
 };
 
+
 exports.createEquipo = async ({ nombre, club_id, categoria_id, user_id }) => {
-  // Verificar si ya existe un equipo con el mismo nombre y categoría
   const existingEquipo = await Equipo.findOne({
     where: {
       nombre,
       categoria_id,
-      eliminado: 'N' // Asegurarse de que no esté marcado como eliminado
+      eliminado: 'N'
     }
   });
 
   if (existingEquipo) {
-    // Si existe, lanzar un error o devolver un mensaje indicando que ya existe
     throw new Error(`Ya existe un equipo con el nombre "${nombre}" en la misma categoría.`);
   }
 
-  // Si no existe, crear el nuevo equipo
   return await Equipo.create({
     nombre,
     club_id,
@@ -59,7 +72,6 @@ exports.createEquipo = async ({ nombre, club_id, categoria_id, user_id }) => {
     user_id
   });
 };
-
 
 exports.updateEquipo = async (id, data) => {
   const { nombre, club_id, categoria_id, user_id } = data;

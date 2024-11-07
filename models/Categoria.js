@@ -19,6 +19,19 @@ const Categoria = sequelize.define('Categoria', {
     type: DataTypes.STRING(20),
     allowNull: true,
   },
+  edad_minima: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  edad_maxima: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  costo_traspaso: {
+    type: DataTypes.DECIMAL(10, 2), // Nueva columna para el costo de traspaso
+    allowNull: false,
+    defaultValue: 0.00, // Un valor predeterminado si no se asigna uno
+  },
   fecha_registro: {
     type: DataTypes.DATE,
     allowNull: true,
@@ -39,7 +52,5 @@ const Categoria = sequelize.define('Categoria', {
   tableName: 'Categoria',
   timestamps: false,
 });
-
-
 
 module.exports = Categoria;

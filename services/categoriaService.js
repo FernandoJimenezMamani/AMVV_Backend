@@ -1,5 +1,6 @@
-const { Categoria,Sequelize} = require('../models');
+const { Categoria, sequelize, Sequelize } = require('../models');
 
+// Obtener todas las categorías
 exports.getCategorias = async () => {
   const categorias = await Categoria.findAll({
     where: { eliminado: 'N' },
@@ -8,6 +9,7 @@ exports.getCategorias = async () => {
   return categorias;
 };
 
+// Obtener categorías por división
 exports.getCategoriaByDivision = async (division) => {
   const categorias = await Categoria.findAll({
     where: { division, eliminado: 'N' },
@@ -19,18 +21,18 @@ exports.getCategoriaByDivision = async (division) => {
 exports.getCategoriaById = async (id) => {
   try {
     const categoria = await Categoria.findOne({
-      where: { id:id, eliminado: 'N' },
-      attributes: ['id', 'nombre', 'fecha_registro', 'fecha_actualizacion', 'eliminado', 'user_id'],
+      where: { id, eliminado: 'N' },
+      attributes: ['id', 'nombre', 'genero', 'division', 'costo_traspaso', 'fecha_registro', 'fecha_actualizacion', 'eliminado', 'user_id'],
     });
     return categoria;
   } catch (error) {
     console.error('Error fetching categoria:', error);
+    throw new Error('Error al obtener la categoría');
   }
 };
 
-
-exports.createCategoria = async (nombre, genero, division, user_id) => {
-  let transaction;
+exports.createCategoria = async (nombre, genero, division, edad_minima, edad_maxima, costo_traspaso, user_id) => {
+  const transaction = await sequelize.transaction();  // Iniciar la transacción
 
   try {
     // Verificar si ya existe una categoría con el mismo nombre y género
@@ -45,23 +47,22 @@ exports.createCategoria = async (nombre, genero, division, user_id) => {
       throw new Error('Ya existe una categoría con el mismo nombre y género');
     }
 
-    // Iniciar una transacción
-    transaction = await sequelize.transaction();
-
     // Crear la nueva categoría
     const nuevaCategoria = await Categoria.create({
       nombre,
-      genero, // Guardar V, D, M para Varones, Damas, Mixto
-      division, // Guardar MY, MN para Mayores, Menores
-      fecha_registro: Sequelize.fn('GETDATE'),
-      fecha_actualizacion: Sequelize.fn('GETDATE'),
+      genero,
+      division,
+      edad_minima,
+      edad_maxima,
+      costo_traspaso,  // Asignar el costo de traspaso
+      fecha_registro: Sequelize.fn('GETDATE'),  // Cambiado a GETDATE() para SQL Server
+      fecha_actualizacion: Sequelize.fn('GETDATE'),  // Cambiado a GETDATE() para SQL Server
       eliminado: 'N',
       user_id,
     }, { transaction });
 
     // Confirmar la transacción
     await transaction.commit();
-
     return nuevaCategoria;
 
   } catch (error) {
@@ -75,31 +76,35 @@ exports.createCategoria = async (nombre, genero, division, user_id) => {
   }
 };
 
-exports.updateCategoria = async (id, nombre, user_id) => {
-  const updatedCategoria = await Categoria.update(
+// Actualizar una categoría
+exports.updateCategoria = async (id, nombre, genero, division, edad_minima, edad_maxima, costo_traspaso, user_id) => {
+  return await Categoria.update(
     {
       nombre,
       genero,
-      fecha_actualizacion: Sequelize.fn('GETDATE'),
+      division,
+      edad_minima,
+      edad_maxima,
+      costo_traspaso,  // Actualizar el costo de traspaso
+      fecha_actualizacion: Sequelize.fn('GETDATE'),  // Cambiado a GETDATE() para SQL Server
       user_id,
     },
     {
-      where: { id },
+      where: { id, eliminado: 'N' }
     }
   );
-  return updatedCategoria;
 };
 
+// Eliminar una categoría (soft delete)
 exports.deleteCategoria = async (id, user_id) => {
-  const deletedCategoria = await Categoria.update(
+  return await Categoria.update(
     {
       eliminado: 'S',
-      fecha_actualizacion: Sequelize.fn('GETDATE'),
+      fecha_actualizacion: Sequelize.fn('GETDATE'),  // Cambiado a GETDATE() para SQL Server
       user_id,
     },
     {
-      where: { id },
+      where: { id }
     }
   );
-  return deletedCategoria;
 };

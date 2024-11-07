@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt'); 
 const jwt = require('jsonwebtoken');
-const { Usuario, Persona, Rol ,ImagenPersona} = require('../models');
+const { Usuario, Persona, Rol, ImagenPersona, Jugador, PresidenteClub, Club } = require('../models');
 require('dotenv').config();
 
 exports.login = async (correo, contraseña) => {
@@ -23,6 +23,28 @@ exports.login = async (correo, contraseña) => {
             as: 'imagenes', 
             attributes: ['persona_imagen'],
           },
+          {
+            model: Jugador,
+            as: 'jugador',
+            include: [
+              {
+                model: Club,
+                as: 'club',
+                attributes: ['id', 'nombre']
+              }
+            ]
+          },
+          {
+            model: PresidenteClub,
+            as: 'presidente',
+            include: [
+              {
+                model: Club,
+                as: 'club',
+                attributes: ['id', 'nombre']
+              }
+            ]
+          }
         ],
       },
     ],
@@ -32,14 +54,19 @@ exports.login = async (correo, contraseña) => {
     throw new Error('Correo o contraseña incorrectos');
   }
 
-  if (contraseña !== usuario.contraseña) {
+  const isPasswordMatch = await bcrypt.compare(contraseña, usuario.contraseña);
+  if (!isPasswordMatch) {
     throw new Error('Correo o contraseña incorrectos');
   }
 
   const roles = usuario.persona.roles.map((rol) => rol.nombre);
-
-  // Verificamos si hay imágenes asociadas
   const imagen = usuario.persona.imagenes.length > 0 ? usuario.persona.imagenes[0].persona_imagen : null;
+
+  // Obtener datos del club donde es jugador (si tiene rol de jugador)
+  const clubJugador = usuario.persona.jugador ? usuario.persona.jugador.club : null;
+
+  // Obtener datos del club donde es presidente (si tiene rol de presidente)
+  const clubPresidente = usuario.persona.presidente ? usuario.persona.presidente.club : null;
 
   const payload = {
     id: usuario.id,
@@ -49,8 +76,10 @@ exports.login = async (correo, contraseña) => {
     fecha_nacimiento: usuario.persona.fecha_nacimiento,
     ci: usuario.persona.ci,
     direccion: usuario.persona.direccion,
-    imagen: imagen,  // Asignar la imagen
+    imagen: imagen,
     roles: roles,
+    clubJugador: clubJugador ? { id: clubJugador.id, nombre: clubJugador.nombre } : null,
+    clubPresidente: clubPresidente ? { id: clubPresidente.id, nombre: clubPresidente.nombre } : null,
   };
 
   const token = jwt.sign(payload, process.env.JWT_SECRET, {

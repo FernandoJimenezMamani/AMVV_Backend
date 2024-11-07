@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/sequelize');
 const Jugador = require('./Jugador');
-const Equipo = require('./Equipo');
+const Club = require('./Club');
 
 const Traspaso = sequelize.define('Traspaso', {
   id: {
@@ -11,34 +11,53 @@ const Traspaso = sequelize.define('Traspaso', {
   },
   jugador_id: {
     type: DataTypes.INTEGER,
-    allowNull: true,
+    allowNull: false,
     references: {
       model: Jugador,
       key: 'id',
     }
   },
-  equipo_origen_id: {
+  club_origen_id: {
     type: DataTypes.INTEGER,
-    allowNull: true,
+    allowNull: false,
     references: {
-      model: Equipo,
+      model: Club,
       key: 'id',
     }
   },
-  equipo_destino_id: {
+  club_destino_id: {
     type: DataTypes.INTEGER,
-    allowNull: true,
+    allowNull: false,
     references: {
-      model: Equipo,
+      model: Club,
       key: 'id',
     }
   },
-  fecha: {
+  fecha_solicitud: {
+    type: DataTypes.DATEONLY,
+    allowNull: false,
+  },
+  fecha_actualizacion: {
     type: DataTypes.DATEONLY,
     allowNull: true,
   },
-  monto: {
-    type: DataTypes.DECIMAL(18, 2),
+  estado_solicitud: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    defaultValue: 'PENDIENTE',
+  },
+  aprobado_por_jugador: {
+    type: DataTypes.CHAR(1),
+    allowNull: false,
+    defaultValue: 'P', // 'S' para aprobado, 'N' para no aprobado
+  },
+  aprobado_por_club: {
+    type: DataTypes.CHAR(1),
+    allowNull: false,
+    defaultValue: 'P', // 'S' para aprobado, 'N' para no aprobado
+  },
+  costo_traspaso: {
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: true,
   },
 }, {
@@ -46,12 +65,14 @@ const Traspaso = sequelize.define('Traspaso', {
   timestamps: false,
 });
 
-Traspaso.belongsTo(Equipo, { foreignKey: 'equipo_origen_id', as: 'equipoOrigen' });
-Equipo.hasMany(Traspaso, { foreignKey: 'equipo_origen_id', as: 'traspasosOrigen' });
+// Relaciones entre Traspaso y Club
+Traspaso.belongsTo(Club, { foreignKey: 'club_origen_id', as: 'clubOrigen' });
+Club.hasMany(Traspaso, { foreignKey: 'club_origen_id', as: 'traspasosOrigen' });
 
-Traspaso.belongsTo(Equipo, { foreignKey: 'equipo_destino_id', as: 'equipoDestino' });
-Equipo.hasMany(Traspaso, { foreignKey: 'equipo_destino_id', as: 'traspasosDestino' });
+Traspaso.belongsTo(Club, { foreignKey: 'club_destino_id', as: 'clubDestino' });
+Club.hasMany(Traspaso, { foreignKey: 'club_destino_id', as: 'traspasosDestino' });
 
+// Relación entre Traspaso y Jugador
 Traspaso.belongsTo(Jugador, { foreignKey: 'jugador_id', as: 'jugador' });
 Jugador.hasMany(Traspaso, { foreignKey: 'jugador_id', as: 'traspasosJugador' });
 
