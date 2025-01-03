@@ -135,14 +135,33 @@ exports.aprobarTraspasoPorJugador = async (id) => {
 
 // Aprobar traspaso por el presidente del club de origen
 exports.aprobarTraspasoPorClub = async (id) => {
-  return await Traspaso.update(
+  try {
+    const traspaso = await Traspaso.findOne({ where: { id, estado_solicitud: 'ACEPTADO_POR_JUGADOR' } });
+
+    if (!traspaso) {
+      throw new Error('Traspaso no encontrado o no está en estado válido para aprobación.');
+    }
+
+    await Traspaso.update(
       {
-          aprobado_por_club: 'S',
-          estado_solicitud: 'APROBADO', // Estado final cuando ambos aceptan
-          fecha_actualizacion: new Date()
+        aprobado_por_club: 'S',
+        estado_solicitud: 'APROBADO', // Estado final
+        fecha_actualizacion: new Date()
       },
-      { where: { id, estado_solicitud: 'ACEPTADO_POR_JUGADOR' } } // Solo permite aprobación si ya fue aceptado por el jugador
-  );
+      { where: { id } }
+    );
+
+    // Cambiar el club del jugador
+    await Jugador.update(
+      { club_id: traspaso.club_destino_id }, // Actualizar club al de destino
+      { where: { id: traspaso.jugador_id } }
+    );
+
+    return true; // Indicar éxito
+  } catch (error) {
+    console.error("Error en aprobarTraspasoPorClub:", error);
+    throw error;
+  }
 };
 
 // Rechazar traspaso por el jugador
