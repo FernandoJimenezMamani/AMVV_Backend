@@ -25,6 +25,10 @@ const Persona = sequelize.define('Persona', {
     type: DataTypes.STRING(255),
     allowNull: true,
   },
+  genero: {  // Nuevo campo agregado
+    type: DataTypes.STRING(20),
+    allowNull: true,
+  },
   direccion: {
     type: DataTypes.STRING(255),
     allowNull: true,
@@ -56,6 +60,17 @@ Persona.associate = function(models) {
     foreignKey: 'persona_id',
     as: 'roles'  
   });
+
+  Persona.hasOne(models.Jugador, { 
+    foreignKey: 'id', 
+    as: 'jugadores' 
+  });
+
+  Persona.hasOne(models.PresidenteClub, { 
+    foreignKey: 'id', 
+    as: 'presidentes' 
+  });
 };
+
 
 module.exports = Persona;
