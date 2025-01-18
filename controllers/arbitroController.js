@@ -7,7 +7,21 @@ exports.getArbitros = async (req, res) => {
     } catch (error) {
       res.status(500).json({ message: 'Error al obtener árbitros', error: error.message });
     }
-  };
+};
+
+exports.getArbitroById = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const arbitro = await arbitroService.getArbitroById(id);
+    if (arbitro) {
+      res.status(200).json(arbitro);
+    } else {
+      res.status(404).json({ message: 'Persona no encontrada' });
+    }
+  } catch (err) {
+    res.status(500).json({ message: 'Error al obtener la persona', error: err.message });
+  }
+};
   
 exports.createArbitro = async (req, res) => {
   const { persona_id, activo } = req.body;

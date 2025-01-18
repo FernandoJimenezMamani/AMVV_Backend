@@ -23,6 +23,10 @@ const Lugar = sequelize.define('Lugar', {
     type: DataTypes.CHAR(1),
     allowNull: true,
   },
+  direccion: {
+    type: DataTypes.STRING(150),
+    allowNull: true,
+  },
 }, {
   tableName: 'Lugar',
   timestamps: false,

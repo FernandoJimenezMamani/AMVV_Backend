@@ -1,10 +1,12 @@
-const { Persona, Usuario, ImagenPersona, PersonaRol, Rol ,Sequelize} = require('../models');
+const { Persona, Usuario, ImagenPersona, PersonaRol, Rol ,Sequelize, Arbitro,PresidenteClub ,Jugador,Club} = require('../models');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const sequelize = require('../config/sequelize');
 const { uploadFile } = require('../utils/subirImagen');
 const { ref, deleteObject } = require('firebase/storage');
 const { storage } = require('../config/firebase');
+const roleNames = require('../constants/roles')
+const { Op } = require('sequelize');
 
 exports.getAllPersonas = async () => {
   const personas = await sequelize.query(`
@@ -19,7 +21,8 @@ exports.getAllPersonas = async () => {
         Persona.fecha_actualizacion,
         Persona.eliminado,
         ImagenPersona.persona_imagen,
-        Usuario.correo
+        Usuario.correo,
+		    STRING_AGG(Rol.nombre, ', ') AS roles
       FROM
         Persona
       LEFT JOIN
@@ -29,9 +32,21 @@ exports.getAllPersonas = async () => {
       LEFT JOIN
         Usuario
       ON
-        Persona.user_id = Usuario.id
-      WHERE
-        Persona.eliminado = 'N'
+        Persona.id = Usuario.id
+      iNNER JOIN PersonaRol ON Persona.id = PersonaRol.persona_id
+      INNER JOIN Rol ON Rol.id= PersonaRol.rol_id AND PersonaRol.eliminado = 0
+      LEFT JOIN PresidenteClub ON PresidenteClub.id = Persona.id
+      GROUP BY Persona.id,
+              Persona.nombre,
+              Persona.apellido,
+              Persona.fecha_nacimiento,
+              Persona.ci,
+              Persona.direccion,
+              Persona.fecha_registro,
+              Persona.fecha_actualizacion,
+              Persona.eliminado,
+              ImagenPersona.persona_imagen,
+              Usuario.correo;
   `, { type: sequelize.QueryTypes.SELECT });
   return personas;
 };
@@ -49,10 +64,32 @@ exports.emailExists = async (correo) => {
   }
 };
 
+exports.emailExistsUpdate = async (correo, personaId = null) => {
+  try {
+    const whereClause = {
+      correo
+    };
+
+    if (personaId) {
+      whereClause.id = { [Sequelize.Op.ne]: personaId }; // Excluir el usuario actual
+    }
+
+    const usuario = await Usuario.findOne({
+      where: whereClause
+    });
+
+    return !!usuario; // Retorna true si encuentra otro usuario con el mismo correo
+  } catch (error) {
+    console.error('Error al verificar si el correo existe:', error);
+    throw new Error('Error al verificar si el correo existe');
+  }
+};
+
+
 exports.getPersonaById = async (id) => {
   try {
     const personas = await sequelize.query(`
-      SELECT
+       SELECT
         Persona.id,
         Persona.nombre,
         Persona.apellido,
@@ -64,7 +101,10 @@ exports.getPersonaById = async (id) => {
         Persona.fecha_actualizacion,
         Persona.eliminado,
         ImagenPersona.persona_imagen,
-        Usuario.correo
+        Usuario.correo,
+        STRING_AGG(Rol.nombre, ', ') AS roles,
+        Jugador.club_id as 'club_jugador',
+        PresidenteClub.club_id as 'club_presidente'
       FROM
         Persona
       LEFT JOIN
@@ -74,9 +114,27 @@ exports.getPersonaById = async (id) => {
       LEFT JOIN
         Usuario
       ON
-        Persona.user_id = Usuario.id
+        Persona.id = Usuario.id
+      iNNER JOIN PersonaRol ON Persona.id = PersonaRol.persona_id
+      INNER JOIN Rol ON Rol.id= PersonaRol.rol_id AND PersonaRol.eliminado = 0
+      LEFT JOIN Jugador ON Persona.id =Jugador.jugador_id AND Jugador.activo = 1
+      LEFT JOIN PresidenteClub ON Persona.id = PresidenteClub.presidente_id AND PresidenteClub.activo = 1
       WHERE
         Persona.id = :id AND Persona.eliminado = 'N'
+		GROUP BY Persona.id,
+            Persona.nombre,
+            Persona.apellido,
+            Persona.fecha_nacimiento,
+            Persona.ci,
+			Persona.genero,
+            Persona.direccion,
+            Persona.fecha_registro,
+            Persona.fecha_actualizacion,
+            Persona.eliminado,
+            ImagenPersona.persona_imagen,
+            Usuario.correo,
+            Jugador.club_id,
+            PresidenteClub.club_id;
     `, {
       replacements: { id },
       type: sequelize.QueryTypes.SELECT
@@ -91,38 +149,154 @@ exports.getPersonaById = async (id) => {
   }
 };
 
-exports.createPersona = async (data, imagen, hashedPassword) => {
+const getRolId = async (roleName) =>{
+  const roleObtained = await Rol.findOne({
+    where : {nombre : roleName}
+  });
+  if (!roleObtained) {
+    throw new Error(`El rol "${roleName}" no se encontró en la base de datos.`);
+  }
+  return roleObtained.id
+}
+
+// Función para verificar roles duplicados
+exports.checkDuplicateRoles = async (roles) => {
+  if (roles.includes(roleNames.Tesorero)) {
+    const existingTesorero = await PersonaRol.findOne({
+      where: { rol_id: await getRolId(roleNames.Tesorero), eliminado: 0 }
+    });
+    if (existingTesorero) {
+      throw new Error('Ya existe un usuario con el rol de Tesorero activo.');
+    }
+  }
+
+  if (roles.includes(roleNames.PresidenteArbitro)) {
+    const existingPresidenteArbitro = await PersonaRol.findOne({
+      where: { rol_id: await getRolId(roleNames.PresidenteArbitro), eliminado: 0 }
+    });
+    if (existingPresidenteArbitro) {
+      throw new Error('Ya existe un usuario con el rol de Presidente de Árbitros activo.');
+    }
+  }
+};
+
+exports.createPersonaWithRoles = async (data, imagen, hashedPassword, roles, clubes) => {
   const { nombre, apellido, fecha_nacimiento, ci, direccion, genero, correo } = data;
+  const { club_jugador_id, club_presidente_id, club_delegado_id } = clubes;
+  console.log(roles, 'este destes')
   
   const transaction = await Persona.sequelize.transaction();
   
   try {
+    // Crear la nueva persona
     const nuevaPersona = await Persona.create({
       nombre,
       apellido,
       fecha_nacimiento,
       ci,
       direccion,
-      genero,  // Asegurarse de incluir este campo
+      genero,
       fecha_registro: Sequelize.fn('GETDATE'),
       fecha_actualizacion: Sequelize.fn('GETDATE'),
       eliminado: 'N'
     }, { transaction });
 
+    // Crear usuario vinculado a la persona
     const nuevoUsuario = await Usuario.create({
       id: nuevaPersona.id,
       contraseña: hashedPassword,
       correo
     }, { transaction });
 
+    // Asignar el user_id a la persona recién creada
     nuevaPersona.user_id = nuevoUsuario.id;
     await nuevaPersona.save({ transaction });
 
-    await PersonaRol.create({
-      persona_id: nuevaPersona.id,
-      rol_id: 8
-    }, { transaction });
+    for (const rol of roles) {
+      switch (rol) {
+        case roleNames.Jugador:
+          await PersonaRol.create({
+            persona_id: nuevaPersona.id,
+            rol_id: await  getRolId(roleNames.Jugador),
+            eliminado: 0
+          }, { transaction });
+    
+          await Jugador.create({
+            jugador_id: nuevaPersona.id,
+            club_id: club_jugador_id,
+            activo: 1
+          }, { transaction });
+        break;
+    
+        case roleNames.PresidenteClub:
+          await PersonaRol.create({
+            persona_id: nuevaPersona.id,
+            rol_id: await  getRolId(roleNames.PresidenteClub),
+            eliminado: 0
+          }, { transaction });
+    
+          await PresidenteClub.create({
+            presidente_id: nuevaPersona.id,
+            club_id: club_presidente_id,
+            activo: 1,
+            delegado: 'N'
+          }, { transaction });
+    
+          await Club.update(
+            { presidente_asignado: 'S' },
+            { where: { id: club_presidente_id }, transaction }
+          );
+        break;
 
+        case roleNames.DelegadoClub:
+            await PersonaRol.create({
+              persona_id: nuevaPersona.id,
+              rol_id: await getRolId(roleNames.DelegadoClub),
+              eliminado: 0
+            }, { transaction });
+      
+            await PresidenteClub.create({
+              presidente_id: nuevaPersona.id,
+              club_id: club_delegado_id,
+              activo: 1,
+              delegado: 'S'        
+            }, { transaction });
+        break;
+    
+        case roleNames.Arbitro:
+          await PersonaRol.create({
+            persona_id: nuevaPersona.id,
+            rol_id: await  getRolId(roleNames.Arbitro),
+            eliminado: 0
+          }, { transaction });
+    
+          await Arbitro.create({
+            id: nuevaPersona.id,
+            activo: 1
+          }, { transaction });
+        break;
+
+        case roleNames.PresidenteArbitro:
+            await PersonaRol.create({
+              persona_id: nuevaPersona.id,
+              rol_id: await  getRolId(roleNames.PresidenteArbitro),
+              eliminado: 0
+            }, { transaction });
+        break;
+
+        case roleNames.Tesorero:
+            await PersonaRol.create({
+              persona_id: nuevaPersona.id,
+              rol_id: await  getRolId(roleNames.Tesorero),
+              eliminado: 0
+            }, { transaction });
+        break;
+        default:
+          console.warn(`Rol desconocido: ${rol}`);
+      }
+    }
+    
+    // Subir y guardar imagen de la persona (si existe)
     if (imagen) {
       await ImagenPersona.create({
         persona_id: nuevaPersona.id,
@@ -130,10 +304,293 @@ exports.createPersona = async (data, imagen, hashedPassword) => {
       }, { transaction });
     }
 
+    // Confirmar la transacción
     await transaction.commit();
     return nuevaPersona;
+
   } catch (error) {
+    // Si ocurre algún error, revertir todos los cambios
     await transaction.rollback();
+    console.error('Error durante la creación de persona con roles:', error);
+    throw error;
+  }
+};
+
+exports.updatePersonaWithRoles = async (id, data, imagen, roles, clubes) => {
+  const { nombre, apellido, fecha_nacimiento, ci, direccion, genero, correo } = data;
+  const { club_jugador_id, club_presidente_id ,club_delegado_id} = clubes;
+  const transaction = await Persona.sequelize.transaction();
+
+  try {
+    await Persona.update({
+      nombre,
+      apellido,
+      fecha_nacimiento,
+      ci,
+      direccion,
+      genero,
+      fecha_actualizacion: Sequelize.fn('GETDATE')
+    }, {
+      where: { id },
+      transaction
+    });
+
+    await Usuario.update({ correo }, { where: { id }, transaction });
+    const rolesActuales = await PersonaRol.findAll({
+      where: { persona_id: id },
+      transaction
+    });
+    console.log('Roles actuales obtenidos:', rolesActuales);
+
+    const rolesActualesIDs = rolesActuales.map((r) => r.rol_id);
+    const rolesIDs = await Promise.all(roles.map(async (role) => await getRolId(role)));
+
+    const jugadorRolId = await getRolId(roleNames.Jugador);
+    const PresidenteClubId = await getRolId(roleNames.PresidenteClub);
+    const ArbitroId = await getRolId(roleNames.Arbitro);
+    const DelegadoClubId = await getRolId(roleNames.DelegadoClub);
+    const PresidenteArbitroId = await getRolId(roleNames.PresidenteArbitro);
+    const TesoreroId = await getRolId(roleNames.Tesorero);
+    for (const rol of roles) {
+      const rolId = await getRolId(rol); // Obtener ID del rol actual
+      const rolExistente = await PersonaRol.findOne({
+        where: { persona_id: id, rol_id: rolId },
+        transaction,
+      });
+
+      console.log(`Evaluando rol: ${rol}, ID del rol: ${rolId}`, rolExistente);
+
+      if (rolExistente) {
+        if (rolExistente.eliminado === 1) {
+          console.log(`Reactivando rol ${rol} para persona con ID: ${id}`);
+          await rolExistente.update({ eliminado: 0 }, { transaction });
+        } else {
+          console.log(`El rol ${rol} ya está activo para persona con ID: ${id}`);
+        }
+      } else {
+        console.log(`Creando nueva relación para el rol ${rol} con ID: ${rolId}`);
+        await PersonaRol.create({ persona_id: id, rol_id: rolId, eliminado: 0 }, { transaction });
+      }
+      switch (rol) {
+        case roleNames.Jugador:
+          await Jugador.update(
+            { activo: 0 },
+            {
+              where: {
+                jugador_id: id,
+                club_id: { [Op.ne]: club_jugador_id }, // Todos los clubes excepto el actual
+              },
+              transaction,
+            }
+          );
+            const jugadorExistente = await Jugador.findOne({
+              where: { jugador_id: id, club_id: club_jugador_id },
+              transaction,
+            });
+            console.log(`Validando jugador existente para ID: ${id}, Club ID: ${club_jugador_id}`, jugadorExistente);
+            if (jugadorExistente) {
+              console.log(`Reactivando jugador existente para ID: ${id}, Club ID: ${club_jugador_id}`);
+              await jugadorExistente.update({ activo: 1 }, { transaction });
+            } else {
+              console.log(`Creando nueva relación de jugador para ID: ${id}, Club ID: ${club_jugador_id}`);
+              await Jugador.create({
+                jugador_id: id,
+                club_id: club_jugador_id,
+                activo: 1,
+              }, { transaction });
+            }
+            await PersonaRol.upsert({ persona_id: id, rol_id: jugadorRolId, eliminado: 0 }, { transaction });
+        break;
+
+        case roleNames.PresidenteClub:
+            const presidenteExistente = await PresidenteClub.findOne({
+              where: { presidente_id: id, club_id: club_presidente_id },
+              transaction,
+            });
+
+            console.log(`Validando presidente existente para ID: ${id}, Club ID: ${club_presidente_id}`, presidenteExistente);
+            if (presidenteExistente) {
+              console.log(`Reactivando presidente existente para ID: ${id}, Club ID: ${club_presidente_id}`);
+              await presidenteExistente.update({ activo: 1, delegado: 'N' }, { transaction });
+            } else {
+              console.log(`Creando nueva relación de presidente para ID: ${id}, Club ID: ${club_presidente_id}`);
+              await PresidenteClub.create({
+                presidente_id: id,
+                club_id: club_presidente_id,
+                activo: 1,
+                delegado: 'N',
+              }, { transaction });
+            }
+            await PersonaRol.upsert({ persona_id: id, rol_id: PresidenteClubId, eliminado: 0 }, { transaction });
+          break;
+
+          case roleNames.DelegadoClub:
+              const delegadoExistente = await PresidenteClub.findOne({
+                where: { presidente_id: id, club_id: club_delegado_id, delegado: 'S' },
+                transaction,
+              });
+  
+              if (delegadoExistente) {
+                console.log(`Reactivando delegado con ID: ${id}`);
+                await delegadoExistente.update({ activo: 1 }, { transaction });
+              } else {
+                console.log(`Creando relación para el rol de DelegadoClub con ID: ${id}`);
+                await PresidenteClub.create({
+                  presidente_id: id,
+                  club_id: club_delegado_id,
+                  activo: 1,
+                  delegado: 'S',
+                }, { transaction });
+              }
+              await PersonaRol.upsert({ persona_id: id, rol_id: DelegadoClubId, eliminado: 0 }, { transaction });
+          break;
+
+        case roleNames.Arbitro: // Árbitro
+            const arbitroExistente = await PersonaRol.findOne({
+              where: { persona_id: id, rol_id: ArbitroId },
+              transaction,
+            });
+            if (arbitroExistente) {
+              if (arbitroExistente.eliminado === 1) {
+                console.log(`Reactivando relación de Árbitro para persona con ID: ${id}`);
+                await arbitroExistente.update({ eliminado: 0 }, { transaction });
+              } else {
+                console.log(`El rol de Árbitro ya está activo para persona con ID: ${id}`);
+              }
+            } else {
+              console.log(`Creando nueva relación para el rol de Árbitro con ID: ${id}`);
+              await PersonaRol.create({ persona_id: id, rol_id: ArbitroId, eliminado: 0 }, { transaction });
+            }
+          
+            console.log(`Actualizando/Insertando registro en la tabla Árbitro para persona con ID: ${id}`);
+            await Arbitro.upsert({ id, activo: 1 }, { transaction });
+            break;
+            case roleNames.Tesorero:
+              const tesoreroExistente = await PersonaRol.findOne({
+                where: { persona_id: id, rol_id: TesoreroId },
+                transaction,
+              });
+            
+              if (tesoreroExistente) {
+                if (tesoreroExistente.eliminado === 1) {
+                  console.log(`Reactivando relación de Tesorero para persona con ID: ${id}`);
+                  await tesoreroExistente.update({ eliminado: 0 }, { transaction });
+                } else {
+                  console.log(`El rol de Tesorero ya está activo para persona con ID: ${id}`);
+                }
+              } else {
+                console.log(`Creando nueva relación para el rol de Tesorero con ID: ${id}`);
+                await PersonaRol.create({ persona_id: id, rol_id: TesoreroId, eliminado: 0 }, { transaction });
+              }
+              break;
+
+              case roleNames.PresidenteArbitro:
+                const presidenteArbitroExistente = await PersonaRol.findOne({
+                  where: { persona_id: id, rol_id: PresidenteArbitroId },
+                  transaction,
+                });
+              
+                if (presidenteArbitroExistente) {
+                  if (presidenteArbitroExistente.eliminado === 1) {
+                    console.log(`Reactivando relación de Presidente de Árbitros para persona con ID: ${id}`);
+                    await presidenteArbitroExistente.update({ eliminado: 0 }, { transaction });
+                  } else {
+                    console.log(`El rol de Presidente de Árbitros ya está activo para persona con ID: ${id}`);
+                  }
+                } else {
+                  console.log(`Creando nueva relación para el rol de Presidente de Árbitros con ID: ${id}`);
+                  await PersonaRol.create({ persona_id: id, rol_id: PresidenteArbitroId, eliminado: 0 }, { transaction });
+                }
+                break;
+        default:
+          console.warn(`Rol desconocido con ID: ${rol}`);
+      }
+    }
+
+    console.log('Eliminando roles que ya no están en la nueva lista...');
+    for (const rol of rolesActualesIDs) {
+      console.log(`Procesando rol actual: ${rol}`);
+    
+      if (!rolesIDs.includes(rol)) {
+        console.log(`El rol ${rol} no está en la nueva lista de roles. Marcando como eliminado...`);
+    
+        // Actualizar PersonaRol para marcar como eliminado
+        await PersonaRol.update(
+          { eliminado: 1 }, // Marcado lógico de eliminación
+          { where: { persona_id: id, rol_id: rol }, transaction }
+        );
+    
+        switch (rol) {
+          case await getRolId(roleNames.Jugador):
+            console.log(`Marcando relación de Jugador como eliminada para persona con ID: ${id}`);
+            await Jugador.update(
+              { activo: 0 }, // Marcado lógico para el rol de Jugador
+              { where: { jugador_id: id }, transaction }
+            );
+            break;
+    
+          case await getRolId(roleNames.PresidenteClub):
+            console.log(`Marcando relación de PresidenteClub como eliminada para persona con ID: ${id}`);
+            await PresidenteClub.update(
+              { activo: 0 }, // Marcado lógico para el rol de PresidenteClub
+              { where: { presidente_id: id, delegado: 'N' }, transaction }
+            );
+            console.log(`Actualizando presidente_asignado en Club para ID de club: ${club_presidente_id}`);
+            await Club.update(
+              { presidente_asignado: 'N' },
+              { where: { id: club_presidente_id }, transaction }
+            );
+            break;
+    
+          case await getRolId(roleNames.DelegadoClub):
+            console.log(`Marcando relación de DelegadoClub como eliminada para persona con ID: ${id}`);
+            await PresidenteClub.update(
+              { activo: 0 }, // Marcado lógico para DelegadoClub
+              { where: { presidente_id: id, delegado: 'S' }, transaction }
+            );
+            console.log(`Actualizando presidente_asignado en Club para ID de club: ${club_presidente_id}`);
+            await Club.update(
+              { presidente_asignado: 'N' },
+              { where: { id: club_delegado_id }, transaction }
+            );
+            break;
+    
+          case await getRolId(roleNames.Arbitro):
+            console.log(`Marcando relación de Árbitro como eliminada para persona con ID: ${id}`);
+            await Arbitro.update(
+              { activo: 0 }, // Marcado lógico para Árbitro
+              { where: { id }, transaction }
+            );
+            break;
+    
+          default:
+            console.warn(`Rol desconocido no procesado: ${rol}`);
+        }
+      } else {
+        console.log(`El rol ${rol} está presente en la nueva lista de roles. No se elimina.`);
+      }
+    }    
+
+    // 5. Actualizar imagen si existe
+    if (imagen) {
+      console.log('Actualizando imagen de la persona...');
+      await ImagenPersona.upsert(
+        { persona_id: id, persona_imagen: imagen },
+        { transaction }
+      );
+    }
+
+    // 6. Confirmar transacción
+    console.log('Confirmando transacción...');
+    await transaction.commit();
+    console.log('Transacción confirmada exitosamente.');
+    return { message: 'Persona actualizada con éxito' };
+
+  } catch (error) {
+    // Revertir cambios si algo falla
+    console.log('Ocurrió un error. Realizando rollback...');
+    await transaction.rollback();
+    console.error('Error durante la actualización de persona:', error);
     throw error;
   }
 };
@@ -215,6 +672,13 @@ exports.updatePersonaImage = async (id, imagen) => {
 exports.deletePersona = async (id, user_id) => {
   return await Persona.update(
     { eliminado: 'S', fecha_actualizacion: Sequelize.fn('GETDATE'), user_id },
+    { where: { id } }
+  );
+};
+
+exports.activatePersona = async (id, user_id) => {
+  return await Persona.update(
+    { eliminado: 'N', fecha_actualizacion: Sequelize.fn('GETDATE'), user_id },
     { where: { id } }
   );
 };

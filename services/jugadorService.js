@@ -1,4 +1,3 @@
-//const { Jugador, Persona, Club, PersonaRol, ImagenPersona } = require('../models');
 const { Jugador, Persona, Equipo, Categoria, PersonaRol, JugadorEquipo } = require('../models');
 const { sequelize } = require('../models');
 
@@ -8,6 +7,7 @@ exports.getAllJugadores = async () => {
     const jugadores = await sequelize.query(
       `SELECT 
         j.id AS jugador_id,
+        j.jugador_id AS persona_id ,
         p.nombre AS nombre_persona,
         p.apellido AS apellido_persona,
         p.ci AS ci_persona,
@@ -15,17 +15,18 @@ exports.getAllJugadores = async () => {
         c.id AS club_id,
         c.nombre AS nombre_club,
         c.descripcion AS descripcion_club,
-        ip.persona_imagen AS imagen_persona
+        im.persona_imagen AS imagen_persona,
+		    p.eliminado 
       FROM 
         Jugador j
       JOIN 
-        Persona p ON j.id = p.id
+        Persona p ON j.jugador_id = p.id
       LEFT JOIN 
         Club c ON j.club_id = c.id
       LEFT JOIN 
-        ImagenPersona ip ON p.id = ip.persona_id
-      WHERE 
-        p.eliminado = 'N'`, // Filtramos solo jugadores no eliminados
+        ImagenPersona im ON p.id = im.persona_id
+        WHERE j.activo = 1
+      `,
       {
         type: sequelize.QueryTypes.SELECT
       }
@@ -38,6 +39,147 @@ exports.getAllJugadores = async () => {
   }
 };
 
+exports.getJugadorById = async (id) => {
+  try {
+    const jugadores = await sequelize.query(`
+       SELECT
+        Persona.id,
+        Persona.nombre,
+        Persona.apellido,
+        Persona.fecha_nacimiento,
+        Persona.ci,
+        Persona.genero,
+        Persona.direccion,
+        Persona.fecha_registro,
+        Persona.fecha_actualizacion,
+        Persona.eliminado,
+        ImagenPersona.persona_imagen,
+        Usuario.correo,
+        Jugador.club_id as 'club_jugador',
+        STRING_AGG(Rol.nombre, ', ') AS roles,
+		    PresidenteClub.club_id as 'club_presidente'
+      FROM
+        Persona
+      LEFT JOIN
+        ImagenPersona
+      ON
+        Persona.id = ImagenPersona.persona_id
+      LEFT JOIN
+        Usuario
+      ON
+        Persona.id = Usuario.id
+	 iNNER JOIN PersonaRol ON Persona.id = PersonaRol.persona_id
+	 INNER JOIN Rol ON Rol.id= PersonaRol.rol_id AND PersonaRol.eliminado = 0
+	 LEFT JOIN Jugador ON Persona.id =Jugador.jugador_id AND Jugador.activo = 1
+   LEFT JOIN PresidenteClub ON Persona.id = PresidenteClub.presidente_id AND PresidenteClub.activo = 1
+      WHERE
+        Persona.id = :id AND Persona.eliminado = 'N'
+		GROUP BY Persona.id,
+            Persona.nombre,
+            Persona.apellido,
+            Persona.fecha_nacimiento,
+            Persona.ci,
+			Persona.genero,
+            Persona.direccion,
+            Persona.fecha_registro,
+            Persona.fecha_actualizacion,
+            Persona.eliminado,
+            ImagenPersona.persona_imagen,
+            Usuario.correo,
+			Jugador.club_id,
+			PresidenteClub.club_id;
+    `, {
+      replacements: { id },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    const jugador = jugadores[0];
+
+    return jugador;
+  } catch (error) {
+    console.error('Error al obtener persona:', error);
+    throw new Error('Error al obtener persona');
+  }
+};
+
+exports.createNewJugador = async (data, imagen, hashedPassword, club_jugador_id) => {
+  const { nombre, apellido, fecha_nacimiento, ci, direccion, genero, correo } = data;
+
+  const transaction = await Persona.sequelize.transaction();
+
+  try {
+    // Crear la nueva persona
+    const nuevaPersona = await Persona.create(
+      {
+        nombre,
+        apellido,
+        fecha_nacimiento,
+        ci,
+        direccion,
+        genero,
+        fecha_registro: Sequelize.fn('GETDATE'),
+        fecha_actualizacion: Sequelize.fn('GETDATE'),
+        eliminado: 'N',
+      },
+      { transaction }
+    );
+
+    // Crear usuario vinculado a la persona
+    const nuevoUsuario = await Usuario.create(
+      {
+        id: nuevaPersona.id,
+        contraseña: hashedPassword,
+        correo,
+      },
+      { transaction }
+    );
+
+    // Asignar el user_id a la persona recién creada
+    nuevaPersona.user_id = nuevoUsuario.id;
+    await nuevaPersona.save({ transaction });
+
+    // Asignar rol de Jugador
+    const jugadorRolId = await getRolId(roleNames.Jugador);
+    await PersonaRol.create(
+      {
+        persona_id: nuevaPersona.id,
+        rol_id: jugadorRolId,
+        eliminado: 0,
+      },
+      { transaction }
+    );
+
+    // Crear relación del jugador con el club
+    await Jugador.create(
+      {
+        jugador_id: nuevaPersona.id,
+        club_id: club_jugador_id,
+        activo: 1,
+      },
+      { transaction }
+    );
+
+    // Subir y guardar imagen de la persona (si existe)
+    if (imagen) {
+      await ImagenPersona.create(
+        {
+          persona_id: nuevaPersona.id,
+          persona_imagen: imagen,
+        },
+        { transaction }
+      );
+    }
+
+    // Confirmar la transacción
+    await transaction.commit();
+    return nuevaPersona;
+  } catch (error) {
+    // Si ocurre algún error, revertir todos los cambios
+    await transaction.rollback();
+    console.error('Error durante la creación de jugador:', error);
+    throw error;
+  }
+};
 
 exports.createJugador = async (persona_id, club_id) => {
   const transaction = await Jugador.sequelize.transaction();

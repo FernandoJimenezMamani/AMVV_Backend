@@ -4,6 +4,7 @@ const clubController = require('../controllers/clubController');
 const { upload } = require('../config/multer');
 
 router.get('/get_club', clubController.getClubs);
+router.get('/get_clubWithoutPresident', clubController.getClubsWithNoPresident);
 router.get('/get_club/:id', clubController.getClubById);
 router.get('/get_club_teams/:id', clubController.getClubTeams);
 router.post('/post_club', upload.single('image'), clubController.createClub);

@@ -4,6 +4,8 @@ const { Usuario, Persona, Rol, ImagenPersona, Jugador, PresidenteClub, Club } = 
 require('dotenv').config();
 
 exports.login = async (correo, contraseña) => {
+  console.log(contraseña, correo);
+
   const usuario = await Usuario.findOne({
     where: { correo },
     include: [
@@ -20,31 +22,37 @@ exports.login = async (correo, contraseña) => {
           },
           {
             model: ImagenPersona,
-            as: 'imagenes', 
+            as: 'imagenes',
             attributes: ['persona_imagen'],
           },
           {
             model: Jugador,
-            as: 'jugador',
+            as: 'jugador', // Plural según la nueva relación
+            attributes: ['id', 'club_id', 'activo'], // Incluye campos adicionales
+            where: { activo: 1 }, // Solo jugadores activos
+            required: false, // Permite que la relación sea opcional
             include: [
               {
                 model: Club,
                 as: 'club',
-                attributes: ['id', 'nombre']
-              }
-            ]
+                attributes: ['id', 'nombre'],
+              },
+            ],
           },
           {
             model: PresidenteClub,
-            as: 'presidente',
+            as: 'presidente', // Plural según la nueva relación
+            attributes: ['id', 'club_id', 'activo', 'delegado'], // Incluye campos adicionales
+            where: { activo: 1 }, // Solo presidentes activos
+            required: false, // Permite que la relación sea opcional
             include: [
               {
                 model: Club,
                 as: 'club',
-                attributes: ['id', 'nombre']
-              }
-            ]
-          }
+                attributes: ['id', 'nombre'],
+              },
+            ],
+          },
         ],
       },
     ],
@@ -55,6 +63,7 @@ exports.login = async (correo, contraseña) => {
   }
 
   const isPasswordMatch = await bcrypt.compare(contraseña, usuario.contraseña);
+
   if (!isPasswordMatch) {
     throw new Error('Correo o contraseña incorrectos');
   }
@@ -62,11 +71,18 @@ exports.login = async (correo, contraseña) => {
   const roles = usuario.persona.roles.map((rol) => rol.nombre);
   const imagen = usuario.persona.imagenes.length > 0 ? usuario.persona.imagenes[0].persona_imagen : null;
 
-  // Obtener datos del club donde es jugador (si tiene rol de jugador)
-  const clubJugador = usuario.persona.jugador ? usuario.persona.jugador.club : null;
+  // Obtener clubes donde la persona es jugador
+  const clubesJugador = usuario.persona.jugadores?.map((jugador) => ({
+    id: jugador.club?.id,
+    nombre: jugador.club?.nombre,
+  })) || [];
 
-  // Obtener datos del club donde es presidente (si tiene rol de presidente)
-  const clubPresidente = usuario.persona.presidente ? usuario.persona.presidente.club : null;
+  // Obtener clubes donde la persona es presidente o delegado
+  const clubesPresidente = usuario.persona.presidenteClubes?.map((presidente) => ({
+    id: presidente.club?.id,
+    nombre: presidente.club?.nombre,
+    delegado: presidente.delegado === 'S', // Identifica si es delegado
+  })) || [];
 
   const payload = {
     id: usuario.id,
@@ -78,8 +94,8 @@ exports.login = async (correo, contraseña) => {
     direccion: usuario.persona.direccion,
     imagen: imagen,
     roles: roles,
-    clubJugador: clubJugador ? { id: clubJugador.id, nombre: clubJugador.nombre } : null,
-    clubPresidente: clubPresidente ? { id: clubPresidente.id, nombre: clubPresidente.nombre } : null,
+    clubesJugador: clubesJugador.length > 0 ? clubesJugador : null,
+    clubesPresidente: clubesPresidente.length > 0 ? clubesPresidente : null,
   };
 
   const token = jwt.sign(payload, process.env.JWT_SECRET, {
@@ -88,6 +104,7 @@ exports.login = async (correo, contraseña) => {
 
   return token;
 };
+
 
 exports.changePassword = async (userId, currentPassword, newPassword) => {
   const usuario = await Usuario.findByPk(userId);

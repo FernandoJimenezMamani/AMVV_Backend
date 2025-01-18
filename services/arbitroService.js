@@ -4,21 +4,34 @@ const sequelize = require('../config/sequelize');
 exports.getArbitros = async () => {
   try {
     const arbitros = await sequelize.query(`
-      SELECT 
-        p.id,
-        p.nombre,
-        p.apellido,
-        p.ci,
-        p.direccion,
-        p.fecha_nacimiento,
-        ip.persona_imagen,
-        r.nombre AS rol_nombre
-      FROM Persona p
-      INNER JOIN PersonaRol pr ON p.id = pr.persona_id
-      INNER JOIN Rol r ON pr.rol_id = r.id
-      LEFT JOIN ImagenPersona ip ON p.id = ip.persona_id
-      WHERE pr.rol_id = 7
-      AND p.eliminado = 'N'
+     SELECT
+        Persona.id,
+        Persona.nombre,
+        Persona.apellido,
+        Persona.fecha_nacimiento,
+        Persona.ci,
+        Persona.direccion,
+        Persona.fecha_registro,
+        Persona.fecha_actualizacion,
+        Persona.eliminado,
+        ImagenPersona.persona_imagen,
+        Usuario.correo,
+		Arbitro.activo
+      FROM
+        Persona
+      LEFT JOIN
+        ImagenPersona
+      ON
+        Persona.id = ImagenPersona.persona_id
+      LEFT JOIN
+        Usuario
+      ON
+        Persona.id = Usuario.id
+      iNNER JOIN PersonaRol ON Persona.id = PersonaRol.persona_id
+      INNER JOIN Rol ON Rol.id= PersonaRol.rol_id AND PersonaRol.eliminado = 0 AND Rol.nombre = 'Arbitro'
+      LEFT JOIN Arbitro ON Arbitro.id = Persona.id
+	  WHERE 
+       Arbitro.activo = 1
     `, {
       type: sequelize.QueryTypes.SELECT
     });
@@ -29,6 +42,70 @@ exports.getArbitros = async () => {
     throw new Error('Error al obtener los árbitros');
   }
 };
+
+exports.getArbitroById = async (id) => {
+  try {
+    const arbitros = await sequelize.query(`
+       SELECT
+        Persona.id,
+        Persona.nombre,
+        Persona.apellido,
+        Persona.fecha_nacimiento,
+        Persona.ci,
+        Persona.genero,
+        Persona.direccion,
+        Persona.fecha_registro,
+        Persona.fecha_actualizacion,
+        Persona.eliminado,
+        ImagenPersona.persona_imagen,
+        Usuario.correo,
+        Jugador.club_id as 'club_jugador',
+        STRING_AGG(Rol.nombre, ', ') AS roles,
+        PresidenteClub.club_id as 'club_presidente'
+      FROM
+        Persona
+      LEFT JOIN
+        ImagenPersona
+      ON
+        Persona.id = ImagenPersona.persona_id
+      LEFT JOIN
+        Usuario
+      ON
+        Persona.id = Usuario.id
+   iNNER JOIN PersonaRol ON Persona.id = PersonaRol.persona_id
+   INNER JOIN Rol ON Rol.id= PersonaRol.rol_id AND PersonaRol.eliminado = 0
+   LEFT JOIN Jugador ON Persona.id =Jugador.jugador_id AND Jugador.activo = 1
+   LEFT JOIN PresidenteClub ON Persona.id = PresidenteClub.presidente_id AND PresidenteClub.activo = 1
+      WHERE
+        Persona.id = :id AND Persona.eliminado = 'N'
+    GROUP BY Persona.id,
+            Persona.nombre,
+            Persona.apellido,
+            Persona.fecha_nacimiento,
+            Persona.ci,
+      Persona.genero,
+            Persona.direccion,
+            Persona.fecha_registro,
+            Persona.fecha_actualizacion,
+            Persona.eliminado,
+            ImagenPersona.persona_imagen,
+            Usuario.correo,
+      Jugador.club_id,
+      PresidenteClub.club_id;
+    `, {
+      replacements: { id },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    const arbitro = arbitros[0];
+
+    return arbitro;
+  } catch (error) {
+    console.error('Error al obtener persona:', error);
+    throw new Error('Error al obtener persona');
+  }
+};
+
 exports.createArbitro = async (persona_id, activo) => {
   const transaction = await Arbitro.sequelize.transaction();
 

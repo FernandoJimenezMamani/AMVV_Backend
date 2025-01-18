@@ -1,6 +1,8 @@
-const { Lugar } = require('../models');
+const { Lugar, Sequelize } = require('../models');
+const sequelize = require('../config/sequelize');
 
-exports.createLugar = async (nombre, longitud, latitud) => {
+
+exports.createLugar = async (nombre, longitud, latitud, direccion) => {
   let transaction;
 
   try {
@@ -23,7 +25,8 @@ exports.createLugar = async (nombre, longitud, latitud) => {
       nombre,
       longitud,
       latitud,
-      eliminado: '0'
+      eliminado: '0',
+      direccion
     }, { transaction });
 
     // Confirmar la transacción
@@ -46,7 +49,7 @@ exports.createLugar = async (nombre, longitud, latitud) => {
 exports.getAllLugares = async () => {
   return await Lugar.findAll({
     where: { eliminado: '0' },
-    attributes: ['id', 'nombre', 'longitud', 'latitud', 'eliminado']
+    attributes: ['id', 'nombre', 'longitud', 'latitud', 'eliminado','direccion']
   });
 };
 
@@ -56,15 +59,15 @@ exports.getLugarById = async (id) => {
       id: id,
       eliminado: '0'
     },
-    attributes: ['id', 'nombre', 'longitud', 'latitud', 'eliminado']
+    attributes: ['id', 'nombre', 'longitud', 'latitud', 'eliminado', 'direccion']
   });
 
   return lugar;
 };
 
-exports.updateLugar = async (id, nombre, longitud, latitud) => {
+exports.updateLugar = async (id, nombre, longitud, latitud, direccion) => {
   return await Lugar.update(
-    { nombre, longitud, latitud },
+    { nombre, longitud, latitud , direccion},
     { where: { id, eliminado: '0' } }
   );
 };

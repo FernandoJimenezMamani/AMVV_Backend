@@ -9,6 +9,15 @@ exports.getClubs = async (req, res) => {
   }
 };
 
+exports.getClubsWithNoPresident = async (req, res) => {
+  try {
+    const clubs = await clubService.getClubsWithNoPresident();
+    res.status(200).json(clubs);
+  } catch (err) {
+    res.status(500).json({ message: 'Error al obtener clubs', error: err.message });
+  }
+};
+
 exports.getClubById = async (req, res) => {
   const { id } = req.params;
   try {
@@ -71,6 +80,7 @@ exports.updateClubImage = async (req, res) => {
     await clubService.updateClubImage(id, imagen);
     res.status(200).json({ message: 'Imagen del club actualizada correctamente' });
   } catch (err) {
+    console.error('Error en controlador:', err);
     res.status(500).json({ message: 'Error al actualizar imagen del club', error: err.message });
   }
 };

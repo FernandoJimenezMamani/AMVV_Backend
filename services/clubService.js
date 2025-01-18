@@ -12,6 +12,7 @@ exports.getClubs = async () => {
         Club.descripcion,
         Club.eliminado,
         Club.user_id,
+        club.presidente_asignado,
         ImagenClub.club_imagen
       FROM
         Club
@@ -21,6 +22,28 @@ exports.getClubs = async () => {
         Club.id = ImagenClub.club_id
       WHERE
         Club.eliminado = 'N'
+  `, { type: sequelize.QueryTypes.SELECT });
+  return clubs;
+};
+
+exports.getClubsWithNoPresident = async () => {
+  const clubs = await sequelize.query(`
+    SELECT
+        Club.id,
+        Club.nombre,
+        Club.descripcion,
+        Club.eliminado,
+        Club.user_id,
+		club.presidente_asignado,
+        ImagenClub.club_imagen
+      FROM
+        Club
+      LEFT JOIN
+        ImagenClub
+      ON
+        Club.id = ImagenClub.club_id
+      WHERE
+        Club.eliminado = 'N' AND Club.presidente_asignado= 'N' 
   `, { type: sequelize.QueryTypes.SELECT });
   return clubs;
 };
@@ -182,7 +205,7 @@ exports.deleteClub = async (id, user_id) => {
 exports.updateClubImage = async (id, imagen) => {
   let transaction;
   try {
-    transaction = await Sequelize.transaction();
+    transaction = await sequelize.transaction();
 
     const currentImage = await ImagenClub.findOne({ where: { club_id: id } });
 

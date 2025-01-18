@@ -7,10 +7,15 @@ const Jugador = sequelize.define('Jugador', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true, 
+    autoIncrement: true,
+  },
+  jugador_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
     references: {
       model: Persona,
       key: 'id',
-    }
+    },
   },
   club_id: {
     type: DataTypes.INTEGER,
@@ -20,6 +25,10 @@ const Jugador = sequelize.define('Jugador', {
       key: 'id',
     }
   },
+  activo:{
+  type: DataTypes.TINYINT,
+  allowNull:true
+  },
 }, {
   tableName: 'Jugador',
   timestamps: false,
@@ -27,7 +36,7 @@ const Jugador = sequelize.define('Jugador', {
 
 
 Jugador.belongsTo(Persona, {foreignKey: 'id',as: 'persona'});
-Persona.hasOne(Jugador, { foreignKey: 'id',as: 'jugador'});
+Persona.hasMany(Jugador, { foreignKey: 'jugador_id',as: 'jugador'});
 
 
 Jugador.belongsTo(Club, {foreignKey: 'club_id',as: 'club'});

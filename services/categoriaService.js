@@ -4,7 +4,7 @@ const { Categoria, sequelize, Sequelize } = require('../models');
 exports.getCategorias = async () => {
   const categorias = await Categoria.findAll({
     where: { eliminado: 'N' },
-    attributes: ['id', 'nombre', 'genero', 'division', 'fecha_registro', 'fecha_actualizacion', 'eliminado', 'user_id'],
+    attributes: ['id', 'nombre', 'genero', 'division', 'edad_minima', 'edad_maxima', 'costo_traspaso', 'fecha_registro', 'fecha_actualizacion', 'eliminado', 'user_id'],
   });
   return categorias;
 };
@@ -22,7 +22,7 @@ exports.getCategoriaById = async (id) => {
   try {
     const categoria = await Categoria.findOne({
       where: { id, eliminado: 'N' },
-      attributes: ['id', 'nombre', 'genero', 'division', 'costo_traspaso', 'fecha_registro', 'fecha_actualizacion', 'eliminado', 'user_id'],
+      attributes: ['id', 'nombre', 'genero', 'division', 'edad_minima', 'edad_maxima', 'costo_traspaso', 'fecha_registro', 'fecha_actualizacion', 'eliminado', 'user_id'],
     });
     return categoria;
   } catch (error) {
