@@ -1,14 +1,14 @@
 const partidoService = require('../services/partidoService');
 
 exports.createPartido = async (req, res) => {
-  const { campeonato_id, equipo_local_id, equipo_visitante_id, fecha, lugar_id, resultado } = req.body;
+  const { campeonato_id, equipo_local_id, equipo_visitante_id, fecha, lugar_id, arbitros } = req.body;
 
   if (!campeonato_id || !equipo_local_id || !equipo_visitante_id || !fecha || !lugar_id) {
     return res.status(400).json({ message: 'Todos los campos requeridos deben ser proporcionados' });
   }
 
   try {
-    await partidoService.createPartido({ campeonato_id, equipo_local_id, equipo_visitante_id, fecha, lugar_id, resultado });
+    await partidoService.createPartido({ campeonato_id, equipo_local_id, equipo_visitante_id, fecha, lugar_id, arbitros });
     res.status(201).json({ message: 'Partido creado exitosamente' });
   } catch (err) {
     res.status(500).json({ message: 'Error al crear el Partido', error: err.message });

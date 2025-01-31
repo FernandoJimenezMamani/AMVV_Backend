@@ -1,4 +1,8 @@
-module.exports = (sequelize, DataTypes) => {
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/sequelize');
+const Persona = require('./Persona');
+const Partido = require('./Partido');
+
   const ArbitroPartido = sequelize.define('ArbitroPartido', {
     id: {
       type: DataTypes.INTEGER,
@@ -26,13 +30,12 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: false,
   });
 
-  ArbitroPartido.associate = (models) => {
-    ArbitroPartido.belongsTo(models.Persona, { foreignKey: 'arbitro_id', as: 'arbitro' });
-    models.Persona.hasMany(ArbitroPartido, { foreignKey: 'arbitro_id', as: 'partidosArbitrados' });
 
-    ArbitroPartido.belongsTo(models.Partido, { foreignKey: 'partido_id', as: 'partido' });
-    models.Partido.hasMany(ArbitroPartido, { foreignKey: 'partido_id', as: 'arbitros' });
-  };
+    ArbitroPartido.belongsTo(Persona, { foreignKey: 'arbitro_id', as: 'arbitro' });
+    Persona.hasMany(ArbitroPartido, { foreignKey: 'arbitro_id', as: 'partidosArbitrados' });
 
-  return ArbitroPartido;
-};
+    ArbitroPartido.belongsTo(Partido, { foreignKey: 'partido_id', as: 'partido' });
+    Partido.hasMany(ArbitroPartido, { foreignKey: 'partido_id', as: 'arbitros' });
+  
+  module.exports = ArbitroPartido;
+

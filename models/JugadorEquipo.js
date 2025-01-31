@@ -25,6 +25,10 @@ const JugadorEquipo = sequelize.define('JugadorEquipo', {
       key: 'id',
     }
   },
+  activo:{
+    type: DataTypes.TINYINT,
+    allowNull: false,
+  },
 }, {
   tableName: 'JugadorEquipo',
   timestamps: false,

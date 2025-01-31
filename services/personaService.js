@@ -6,7 +6,7 @@ const { uploadFile } = require('../utils/subirImagen');
 const { ref, deleteObject } = require('firebase/storage');
 const { storage } = require('../config/firebase');
 const roleNames = require('../constants/roles')
-const { Op } = require('sequelize');
+const { Op, where } = require('sequelize');
 
 exports.getAllPersonas = async () => {
   const personas = await sequelize.query(`
@@ -403,26 +403,65 @@ exports.updatePersonaWithRoles = async (id, data, imagen, roles, clubes) => {
         break;
 
         case roleNames.PresidenteClub:
-            const presidenteExistente = await PresidenteClub.findOne({
-              where: { presidente_id: id, club_id: club_presidente_id },
-              transaction,
-            });
+          // Desactivar relaciones anteriores del presidente en PresidenteClub
+          console.log(`Desactivando relaciones previas del presidente con ID: ${id}`);
+          await PresidenteClub.update(
+            { activo: 0 }, // Desactiva todas las relaciones previas
+            { where: { presidente_id: id }, transaction }
+          );
 
-            console.log(`Validando presidente existente para ID: ${id}, Club ID: ${club_presidente_id}`, presidenteExistente);
-            if (presidenteExistente) {
-              console.log(`Reactivando presidente existente para ID: ${id}, Club ID: ${club_presidente_id}`);
-              await presidenteExistente.update({ activo: 1, delegado: 'N' }, { transaction });
-            } else {
-              console.log(`Creando nueva relación de presidente para ID: ${id}, Club ID: ${club_presidente_id}`);
-              await PresidenteClub.create({
+          // Actualizar todos los clubes anteriores a presidente_asignado = 'N'
+          console.log(`Actualizando estado de clubes anteriores para presidente ID: ${id}`);
+          await Club.update(
+            { presidente_asignado: 'N' },
+            {
+              where: { id: { [Sequelize.Op.in]: Sequelize.literal(
+                `(SELECT club_id FROM PresidenteClub WHERE presidente_id = ${id})`
+              ) } },
+              transaction,
+            }
+          );
+
+          // Buscar el nuevo club al que se asignará el presidente
+          const clubPresidente = await Club.findOne({
+            where: { id: club_presidente_id },
+            transaction,
+          });
+
+          if (!clubPresidente) {
+            throw new Error(`El club con ID: ${club_presidente_id} no existe.`);
+          }
+
+          console.log(`Creando o activando nueva relación para presidente con ID: ${id}, Club ID: ${club_presidente_id}`);
+          const presidenteExistente = await PresidenteClub.findOne({
+            where: { presidente_id: id, club_id: club_presidente_id },
+            transaction,
+          });
+
+          if (presidenteExistente) {
+            console.log(`Reactivando presidente existente en el club con ID: ${club_presidente_id}`);
+            await presidenteExistente.update({ activo: 1, delegado: 'N' }, { transaction });
+          } else {
+            console.log(`Creando nueva relación de presidente para el club con ID: ${club_presidente_id}`);
+            await PresidenteClub.create(
+              {
                 presidente_id: id,
                 club_id: club_presidente_id,
                 activo: 1,
                 delegado: 'N',
-              }, { transaction });
-            }
-            await PersonaRol.upsert({ persona_id: id, rol_id: PresidenteClubId, eliminado: 0 }, { transaction });
+              },
+              { transaction }
+            );
+          }
+
+          // Actualizar el nuevo club a presidente_asignado = 'S'
+          console.log(`Actualizando club con ID: ${club_presidente_id} a presidente_asignado = 'S'`);
+          await clubPresidente.update({ presidente_asignado: 'S' }, { transaction });
+
+          // Asegurar que el rol de presidente se registre o actualice en PersonaRol
+          await PersonaRol.upsert({ persona_id: id, rol_id: PresidenteClubId, eliminado: 0 }, { transaction });
           break;
+
 
           case roleNames.DelegadoClub:
               const delegadoExistente = await PresidenteClub.findOne({
@@ -669,11 +708,43 @@ exports.updatePersonaImage = async (id, imagen) => {
   }
 };
 
-exports.deletePersona = async (id, user_id) => {
-  return await Persona.update(
-    { eliminado: 'S', fecha_actualizacion: Sequelize.fn('GETDATE'), user_id },
-    { where: { id } }
-  );
+exports.deletePersona = async (id, user_id,roles) => {
+  try{
+    const transaction = await sequelize.transaction();
+    await Persona.update(
+      { eliminado: 'S', fecha_actualizacion: Sequelize.fn('GETDATE'), user_id },
+      { where: { id } } , {transaction}
+    );
+    for(role of roles){
+      switch(role){
+        case roleNames.PresidenteClub:
+          const checkPresidenteClub = await PresidenteClub.findOne({
+            where: { presidente_id: id, activo: 1 },
+            transaction
+          });
+          const checkClub = await Club.findOne({
+            where: { id: checkPresidenteClub.club_id },
+            transaction
+          });
+          await checkPresidenteClub.update({
+            presidente_id: id,
+            club_id: checkClub.id,
+            activo: 0,
+            delegado: 'N',
+          },{transaction});
+
+          await checkClub.update({
+            presidente_asignado: 'N'
+          },{transaction});
+      }
+    }
+
+
+    await transaction.commit();
+  }catch(error){
+    await transaction.rollback();
+    throw error;
+  }
 };
 
 exports.activatePersona = async (id, user_id) => {

@@ -185,3 +185,32 @@ exports.rechazarTraspasoPorClub = async (id) => {
       { where: { id, estado_solicitud: 'ACEPTADO_POR_JUGADOR' } } // Solo permite rechazo si ya fue aceptado por el jugador
   );
 };
+
+const obtenerListaTraspasos = async () => {
+  try {
+    const traspasos = await sequelize.query(
+      `SELECT 
+          t.id AS traspaso_id,
+          t.jugador_id,
+          e_origen.nombre AS club_origen,
+          e_destino.nombre AS club_destino,
+          t.costo_traspaso,
+          t.fecha_solicitud,
+          t.estado_solicitud,
+          t.aprobado_por_jugador,
+          t.aprobado_por_club
+       FROM Traspaso t
+       JOIN Equipo e_origen ON t.club_origen_id = e_origen.id
+       JOIN Equipo e_destino ON t.club_destino_id = e_destino.id
+       ORDER BY t.fecha_solicitud DESC;`,
+      {
+        type: QueryTypes.SELECT
+      }
+    );
+
+    return traspasos;
+  } catch (error) {
+    console.error("Error al obtener la lista de traspasos:", error);
+    throw error;
+  }
+};

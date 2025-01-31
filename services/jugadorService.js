@@ -209,19 +209,20 @@ exports.getJugadoresByClubId = async (club_id) => {
   const jugadores = await sequelize.query(
     `SELECT 
       j.id AS jugador_id,
+      j.jugador_id AS persona_id,
       p.nombre AS nombre_persona,
       p.apellido AS apellido_persona,
       p.ci AS ci_persona,
       p.fecha_nacimiento AS fecha_nacimiento_persona,
-      ip.persona_imagen AS imagen_persona
+      im.persona_imagen AS imagen_persona
     FROM 
       Jugador j
     JOIN 
-      Persona p ON j.id = p.id
+      Persona p ON j.jugador_id = p.id
     LEFT JOIN 
-      ImagenPersona ip ON p.id = ip.persona_id
+      ImagenPersona im ON p.id = im.persona_id
     WHERE 
-      j.club_id =:club_id`, 
+      j.club_id =:club_id AND J.activo = 1 AND p.eliminado = 'N'`, 
     {
       replacements: { club_id },
       type: sequelize.QueryTypes.SELECT
@@ -230,6 +231,87 @@ exports.getJugadoresByClubId = async (club_id) => {
 
   return jugadores;
 };
+
+exports.getJugadoresByClubIdAndCategory = async (club_id,categoria_id,id_equipo) => {
+  const jugadores = await sequelize.query(
+    `SELECT 
+    j.id AS jugador_id,
+    j.jugador_id AS persona_id,
+    p.nombre AS nombre_persona,
+    p.apellido AS apellido_persona,
+    p.ci AS ci_persona,
+    p.fecha_nacimiento AS fecha_nacimiento_persona,
+    p.genero,
+    im.persona_imagen AS imagen_persona,
+    club.nombre AS nombre_club,
+    DATEDIFF(YEAR, p.fecha_nacimiento, GETDATE()) - 
+    CASE 
+        WHEN MONTH(p.fecha_nacimiento) > MONTH(GETDATE()) OR 
+             (MONTH(p.fecha_nacimiento) = MONTH(GETDATE()) AND DAY(p.fecha_nacimiento) > DAY(GETDATE())) 
+        THEN 1 
+        ELSE 0 
+    END AS edad_jugador
+FROM 
+    Jugador j
+JOIN 
+    Persona p ON j.jugador_id = p.id
+LEFT JOIN 
+    ImagenPersona im ON p.id = im.persona_id
+INNER JOIN 
+    Club ON Club.id = j.club_id
+INNER JOIN 
+    Equipo ON Equipo.club_id = Club.id
+INNER JOIN 
+    Categoria ON Categoria.id = Equipo.categoria_id
+LEFT JOIN 
+    JugadorEquipo je ON je.jugador_id = j.id AND je.activo = 1 -- Validar solo relaciones activas
+WHERE 
+    j.club_id = :club_id
+    AND j.activo = 1 
+    AND p.eliminado = 'N'
+    AND Categoria.id = :categoria_id
+    AND (
+        Categoria.genero = 'Mixto' -- Si la categoría es mixta, no filtrar por género
+        OR p.genero = Categoria.genero -- Si no es mixta, filtrar por género coincidente
+    )
+    AND (
+        (Categoria.edad_minima IS NULL OR Categoria.edad_minima <= 
+            (DATEDIFF(YEAR, p.fecha_nacimiento, GETDATE()) - 
+            CASE 
+                WHEN MONTH(p.fecha_nacimiento) > MONTH(GETDATE()) OR 
+                     (MONTH(p.fecha_nacimiento) = MONTH(GETDATE()) AND DAY(p.fecha_nacimiento) > DAY(GETDATE())) 
+                THEN 1 
+                ELSE 0 
+            END)
+        )
+        AND (Categoria.edad_maxima IS NULL OR Categoria.edad_maxima >= 
+            (DATEDIFF(YEAR, p.fecha_nacimiento, GETDATE()) - 
+            CASE 
+                WHEN MONTH(p.fecha_nacimiento) > MONTH(GETDATE()) OR 
+                     (MONTH(p.fecha_nacimiento) = MONTH(GETDATE()) AND DAY(p.fecha_nacimiento) > DAY(GETDATE())) 
+                THEN 1 
+                ELSE 0 
+            END)
+        )
+    )
+    AND NOT EXISTS (
+        SELECT 1
+        FROM JugadorEquipo je_sub
+        WHERE je_sub.jugador_id = j.id
+          AND je_sub.equipo_id = :id_equipo
+          AND je_sub.activo = 1 -- Validar solo relaciones activas
+    );
+
+    `, 
+    {
+      replacements: { club_id, categoria_id ,id_equipo },
+      type: sequelize.QueryTypes.SELECT
+    }
+  );
+
+  return jugadores;
+};
+
 
 exports.asignarJugadorAEquipo = async (persona_id, equipo_id) => {
   const transaction = await Jugador.sequelize.transaction();
@@ -349,13 +431,20 @@ exports.getJugadoresByEquipoId = async (equipo_id) => {
         p.apellido AS apellido_persona,
         p.ci AS ci_persona,
         p.fecha_nacimiento AS fecha_nacimiento_persona,
-        ip.persona_imagen AS imagen_persona
+        ip.persona_imagen AS imagen_persona,
+         DATEDIFF(YEAR, p.fecha_nacimiento, GETDATE()) 
+        - CASE 
+            WHEN MONTH(p.fecha_nacimiento) > MONTH(GETDATE()) OR 
+                 (MONTH(p.fecha_nacimiento) = MONTH(GETDATE()) AND DAY(p.fecha_nacimiento) > DAY(GETDATE()))
+            THEN 1 
+            ELSE 0 
+          END AS edad_jugador
       FROM 
         JugadorEquipo je
       JOIN 
         Jugador j ON je.jugador_id = j.id
       JOIN 
-        Persona p ON j.id = p.id
+        Persona p ON j.jugador_id = p.id
       LEFT JOIN 
         ImagenPersona ip ON p.id = ip.persona_id
       WHERE 
@@ -369,5 +458,28 @@ exports.getJugadoresByEquipoId = async (equipo_id) => {
     return jugadores;
   } catch (err) {
     throw new Error('Error al obtener los jugadores del equipo: ' + err.message);
+  }
+};
+
+exports.createNewJugadorEquipo = async (equipo_id,jugador_id) => {
+  try{
+    const VerificarJugadorEquipo = await JugadorEquipo.findOne({
+      where: {
+        equipo_id,
+        jugador_id
+      }
+    });
+    if(VerificarJugadorEquipo){
+      throw new Error('El jugador ya está en el equipo');
+    }
+    const jugadorEquipo = await JugadorEquipo.create({
+      equipo_id,
+      jugador_id,
+      activo : 1
+    });
+
+    return jugadorEquipo;
+  }catch(err){
+    throw new Error('Error al crear jugador en equipo: ' + err.message);
   }
 };

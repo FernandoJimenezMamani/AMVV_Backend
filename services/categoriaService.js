@@ -85,8 +85,8 @@ exports.updateCategoria = async (id, nombre, genero, division, edad_minima, edad
       division,
       edad_minima,
       edad_maxima,
-      costo_traspaso,  // Actualizar el costo de traspaso
-      fecha_actualizacion: Sequelize.fn('GETDATE'),  // Cambiado a GETDATE() para SQL Server
+      costo_traspaso,  
+      fecha_actualizacion: Sequelize.fn('GETDATE'), 
       user_id,
     },
     {

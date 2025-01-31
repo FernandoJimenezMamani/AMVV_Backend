@@ -1,11 +1,16 @@
 const { sequelize } = require('../models');
-const { Categoria } = require('../models');
+const { Categoria , PersonaRol } = require('../models');
 
 const seedCategorias = async () => {
   let transaction;
   try {
     console.log('Iniciando la transacción...');
     transaction = await sequelize.transaction();
+
+    const presidenteAsociacion = await PersonaRol.findOne({
+      where: { rol_id: 1 },
+      attributes: ['persona_id'],
+    });
 
     // Datos de las categorías
     const categorias = [
@@ -42,6 +47,7 @@ const seedCategorias = async () => {
           fecha_registro: sequelize.fn('GETDATE'),
           fecha_actualizacion: sequelize.fn('GETDATE'),
           eliminado: 'N',
+          user_id:presidenteAsociacion
         },
         { transaction }
       );

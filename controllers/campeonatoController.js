@@ -1,19 +1,44 @@
 const campeonatoService = require('../services/campeonatoService');
 
 exports.createCampeonato = async (req, res) => {
-  const { nombre, fecha_inicio, fecha_fin } = req.body;
+  const { nombre, fecha_inicio_transaccion, fecha_fin_transaccion ,fecha_inicio_campeonato, fecha_fin_campeonato} = req.body;
+  console.log(req.body);
 
-  if (!nombre || !fecha_inicio || !fecha_fin) {
-    return res.status(400).json({ message: 'Todos los campos deben ser proporcionados' });
+  // Validar que todos los campos requeridos estén presentes
+  if (!nombre || !fecha_inicio_campeonato || !fecha_fin_campeonato || !fecha_inicio_transaccion || !fecha_fin_transaccion) {
+    console.log('Todos los campos deben ser proporcionados');
+    return res.status(400).json({ 
+      message: 'Todos los campos deben ser proporcionados', 
+      errors: ['nombre', 'fecha_inicio', 'fecha_fin', 'fecha_inicio_transaccion', 'fecha_fin_transaccion'] 
+    });
   }
 
   try {
-    const campeonato = await campeonatoService.createCampeonato(nombre, fecha_inicio, fecha_fin);
-    res.status(201).json({ message: 'Campeonato creado exitosamente', campeonatoId: campeonato.id });
+    // Intentar crear el campeonato
+    const campeonato = await campeonatoService.createCampeonato(
+      nombre, 
+      fecha_inicio_campeonato, 
+      fecha_fin_campeonato, 
+      fecha_inicio_transaccion, 
+      fecha_fin_transaccion
+    );
+
+    // Responder con éxito si el campeonato se crea correctamente
+    res.status(201).json({ 
+      message: 'Campeonato creado exitosamente', 
+      campeonatoId: campeonato.id 
+    });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.log(err);
+    // Capturar y devolver el mensaje de error del servicio
+    res.status(400).json({ 
+      message: 'Error al crear el campeonato', 
+      error: err.message 
+    });
+    
   }
 };
+
 
 exports.getCampeonatoCategoria = async (req, res) => {
   const { campeonato_id, categoria_id } = req.params;
@@ -59,14 +84,15 @@ exports.getCampeonatoById = async (req, res) => {
 
 exports.updateCampeonato = async (req, res) => {
   const { id } = req.params;
-  const { nombre, fecha_inicio, fecha_fin } = req.body;
+  const { nombre, fecha_inicio_transaccion, fecha_fin_transaccion ,fecha_inicio_campeonato, fecha_fin_campeonato } = req.body;
+  console.log(req.body);
 
-  if (!nombre || !fecha_inicio || !fecha_fin) {
+  if (!nombre || !fecha_inicio_transaccion || !fecha_fin_transaccion|| !fecha_inicio_campeonato || !fecha_fin_campeonato) {
     return res.status(400).json({ message: 'Todos los campos deben ser proporcionados' });
   }
 
   try {
-    await campeonatoService.updateCampeonato(id, nombre, fecha_inicio, fecha_fin);
+    await campeonatoService.updateCampeonato(id, nombre, fecha_inicio_transaccion, fecha_fin_transaccion ,fecha_inicio_campeonato, fecha_fin_campeonato);
     res.status(200).json({ message: 'Campeonato editado exitosamente' });
   } catch (err) {
     res.status(400).json({ message: err.message });

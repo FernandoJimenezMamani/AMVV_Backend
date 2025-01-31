@@ -1,25 +1,97 @@
 const { Campeonato, EquipoCampeonato, Equipo, Categoria } = require('../models');
 const sequelize = require('../config/sequelize');
+const { Op, where } = require('sequelize');
+const moment = require('moment');
+const campeonatoEstados = require('../constants/campeonatoEstados');
+const { sendToClient, clients } = require('../server');
+const campeonatoEquipoEstados = require('../constants/campeonatoEquipoEstado');
 
-exports.createCampeonato = async (nombre, fecha_inicio, fecha_fin) => {
-  const normalizedNombre = nombre.replace(/\s+/g, '').toUpperCase();
+exports.createCampeonato = async (nombre, fecha_inicio_campeonato, fecha_fin_campeonato, fecha_inicio_transaccion, fecha_fin_transaccion) => {
+  try {
+    const inicioCampeonato = moment(fecha_inicio_campeonato).format('YYYY-MM-DD HH:mm:ss');
+    const finCampeonato = moment(fecha_fin_campeonato).format('YYYY-MM-DD HH:mm:ss');
+    const inicioTransaccion = moment(fecha_inicio_transaccion).format('YYYY-MM-DD HH:mm:ss');
+    const finTransaccion = moment(fecha_fin_transaccion).format('YYYY-MM-DD HH:mm:ss');
 
-  // Check if the championship name already exists
-  const existingCampeonato = await Campeonato.findOne({
-    where: sequelize.where(
-      sequelize.fn('REPLACE', sequelize.fn('UPPER', sequelize.col('nombre')), ' ', ''),
-      normalizedNombre
-    )
-  });
+    const normalizedNombre = nombre.replace(/\s+/g, '').toUpperCase();
+    
+    const campeonatosActivos = await Campeonato.findOne({
+      where: {
+        estado: { [Op.in]: [0, 1, 2] }
+      }
+    });
 
-  if (existingCampeonato) {
-    throw new Error('El nombre del campeonato ya existe');
+    if (campeonatosActivos) {
+      throw new Error('No se puede crear un nuevo campeonato mientras haya otro en estado en espera, en transacción o en curso.');
+    }
+
+    const existingCampeonato = await Campeonato.findOne({
+      where: sequelize.where(
+        sequelize.fn('REPLACE', sequelize.fn('UPPER', sequelize.col('nombre')), ' ', ''),
+        normalizedNombre
+      ),
+    });
+
+    if (existingCampeonato) {
+      throw new Error('El nombre del campeonato ya existe');
+    }
+
+    if (fecha_inicio_transaccion >= fecha_inicio_campeonato) {
+      throw new Error('La fecha de inicio de transacciones debe ser antes de la fecha de inicio del campeonato');
+    }
+
+    if (fecha_fin_transaccion >= fecha_inicio_campeonato) {
+      throw new Error('La fecha de fin de transacciones debe ser antes de la fecha de inicio del campeonato');
+    }
+
+    if (fecha_fin_transaccion < fecha_inicio_transaccion) {
+      throw new Error('La fecha de fin de transacciones no puede ser anterior a la fecha de inicio de transacciones');
+    }
+
+    // Crear el campeonato
+    const campeonato = await Campeonato.create({
+      nombre,
+      fecha_inicio_campeonato: sequelize.fn('CONVERT', sequelize.literal('DATETIME'), inicioCampeonato),
+      fecha_fin_campeonato: sequelize.fn('CONVERT', sequelize.literal('DATETIME'), finCampeonato),
+      fecha_inicio_transaccion: sequelize.fn('CONVERT', sequelize.literal('DATETIME'), inicioTransaccion),
+      fecha_fin_transaccion: sequelize.fn('CONVERT', sequelize.literal('DATETIME'), finTransaccion),
+      fecha_registro: sequelize.fn('GETDATE'),
+      eliminado: 'N',
+      user_id: 1,
+      estado: campeonatoEstados.enEspera
+    });
+
+    console.log('Campeonato creado:', campeonato);
+
+    // Obtener todos los equipos existentes
+    const equipos = await Equipo.findAll({
+      where: { eliminado: 'N' }
+    });
+    
+    if (equipos.length === 0) {
+      console.log('No hay equipos registrados para asignar al campeonato.');
+    } else {
+      console.log(`Registrando ${equipos.length} equipos en el campeonato...`);
+      
+      // Crear registros en EquipoCampeonato
+      const equiposCampeonato = equipos.map(equipo => ({
+        equipoId: equipo.id,
+        campeonatoId: campeonato.id,
+        estado: campeonatoEquipoEstados.DeudaInscripcion 
+      }));
+
+      await EquipoCampeonato.bulkCreate(equiposCampeonato);
+      console.log('Todos los equipos fueron registrados en el campeonato.');
+    }
+
+    return campeonato;
+  } catch (err) {
+    console.log('Error al crear el campeonato:', err);
+    throw new Error('Error al crear el campeonato');
   }
-
-  // Create Campeonato
-  const campeonato = await Campeonato.create({ nombre, fecha_inicio, fecha_fin });
-  return campeonato;
 };
+
+
 
 exports.getCampeonatoCategoria = async (campeonato_id, categoria_id) => {
   const campeonato = await Campeonato.findOne({
@@ -59,45 +131,157 @@ exports.getCampeonatoCategoria = async (campeonato_id, categoria_id) => {
 
 exports.getAllCampeonatos = async () => {
   const campeonatos = await Campeonato.findAll({
-    attributes: ['id', 'nombre', 'fecha_inicio', 'fecha_fin'],
+    attributes: ['id', 'nombre', 'fecha_inicio_campeonato', 'fecha_fin_campeonato', 'fecha_inicio_transaccion' , 'fecha_fin_transaccion' , 'estado'],
   });
   return campeonatos;
 };
 
 exports.getCampeonatoById = async (id) => {
   const campeonato = await Campeonato.findByPk(id, {
-    attributes: ['id', 'nombre', 'fecha_inicio', 'fecha_fin'],
+    attributes: ['id', 'nombre', 'fecha_inicio_campeonato', 'fecha_fin_campeonato', 'fecha_inicio_transaccion', 'fecha_fin_transaccion', 'estado'],
   });
 
   if (!campeonato) {
     throw new Error('Campeonato no encontrado');
   }
 
-  return campeonato;
+  // Procesar las fechas para separarlas en fecha y hora
+  const processedCampeonato = {
+    id: campeonato.id,
+    nombre: campeonato.nombre,
+    estado: campeonato.estado,
+    fecha_inicio_transaccion: campeonato.fecha_inicio_transaccion.toISOString().split('T')[0], // Solo la fecha
+    hora_inicio_transaccion: campeonato.fecha_inicio_transaccion.toISOString().split('T')[1].split('.')[0], // Solo la hora
+    fecha_fin_transaccion: campeonato.fecha_fin_transaccion.toISOString().split('T')[0],
+    hora_fin_transaccion: campeonato.fecha_fin_transaccion.toISOString().split('T')[1].split('.')[0],
+    fecha_inicio_campeonato: campeonato.fecha_inicio_campeonato.toISOString().split('T')[0],
+    hora_inicio_campeonato: campeonato.fecha_inicio_campeonato.toISOString().split('T')[1].split('.')[0],
+    fecha_fin_campeonato: campeonato.fecha_fin_campeonato.toISOString().split('T')[0],
+    hora_fin_campeonato: campeonato.fecha_fin_campeonato.toISOString().split('T')[1].split('.')[0],
+  };
+
+  return processedCampeonato;
 };
 
-exports.updateCampeonato = async (id, nombre, fecha_inicio, fecha_fin) => {
-  const normalizedNombre = nombre.replace(/\s+/g, '').toUpperCase();
 
-  // Check if the championship name already exists for another record
-  const existingCampeonato = await Campeonato.findOne({
-    where: {
-      id: { [sequelize.Op.ne]: id },
-      [sequelize.Op.and]: sequelize.where(
-        sequelize.fn('REPLACE', sequelize.fn('UPPER', sequelize.col('nombre')), ' ', ''),
-        normalizedNombre
-      ),
-    },
-  });
+exports.updateCampeonato = async (
+  id,
+  nombre,
+  fecha_inicio_transaccion,
+  fecha_fin_transaccion,
+  fecha_inicio_campeonato,
+  fecha_fin_campeonato
+) => {
+  try {
+    const inicioCampeonato = moment(fecha_inicio_campeonato).format(
+      "YYYY-MM-DD HH:mm:ss"
+    );
+    const finCampeonato = moment(fecha_fin_campeonato).format(
+      "YYYY-MM-DD HH:mm:ss"
+    );
+    const inicioTransaccion = moment(fecha_inicio_transaccion).format(
+      "YYYY-MM-DD HH:mm:ss"
+    );
+    const finTransaccion = moment(fecha_fin_transaccion).format(
+      "YYYY-MM-DD HH:mm:ss"
+    );
 
-  if (existingCampeonato) {
-    throw new Error('El nombre del campeonato ya existe para otro registro');
+    const normalizedNombre = nombre.replace(/\s+/g, "").toUpperCase();
+    console.log("Nombre normalizado:", normalizedNombre);
+
+    // Validar si el nombre del campeonato ya existe para otro registro
+    console.log("Validando si el nombre ya existe...");
+    const existingCampeonato = await Campeonato.findOne({
+      where: {
+        id: { [Op.ne]: id },
+        [Op.and]: sequelize.where(
+          sequelize.fn(
+            "REPLACE",
+            sequelize.fn("UPPER", sequelize.col("nombre")),
+            " ",
+            ""
+          ),
+          normalizedNombre
+        ),
+      },
+    });
+    console.log("Resultado de búsqueda por nombre:", existingCampeonato);
+
+    if (existingCampeonato) {
+      throw new Error(
+        "El nombre del campeonato ya existe para otro registro"
+      );
+    }
+
+    // Validar que las fechas de transacciones estén antes del inicio del campeonato
+    console.log("Validando fechas de transacciones...");
+    if (fecha_inicio_transaccion >= fecha_inicio_campeonato) {
+      throw new Error(
+        "La fecha de inicio de transacciones debe ser antes de la fecha de inicio del campeonato"
+      );
+    }
+
+    if (fecha_fin_transaccion >= fecha_inicio_campeonato) {
+      throw new Error(
+        "La fecha de fin de transacciones debe ser antes de la fecha de inicio del campeonato"
+      );
+    }
+
+    if (fecha_fin_transaccion < fecha_inicio_transaccion) {
+      throw new Error(
+        "La fecha de fin de transacciones no puede ser anterior a la fecha de inicio de transacciones"
+      );
+    }
+
+    // Actualizar el campeonato
+    console.log("Actualizando campeonato...");
+    const [updatedRowsCount] = await Campeonato.update(
+      {
+        nombre,
+        fecha_inicio_campeonato: sequelize.fn(
+          "CONVERT",
+          sequelize.literal("DATETIME"),
+          inicioCampeonato
+        ),
+        fecha_fin_campeonato: sequelize.fn(
+          "CONVERT",
+          sequelize.literal("DATETIME"),
+          finCampeonato
+        ),
+        fecha_inicio_transaccion: sequelize.fn(
+          "CONVERT",
+          sequelize.literal("DATETIME"),
+          inicioTransaccion
+        ),
+        fecha_fin_transaccion: sequelize.fn(
+          "CONVERT",
+          sequelize.literal("DATETIME"),
+          finTransaccion
+        ),
+        fecha_actualizacion: sequelize.fn("GETDATE"),
+      },
+      {
+        where: { id },
+      }
+    );
+
+    if (updatedRowsCount === 0) {
+      throw new Error(
+        `No se encontró el campeonato con el ID ${id} para actualizar`
+      );
+    }
+
+    console.log("Campeonato actualizado correctamente.");
+    return { message: "Campeonato actualizado correctamente" };
+  } catch (err) {
+    console.log("Error al actualizar el campeonato:", err);
+    console.log("Detalles del error:", {
+      message: err.message,
+      stack: err.stack,
+    });
+    throw new Error("Error al actualizar el campeonato");
   }
-
-  // Update Campeonato
-  await Campeonato.update({ nombre, fecha_inicio, fecha_fin }, { where: { id } });
 };
-
 
 exports.getChampionshipPositions = async (categoriaId,campeonato_id) => {
   try {
@@ -237,7 +421,7 @@ exports.getChampionshipPositions = async (categoriaId,campeonato_id) => {
     LEFT JOIN
         ImagenClub ic ON c.id = ic.club_id
     WHERE 
-        ec.campeonatoid = :campeonato_id AND ec.estado = 'C' AND e.categoria_id = :categoriaId
+        ec.campeonatoid = :campeonato_id AND ec.estado = 'Inscrito' AND e.categoria_id = :categoriaId
     GROUP BY 
         e.id, e.nombre, ic.club_imagen
     ORDER BY 
@@ -253,4 +437,3 @@ exports.getChampionshipPositions = async (categoriaId,campeonato_id) => {
     throw new Error('Error al obtener los partidos');
   }
 };
-

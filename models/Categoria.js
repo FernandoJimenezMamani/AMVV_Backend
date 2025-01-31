@@ -32,6 +32,11 @@ const Categoria = sequelize.define('Categoria', {
     allowNull: false,
     defaultValue: 0.00, // Un valor predeterminado si no se asigna uno
   },
+  costo_inscripcion: {
+    type: DataTypes.DECIMAL(10, 2), // Nueva columna para el costo de traspaso
+    allowNull: false,
+    defaultValue: 0.00, // Un valor predeterminado si no se asigna uno
+  },
   fecha_registro: {
     type: DataTypes.DATE,
     allowNull: true,

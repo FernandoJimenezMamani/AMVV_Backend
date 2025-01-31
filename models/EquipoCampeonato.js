@@ -14,13 +14,21 @@ EquipoCampeonato.init({
   equipoId: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: Equipo,
+      key: 'id',
+    }
   },
   campeonatoId: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: Campeonato,
+      key: 'id',
+    }
   },
   estado: {
-    type: DataTypes.CHAR(1),
+    type: DataTypes.STRING(30),
     allowNull: false,
   }
 }, {

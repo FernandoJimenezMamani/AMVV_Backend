@@ -1,39 +1,47 @@
-const { Partido, Equipo, Lugar, Campeonato,ResultadoLocal,ResultadoVisitante,Tarjeta ,ImagePlanilla } = require('../models');
+const { Partido, Equipo, Lugar, Campeonato,ResultadoLocal,ResultadoVisitante,Tarjeta ,ImagePlanilla,ArbitroPartido } = require('../models');
 const sequelize = require('../config/sequelize');
 const { uploadFile } = require('../utils/subirImagen');
-
+const moment = require('moment');
 exports.createPartido = async (data) => {
-  const { campeonato_id, equipo_local_id, equipo_visitante_id, fecha, lugar_id } = data;
-
-  const formattedFecha = new Date(fecha).toISOString().slice(0, 19).replace('T', ' ');
-
-  console.log('Datos recibidos para crear el partido:');
-  console.log('Campeonato ID:', campeonato_id);
-  console.log('Equipo Local ID:', equipo_local_id);
-  console.log('Equipo Visitante ID:', equipo_visitante_id);
-  console.log('Fecha (formateada):', formattedFecha);
-  console.log('Lugar ID:', lugar_id);
-
   try {
-    const result = await sequelize.query(`
-      INSERT INTO Partido (campeonato_id, equipo_local_id, equipo_visitante_id, fecha, lugar_id)
-      VALUES (:campeonato_id, :equipo_local_id, :equipo_visitante_id, :fecha, :lugar_id)
-    `, {
-      replacements: {
+    const transaction = await sequelize.transaction(); 
+    const { campeonato_id, equipo_local_id, equipo_visitante_id, fecha, lugar_id ,arbitros} = data;
+
+    // Convertir la fecha al formato YYYY-MM-DD HH:MM:SS
+    const formattedFecha = moment(fecha).format('YYYY-MM-DD HH:mm:ss');
+    console.log('Datos recibidos para crear el partido:');
+    console.log('Campeonato ID:', campeonato_id);
+    console.log('Equipo Local ID:', equipo_local_id);
+    console.log('Equipo Visitante ID:', equipo_visitante_id);
+    console.log('Fecha (formateada):', formattedFecha);
+    console.log('Lugar ID:', lugar_id);
+    console.log('arbitros ID:', arbitros);
+ 
+    const result = await Partido.create({
         campeonato_id,
         equipo_local_id,
         equipo_visitante_id,
-        fecha: formattedFecha,
-        lugar_id
-      },
-      type: sequelize.QueryTypes.INSERT
-    });
+        fecha:sequelize.fn('CONVERT', sequelize.literal('DATETIME'), formattedFecha),
+        lugar_id,
+        estado: 1
+      }, { transaction });
 
     console.log('Partido creado exitosamente:', result);
+
+    for (const arbitro_id of arbitros) {
+      console.log('arbitros:', arbitro_id);
+      await ArbitroPartido.create({
+        arbitro_id,
+        partido_id: result.id 
+      }, { transaction });
+    }
+
+    await transaction.commit();
     return result;
 
   } catch (error) {
     console.error('Error al crear el partido:', error);
+    await transaction.rollback();
     throw error;
   }
 };

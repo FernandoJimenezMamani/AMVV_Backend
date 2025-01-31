@@ -60,6 +60,10 @@ const Traspaso = sequelize.define('Traspaso', {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true,
   },
+  estado_pago: {
+    type: DataTypes.STRING(30),
+    allowNull: false,
+  }
 }, {
   tableName: 'Traspaso',
   timestamps: false,

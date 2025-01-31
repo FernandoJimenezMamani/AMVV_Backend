@@ -144,6 +144,22 @@ exports.getJugadoresByClubId = async (req, res) => {
   }
 };
 
+exports.getJugadoresByClubIdAndCategory = async (req, res) => {
+  const { club_id,categoria_id ,id_equipo} = req.body;
+  console.log(req.body);
+
+  if (!club_id) {
+    return res.status(400).json({ message: 'El club_id debe ser proporcionado' });
+  }
+
+  try {
+    const jugadores = await jugadorService.getJugadoresByClubIdAndCategory(club_id,categoria_id,id_equipo);
+    res.status(200).json(jugadores);
+  } catch (err) {
+    res.status(500).json({ message: 'Error al obtener los jugadores del club', error: err.message });
+  }
+};
+
 exports.getJugadoresByEquipo = async (req, res) => {
   const { equipo_id } = req.params;
 
@@ -183,5 +199,16 @@ exports.getJugadoresByEquipoId = async (req, res) => {
     res.status(200).json(jugadores);
   } catch (err) {
     res.status(500).json({ message: 'Error al obtener los jugadores del equipo', error: err.message });
+  }
+};
+
+exports.createJugadorEquipo = async (req, res) => {
+  const {equipo_id, jugador_id} = req.body;
+  try {
+    const response = await jugadorService.createNewJugadorEquipo(equipo_id, jugador_id);
+    res.status(201).json(response);
+  } catch (err) { 
+    console.error('Error en getJugadoresByEquipo:', err);
+    res.status(500).json({ message: err.message });
   }
 };

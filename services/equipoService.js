@@ -42,7 +42,7 @@ exports.getEquipoById = async (id) => {
       {
         model: Categoria,
         as: 'categoria',
-        attributes: ['nombre', 'genero'] // Incluir también el género de la categoría
+        attributes: ['nombre', 'genero' , 'division'] // Incluir también el género de la categoría
       }
     ]
   });

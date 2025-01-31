@@ -308,18 +308,31 @@ exports.updatePersonaImage = async (req, res) => {
 };
 
 exports.deletePersona = async (req, res) => {
-  const { id } = req.params;
-  const { user_id } = req.body;
+  const { id } = req.params; // ID de la persona a eliminar
+  const { user_id, roles } = req.body; // ID del usuario que realiza la acción y roles asociados
 
   try {
-    const result = await personaService.deletePersona(id, user_id);
-    if (result[0] > 0) {
-      res.status(200).json({ message: 'Persona eliminada correctamente' });
-    } else {
-      res.status(404).json({ message: 'Persona no encontrada' });
+    if (!id || !user_id || !roles || !Array.isArray(roles)) {
+      return res.status(400).json({
+        message: 'Faltan datos requeridos: id, user_id o roles no son válidos.',
+      });
     }
-  } catch (err) {
-    res.status(500).json({ message: 'Error al eliminar persona', error: err.message });
+
+    console.log(`Eliminando persona con ID: ${id}, roles: ${roles}`);
+
+    await personaService.deletePersona(id, user_id, roles);
+
+    res.status(200).json({
+      message: 'Persona eliminada correctamente.',
+    });
+  } catch (error) {
+    console.error(`Error al eliminar la persona con ID: ${id}`, error.message);
+
+    // Devuelve un error 500 con información adicional
+    res.status(500).json({
+      message: 'Error al eliminar la persona.',
+      error: error.message,
+    });
   }
 };
 

@@ -115,3 +115,12 @@ exports.rechazarTraspasoPorClub = async (req, res) => {
         res.status(500).json({ message: 'Error al rechazar traspaso por el club de origen', error: error.message });
     }
 };
+
+exports.getTraspasos = async (req, res) => {
+    try {
+      const traspasos = await obtenerListaTraspasos();
+      res.status(200).json(traspasos);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener la lista de traspasos", error: error.message });
+    }
+  };

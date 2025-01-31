@@ -95,7 +95,8 @@ exports.getClubTeams = async (id) => {
         Categoria.id AS categoria_id,
         Categoria.nombre AS categoria_nombre,
         Persona.id AS presidente_id,
-        CONCAT(Persona.nombre, ' ', Persona.apellido) AS presidente_nombre
+        CONCAT(Persona.nombre, ' ', Persona.apellido) AS presidente_nombre,
+		ImagenPersona.persona_imagen
       FROM
         Club
       LEFT JOIN
@@ -117,7 +118,9 @@ exports.getClubTeams = async (id) => {
       LEFT JOIN
         Persona
       ON
-        PresidenteClub.id = Persona.id
+        PresidenteClub.presidente_id = Persona.id AND Persona.eliminado = 'N'
+	  LEFT JOIN ImagenPersona 
+	  ON ImagenPersona.persona_id = Persona.id
       WHERE
         Club.id = :id AND Club.eliminado = 'N'
     `, {

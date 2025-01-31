@@ -55,8 +55,9 @@ exports.createCategoria = async (req, res) => {
 exports.updateCategoria = async (req, res) => {
   const { id } = req.params;
   const { nombre, genero, division, edad_minima, edad_maxima, costo_traspaso, user_id } = req.body;
+  console.log('req.body:', req.body);
 
-  if (!id || !nombre || !user_id || costo_traspaso === undefined) {
+  if (!id || !nombre  || costo_traspaso === undefined) {
     return res.status(400).json({ message: 'ID, nombre, user_id y costo_traspaso son necesarios' });
   }
 
