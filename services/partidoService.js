@@ -2,6 +2,7 @@ const { Partido, Equipo, Lugar, Campeonato,ResultadoLocal,ResultadoVisitante,Tar
 const sequelize = require('../config/sequelize');
 const { uploadFile } = require('../utils/subirImagen');
 const moment = require('moment');
+
 exports.createPartido = async (data) => {
   try {
     const transaction = await sequelize.transaction(); 
@@ -352,5 +353,63 @@ exports.getArbitrosByPartidoId = async (partidoId) => {
   } catch (error) {
     console.error('Error al obtener los árbitros del partido:', error);
     throw new Error('Error al obtener los árbitros del partido');
+
+  }
+}
+
+exports.getPartidosByLugarYFecha = async (lugarId, fecha) => {
+  try {
+    if (!lugarId || !fecha) {
+      throw new Error('El lugarId y la fecha son obligatorios');
+    }
+
+    // Convertir la fecha a formato YYYY-MM-DD si viene en formato DD/MM/YYYY
+    let fechaFormateada;
+    if (fecha.includes('/')) {
+      const [dia, mes, anio] = fecha.split('/');
+      fechaFormateada = `${anio}-${mes}-${dia}`;
+    } else {
+      fechaFormateada = fecha;
+    }
+
+    // Definir el rango de fechas para incluir todo el día
+    const fechaInicio = `${fechaFormateada} 00:00:00`;
+    const fechaFin = `${fechaFormateada} 23:59:59`;
+
+    // Ejecutar la consulta RAW
+    const partidos = await sequelize.query(`
+      SELECT 
+        P.id AS partido_id,
+        P.campeonato_id,
+        P.equipo_local_id,
+        P.equipo_visitante_id,
+        P.fecha,
+        P.lugar_id,
+        P.estado,
+        EL.id AS equipolocal_id,
+        EL.nombre AS equipolocal_nombre,
+        EV.id AS equipovisitante_id,
+        EV.nombre AS equipovisitante_nombre,
+        L.id AS lugar_id,
+        L.nombre AS lugar_nombre,
+        C.id AS campeonato_id,
+        C.nombre AS campeonato_nombre
+      FROM Partido P
+      LEFT JOIN Equipo EL ON P.equipo_local_id = EL.id
+      LEFT JOIN Equipo EV ON P.equipo_visitante_id = EV.id
+      LEFT JOIN Lugar L ON P.lugar_id = L.id
+      LEFT JOIN Campeonato C ON P.campeonato_id = C.id
+      WHERE P.lugar_id = :lugarId 
+      AND P.fecha BETWEEN :fechaInicio AND :fechaFin
+      ORDER BY P.fecha ASC;
+    `, {
+      replacements: { lugarId, fechaInicio, fechaFin },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    return partidos;
+  } catch (error) {
+    console.error('Error en getPartidosByLugarYFecha:', error);
+    throw new Error('Error al obtener los partidos por lugar y fecha');
   }
 };

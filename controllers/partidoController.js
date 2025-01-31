@@ -159,3 +159,20 @@ exports.getArbitrosByPartidoId = async (req, res) => {
     res.status(500).json({ message: 'Error al obtener los árbitros del partido', error: error.message });
   }
 };
+
+exports.getPartidosByLugarYFecha = async (req, res) => {
+  const { lugarId, fecha } = req.query;
+
+  if (!lugarId || !fecha) {
+    return res.status(400).json({ message: 'El lugar y la fecha son obligatorios' });
+  }
+
+  try {
+    const partidos = await partidoService.getPartidosByLugarYFecha(lugarId, fecha);
+    res.status(200).json(partidos);
+  } catch (err) {
+    console.error('Error en el controlador getPartidosByLugarYFecha:', err.message);
+    res.status(500).json({ message: 'Error al obtener los partidos', error: err.message });
+  }
+};
+
