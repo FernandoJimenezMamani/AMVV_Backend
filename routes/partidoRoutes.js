@@ -15,5 +15,6 @@ router.get('/get_partido_completo/:partidoId', partidoController.getPartidoCompl
 router.get('/get_jugadores/:equipoId', partidoController.getJugadoresByEquipoId);
 router.get('/get_arbitros/:partidoId', partidoController.getArbitrosByPartidoId);
 router.get('/partidos_pdf/filtrar', partidoController.getPartidosByLugarYFecha);
+router.get('/partidos_pdf/filtrar_fecha', partidoController.getPartidosByFecha);
 
 module.exports = router;

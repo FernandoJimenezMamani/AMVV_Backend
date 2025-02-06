@@ -24,6 +24,7 @@ const presidenteRoutes = require('./routes/presidenteClubRoutes');
 const arbitroRoutes = require('./routes/arbitroRoutes'); 
 const traspasoRoutes = require('./routes/traspasoRoutes'); 
 const pagosRoutes = require('./routes/pagoRoutes'); 
+const reporteRoutes = require('./routes/reporteRoutes'); 
 
 // Inicializar la app
 const app = express();
@@ -148,6 +149,7 @@ app.use('/api/presidente_club', presidenteRoutes);
 app.use('/api/arbitro', arbitroRoutes); // Usa la ruta
 app.use('/api/traspaso', traspasoRoutes); // Usa la ruta
 app.use('/api/pagos', pagosRoutes); 
+app.use('/api/reportes', reporteRoutes); 
 
 // Ruta de prueba
 app.get('/', (req, res) => {

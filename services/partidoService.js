@@ -384,6 +384,7 @@ exports.getPartidosByLugarYFecha = async (lugarId, fecha) => {
         P.equipo_local_id,
         P.equipo_visitante_id,
         P.fecha,
+        FORMAT(P.fecha, 'HH:mm') AS hora_partido, 
         P.lugar_id,
         P.estado,
         EL.id AS equipolocal_id,
@@ -393,15 +394,18 @@ exports.getPartidosByLugarYFecha = async (lugarId, fecha) => {
         L.id AS lugar_id,
         L.nombre AS lugar_nombre,
         C.id AS campeonato_id,
-        C.nombre AS campeonato_nombre
+        C.nombre AS campeonato_nombre,
+        CL.id AS categoria_id,
+        CONCAT(CL.nombre, ' ', CL.genero) AS categoria_nombre
       FROM Partido P
       LEFT JOIN Equipo EL ON P.equipo_local_id = EL.id
       LEFT JOIN Equipo EV ON P.equipo_visitante_id = EV.id
       LEFT JOIN Lugar L ON P.lugar_id = L.id
       LEFT JOIN Campeonato C ON P.campeonato_id = C.id
+      LEFT JOIN Categoria CL ON EL.categoria_id = CL.id
       WHERE P.lugar_id = :lugarId 
-      AND P.fecha BETWEEN :fechaInicio AND :fechaFin
-      ORDER BY P.fecha ASC;
+        AND P.fecha BETWEEN :fechaInicio AND :fechaFin
+      ORDER BY CAST(FORMAT(P.fecha, 'HH:mm:ss') AS TIME) ASC;  -- Ordenar por la hora
     `, {
       replacements: { lugarId, fechaInicio, fechaFin },
       type: sequelize.QueryTypes.SELECT
@@ -411,5 +415,65 @@ exports.getPartidosByLugarYFecha = async (lugarId, fecha) => {
   } catch (error) {
     console.error('Error en getPartidosByLugarYFecha:', error);
     throw new Error('Error al obtener los partidos por lugar y fecha');
+  }
+};
+
+exports.getPartidosByFecha = async (fecha) => {
+  try {
+    if (!fecha) {
+      throw new Error('La fecha es obligatoria');
+    }
+
+    // Convertir la fecha a formato YYYY-MM-DD si viene en formato DD/MM/YYYY
+    let fechaFormateada;
+    if (fecha.includes('/')) {
+      const [dia, mes, anio] = fecha.split('/');
+      fechaFormateada = `${anio}-${mes}-${dia}`;
+    } else {
+      fechaFormateada = fecha;
+    }
+
+    // Definir el rango de fechas para incluir todo el día
+    const fechaInicio = `${fechaFormateada} 00:00:00`;
+    const fechaFin = `${fechaFormateada} 23:59:59`;
+
+    // Ejecutar la consulta RAW sin filtrar por lugar
+    const partidos = await sequelize.query(`
+      SELECT 
+        P.id AS partido_id,
+        P.campeonato_id,
+        P.equipo_local_id,
+        P.equipo_visitante_id,
+        P.fecha,
+        FORMAT(P.fecha, 'HH:mm') AS hora_partido, 
+        P.lugar_id,
+        P.estado,
+        EL.id AS equipolocal_id,
+        EL.nombre AS equipolocal_nombre,
+        EV.id AS equipovisitante_id,
+        EV.nombre AS equipovisitante_nombre,
+        L.id AS lugar_id,
+        L.nombre AS lugar_nombre,
+        C.id AS campeonato_id,
+        C.nombre AS campeonato_nombre,
+        CL.id AS categoria_id,
+        CONCAT(CL.nombre, ' ', CL.genero) AS categoria_nombre
+      FROM Partido P
+      LEFT JOIN Equipo EL ON P.equipo_local_id = EL.id
+      LEFT JOIN Equipo EV ON P.equipo_visitante_id = EV.id
+      LEFT JOIN Lugar L ON P.lugar_id = L.id
+      LEFT JOIN Campeonato C ON P.campeonato_id = C.id
+      LEFT JOIN Categoria CL ON EL.categoria_id = CL.id
+      WHERE P.fecha BETWEEN :fechaInicio AND :fechaFin
+      ORDER BY CAST(FORMAT(P.fecha, 'HH:mm:ss') AS TIME) ASC;
+    `, {
+      replacements: { fechaInicio, fechaFin },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    return partidos;
+  } catch (error) {
+    console.error('Error en getPartidosByFecha:', error);
+    throw new Error('Error al obtener los partidos por fecha');
   }
 };
