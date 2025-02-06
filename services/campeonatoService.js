@@ -131,14 +131,14 @@ exports.getCampeonatoCategoria = async (campeonato_id, categoria_id) => {
 
 exports.getAllCampeonatos = async () => {
   const campeonatos = await Campeonato.findAll({
-    attributes: ['id', 'nombre', 'fecha_inicio_campeonato', 'fecha_fin_campeonato', 'fecha_inicio_transaccion' , 'fecha_fin_transaccion' , 'estado'],
+    attributes: ['id', 'nombre', 'fecha_inicio', 'fecha_fin', 'fecha_inicio_transaccion' , 'fecha_fin_transaccion'],
   });
   return campeonatos;
 };
 
 exports.getCampeonatoById = async (id) => {
   const campeonato = await Campeonato.findByPk(id, {
-    attributes: ['id', 'nombre', 'fecha_inicio_campeonato', 'fecha_fin_campeonato', 'fecha_inicio_transaccion', 'fecha_fin_transaccion', 'estado'],
+    attributes: ['id', 'nombre', 'fecha_inicio', 'fecha_fin', 'fecha_inicio_transaccion', 'fecha_fin_transaccion'],
   });
 
   if (!campeonato) {

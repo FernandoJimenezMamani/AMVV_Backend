@@ -1,4 +1,7 @@
 const partidoService = require('../services/partidoService');
+const fs = require('fs');
+const path = require('path');
+const generatePDF = require('../pdf-generator/generatePDF');
 
 exports.createPartido = async (req, res) => {
   const { campeonato_id, equipo_local_id, equipo_visitante_id, fecha, lugar_id, arbitros } = req.body;
@@ -164,15 +167,52 @@ exports.getPartidosByLugarYFecha = async (req, res) => {
   const { lugarId, fecha } = req.query;
 
   if (!lugarId || !fecha) {
-    return res.status(400).json({ message: 'El lugar y la fecha son obligatorios' });
+      return res.status(400).json({ message: 'El lugar y la fecha son obligatorios' });
   }
 
   try {
-    const partidos = await partidoService.getPartidosByLugarYFecha(lugarId, fecha);
-    res.status(200).json(partidos);
+      const partidos = await partidoService.getPartidosByLugarYFecha(lugarId, fecha);
+      const pdfPath = await generatePDF(lugarId, fecha, partidos);
+
+      // Verificar si el archivo realmente existe antes de enviarlo
+      if (!fs.existsSync(pdfPath)) {
+          return res.status(500).json({ message: 'No se pudo generar el PDF' });
+      }
+
+      // 📌 Configurar la respuesta para abrir el PDF en el navegador
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline; filename="partidos.pdf"');
+      res.sendFile(path.resolve(pdfPath));
+
   } catch (err) {
-    console.error('Error en el controlador getPartidosByLugarYFecha:', err.message);
-    res.status(500).json({ message: 'Error al obtener los partidos', error: err.message });
+      console.error('Error en getPartidosByLugarYFecha:', err.message);
+      res.status(500).json({ message: 'Error al obtener los partidos', error: err.message });
   }
 };
 
+exports.getPartidosByFecha = async (req, res) => {
+  const { fecha } = req.query;
+
+  if (!fecha) {
+      return res.status(400).json({ message: 'La fecha es obligatoria' });
+  }
+
+  try {
+      const partidos = await partidoService.getPartidosByFecha(fecha);
+      const pdfPath = await generatePDF(fecha, partidos);
+
+      // Verificar si el archivo realmente existe antes de enviarlo
+      if (!fs.existsSync(pdfPath)) {
+          return res.status(500).json({ message: 'No se pudo generar el PDF' });
+      }
+
+      // 📌 Configurar la respuesta para abrir el PDF en el navegador
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline; filename="partidos.pdf"');
+      res.sendFile(path.resolve(pdfPath));
+
+  } catch (err) {
+      console.error('Error en getPartidosByFecha:', err.message);
+      res.status(500).json({ message: 'Error al obtener los partidos', error: err.message });
+  }
+};
