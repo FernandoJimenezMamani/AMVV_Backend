@@ -484,3 +484,106 @@ exports.createNewJugadorEquipo = async (equipo_id,jugador_id) => {
     throw new Error('Error al crear jugador en equipo: ' + err.message);
   }
 };
+
+exports.getJugadoresAbleToExchange = async (club_presidente , idTraspasoPresidente) => {
+  try {
+    const jugadores = await sequelize.query(
+      `SELECT 
+      j.id AS jugador_id,
+      j.jugador_id AS persona_id,
+      p.nombre AS nombre_persona,
+      p.apellido AS apellido_persona,
+      p.ci AS ci_persona,
+      p.fecha_nacimiento AS fecha_nacimiento_persona,
+      c.id AS club_id,
+      c.nombre AS nombre_club,
+      c.descripcion AS descripcion_club,
+      im.persona_imagen AS imagen_persona,
+      p.eliminado,
+      pp.nombre AS presidente_nombre
+      FROM 
+          Jugador j
+      JOIN 
+          Persona p ON j.jugador_id = p.id
+      LEFT JOIN 
+          Club c ON j.club_id = c.id
+      LEFT JOIN 
+          PresidenteClub pc ON pc.club_id = c.id AND pc.delegado = 'N' AND pc.activo = 1
+      JOIN 
+          Persona pp ON pp.id = pc.presidente_id 
+      JOIN 
+          Club cp ON cp.id = pc.club_id
+      LEFT JOIN 
+          ImagenPersona im ON p.id = im.persona_id
+      LEFT JOIN 
+          Traspaso t ON t.jugador_id = j.id
+      WHERE 
+        j.activo = 1 
+        AND p.eliminado = 'N' 
+        AND cp.id != :club_presidente
+        AND (t.presidente_club_id_destino IS NULL OR t.presidente_club_id_destino != :idTraspasoPresidente OR  t.id IS NULL
+        OR t.estado_jugador = 'RECHAZADO'
+        OR t.estado_club = 'RECHAZADO'
+        OR t.eliminado = 'S');
+      `,
+      {
+        replacements:{club_presidente,idTraspasoPresidente},
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+
+    return jugadores;
+  } catch (error) {
+    console.error('Error al obtener los jugadores con sus clubes:', error);
+    throw new Error('Error al obtener los jugadores con sus clubes');
+  }
+};
+
+exports.getJugadoresPendingExchange = async (club_presidente , idTraspasoPresidente) => {
+  try {
+    const jugadores = await sequelize.query(
+      `SELECT 
+        j.id AS jugador_id,
+        j.jugador_id AS persona_id ,
+        p.nombre AS nombre_persona,
+        p.apellido AS apellido_persona,
+        p.ci AS ci_persona,
+        p.fecha_nacimiento AS fecha_nacimiento_persona,
+        c.id AS club_id,
+        c.nombre AS nombre_club,
+        c.descripcion AS descripcion_club,
+        im.persona_imagen AS imagen_persona,
+        p.eliminado,
+        pp.nombre,
+        t.estado_jugador,
+        t.estado_club,
+        t.estado_deuda,
+        t.eliminado,
+		    t.id AS id_traspaso,
+        t.fecha_solicitud
+        FROM 
+          Jugador j
+        JOIN 
+          Persona p ON j.jugador_id = p.id
+        LEFT JOIN 
+          Club c ON j.club_id = c.id
+        LEFT JOIN PresidenteClub pc ON pc.club_id = c.id AND pc.delegado = 'N' AND pc.activo = 1
+        JOIN Persona pp ON pp.id = pc.presidente_id 
+        JOIN Club cp ON cp.id = pc.club_id
+        LEFT JOIN 
+          ImagenPersona im ON p.id = im.persona_id
+        LEFT JOIN Traspaso t ON t.jugador_id = j.id 
+          WHERE j.activo = 1 AND p.eliminado = 'N' AND cp.id != :club_presidente AND t.presidente_club_id_destino = :idTraspasoPresidente AND t.eliminado = 'N'
+      `,
+      {
+        replacements:{club_presidente,idTraspasoPresidente},
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+
+    return jugadores;
+  } catch (error) {
+    console.error('Error al obtener los jugadores con sus clubes:', error);
+    throw new Error('Error al obtener los jugadores con sus clubes');
+  }
+};

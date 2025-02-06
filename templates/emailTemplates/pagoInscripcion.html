@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    .container {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: auto;
+      border: 1px solid #ddd;
+      padding: 20px;
+      border-radius: 8px;
+      background-color: #f9f9f9;
+    }
+    .header {
+      background-color: #0275d8;
+      color: white;
+      text-align: center;
+      padding: 15px;
+      font-size: 20px;
+      font-weight: bold;
+      border-radius: 8px 8px 0 0;
+    }
+    .content {
+      padding: 20px;
+      font-size: 16px;
+      color: #333;
+    }
+    .footer {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 14px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">Pago de Inscripción Confirmado</div>
+    <div class="content">
+      <p>Estimado <strong>{{PRESIDENTE_NOMBRE}}</strong>,</p>
+      <p>Se ha registrado el pago de inscripción del equipo <strong>{{EQUIPO_NOMBRE}}</strong> para el campeonato <strong>{{CAMPEONATO_NOMBRE}}</strong> en la Asociación Municipal de Voleibol de Vinto.</p>
+      <p><strong>Detalles del Pago:</strong></p>
+      <ul>
+        <li><strong>Monto Pagado:</strong> {{MONTO}} Bs.</li>
+        <li><strong>Fecha del Pago:</strong> {{FECHA}}</li>
+        <li><strong>Referencia:</strong> {{REFERENCIA}}</li>
+      </ul>
+      <p>Gracias por su participación. ¡Éxito en el torneo!</p>
+    </div>
+    <div class="footer">Vinto Volleyball Asociación</div>
+  </div>
+</body>
+</html>

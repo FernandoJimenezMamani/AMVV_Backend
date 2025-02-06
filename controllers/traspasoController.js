@@ -37,6 +37,17 @@ exports.getTraspasosPorJugador = async (req, res) => {
     }
 };
 
+exports.getTraspasosPorPresidente = async (req, res) => {
+    const presidente_id = req.user.id; 
+    try {
+        const solicitudes = await traspasoService.getTraspasosPorPresidente(presidente_id);
+        res.status(200).json(solicitudes);
+    } catch (error) {
+        console.error('Error al obtener los traspasos del presidente:', error);
+        res.status(500).json({ message: 'Error al obtener los traspasos del presidente' });
+    }
+};
+
 exports.getTraspasosEnviadosPorClub = async (req, res) => {
   const { club_id } = req.params;
 
@@ -64,10 +75,12 @@ exports.getTraspasosRecibidosPorClub = async (req, res) => {
 
 // Crear un nuevo traspaso
 exports.createTraspaso = async (req, res) => {
+    
     try {
         const traspaso = await traspasoService.createTraspaso(req.body);
         res.status(201).json({ message: 'Traspaso creado con éxito', traspaso });
     } catch (error) {
+        console.log(error)
         res.status(500).json({ message: 'Error al crear el traspaso', error: error.message });
     }
 };
@@ -113,6 +126,16 @@ exports.rechazarTraspasoPorClub = async (req, res) => {
         res.status(200).json({ message: 'Traspaso rechazado por el club de origen' });
     } catch (error) {
         res.status(500).json({ message: 'Error al rechazar traspaso por el club de origen', error: error.message });
+    }
+};
+
+exports.eliminarTraspaso = async (req, res) => {
+    const { id } = req.params;
+    try {
+        await traspasoService.eliminarTraspaso(id);
+        res.status(200).json({ message: 'Traspaso eliminado por el club de origen' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al eliminar traspaso por el club de origen', error: error.message });
     }
 };
 

@@ -2,6 +2,8 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/sequelize');
 const Jugador = require('./Jugador');
 const Club = require('./Club');
+const Campeonato = require('./Campeonato');
+const PresidenteClub = require('./PresidenteClub');
 
 const Traspaso = sequelize.define('Traspaso', {
   id: {
@@ -41,28 +43,49 @@ const Traspaso = sequelize.define('Traspaso', {
     type: DataTypes.DATEONLY,
     allowNull: true,
   },
-  estado_solicitud: {
+  estado_jugador: {
     type: DataTypes.STRING(20),
     allowNull: false,
     defaultValue: 'PENDIENTE',
   },
-  aprobado_por_jugador: {
+  estado_club: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    defaultValue: 'PENDIENTE',
+  },
+  estado_deuda: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    defaultValue: 'PENDIENTE',
+  },
+  eliminado: {
     type: DataTypes.CHAR(1),
     allowNull: false,
-    defaultValue: 'P', // 'S' para aprobado, 'N' para no aprobado
+    defaultValue: 'N',
   },
-  aprobado_por_club: {
-    type: DataTypes.CHAR(1),
-    allowNull: false,
-    defaultValue: 'P', // 'S' para aprobado, 'N' para no aprobado
+  campeonato_id:{
+    type:DataTypes.INTEGER,
+    allowNull:false,
+    references: {
+      model: Campeonato,
+      key: 'id',
+    }
   },
-  costo_traspaso: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: true,
+  presidente_club_id_origen:{
+    type:DataTypes.INTEGER,
+    allowNull:false,
+    references: {
+      model: PresidenteClub,
+      key: 'id',
+    }
   },
-  estado_pago: {
-    type: DataTypes.STRING(30),
-    allowNull: false,
+  presidente_club_id_destino:{
+    type:DataTypes.INTEGER,
+    allowNull:false,
+    references: {
+      model: PresidenteClub,
+      key: 'id',
+    }
   }
 }, {
   tableName: 'Traspaso',

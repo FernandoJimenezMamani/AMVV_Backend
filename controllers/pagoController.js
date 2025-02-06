@@ -11,8 +11,10 @@ exports.createPago = async (req, res) => {
       EquipoId,
       estado,
       fecha_registro,
-      userId
+      userId,
+      campeonatoId
     } = req.body;
+    console.log('req.body:', req.body);
 
     // Validación de campos requeridos
     if (!monto || !fecha || !tipo_pago || !userId) {
@@ -34,7 +36,8 @@ exports.createPago = async (req, res) => {
       EquipoId: EquipoId || null,
       estado,
       fecha_registro: fecha_registro || new Date(),
-      userId
+      userId,
+      campeonatoId
     });
 
     return res.status(201).json({ 
@@ -55,6 +58,35 @@ exports.getEquiposDebt = async (req, res) => {
   try {
     const equipos = await pagoService.obtenerEquiposPorCampeonato();
     res.status(200).json(equipos);
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener los equipos", error: error.message });
+  }
+};
+
+exports.getEquipoDebtById = async (req, res) => {
+  const id = req.params.id;
+  try {
+    const equipos = await pagoService.obtenerEquiposPorCampeonatoById(id);
+    res.status(200).json(equipos);
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener los equipos", error: error.message });
+  }
+};
+
+exports.getTraspasoDebt = async (req, res) => {
+  try {
+    const traspasos = await pagoService.obtenerTraspasosPorCampeonato();
+    res.status(200).json(traspasos);
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener los equipos", error: error.message });
+  }
+};
+
+exports.getTraspasoDebtById = async (req, res) => {
+  const id = req.params.id;
+  try {
+    const traspasos = await pagoService.obtenerTraspasosPorCampeonatoById(id);
+    res.status(200).json(traspasos);
   } catch (error) {
     res.status(500).json({ message: "Error al obtener los equipos", error: error.message });
   }

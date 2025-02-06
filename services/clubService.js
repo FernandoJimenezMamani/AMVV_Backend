@@ -114,11 +114,11 @@ exports.getClubTeams = async (id) => {
       LEFT JOIN
         PresidenteClub
       ON
-        Club.id = PresidenteClub.club_id
+        Club.id = PresidenteClub.club_id AND PresidenteClub.activo = 1
       LEFT JOIN
         Persona
       ON
-        PresidenteClub.presidente_id = Persona.id AND Persona.eliminado = 'N'
+        PresidenteClub.presidente_id = Persona.id AND Persona.eliminado = 'N' 
 	  LEFT JOIN ImagenPersona 
 	  ON ImagenPersona.persona_id = Persona.id
       WHERE

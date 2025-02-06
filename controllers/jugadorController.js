@@ -224,3 +224,41 @@ exports.getJugadoresByEquipo = async (req, res) => {
     return res.status(500).json({ error: 'Error al obtener los jugadores por equipo' });
   }
 };
+
+exports.getJugadoresAbleToExchange = async (req, res) => {
+  try {
+      const { club_presidente, idTraspasoPresidente } = req.body;
+
+      console.log('datos recibidos traspaso' ,req.body )
+
+      if (!club_presidente || !idTraspasoPresidente) {
+          return res.status(400).json({ error: 'Los parámetros club_presidente e idTraspasoPresidente son requeridos' });
+      }
+
+      const jugadores = await jugadorService.getJugadoresAbleToExchange(club_presidente, idTraspasoPresidente);
+
+      return res.status(200).json(jugadores);
+  } catch (error) {
+      console.error('Error en el controlador al obtener jugadores:', error);
+      return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+exports.getJugadoresPendingExchange = async (req, res) => {
+  try {
+      const { club_presidente, idTraspasoPresidente } = req.body;
+
+      console.log('datos recibidos traspaso' ,req.body )
+
+      if (!club_presidente || !idTraspasoPresidente) {
+          return res.status(400).json({ error: 'Los parámetros club_presidente e idTraspasoPresidente son requeridos' });
+      }
+
+      const jugadores = await jugadorService.getJugadoresPendingExchange(club_presidente, idTraspasoPresidente);
+
+      return res.status(200).json(jugadores);
+  } catch (error) {
+      console.error('Error en el controlador al obtener jugadores:', error);
+      return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};

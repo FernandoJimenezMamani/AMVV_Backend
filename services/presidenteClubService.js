@@ -111,7 +111,8 @@ exports.getPresidenteById = async (id) => {
         Usuario.correo,
         Jugador.club_id as 'club_jugador',
         STRING_AGG(Rol.nombre, ', ') AS roles,
-        PresidenteClub.club_id as 'club_presidente'
+        PresidenteClub.club_id as 'club_presidente',
+		    PresidenteClub.id AS 'id_presidente'
       FROM
         Persona
       LEFT JOIN
@@ -141,7 +142,8 @@ exports.getPresidenteById = async (id) => {
             ImagenPersona.persona_imagen,
             Usuario.correo,
       Jugador.club_id,
-      PresidenteClub.club_id;
+      PresidenteClub.club_id,
+      PresidenteClub.id;;
     `, {
       replacements: { id },
       type: sequelize.QueryTypes.SELECT
