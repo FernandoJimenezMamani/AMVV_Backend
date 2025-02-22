@@ -2,7 +2,8 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const authMiddleware = (req, res, next) => {
-  const token = req.headers['authorization']?.split(' ')[1]; // Asegurarse de que el formato es 'Bearer <token>'
+  console.log('🛡️ Token recibido en la petición:', req.headers['authorization']);
+  const token = req.headers['authorization']?.split(' ')[1]; 
   
   if (!token) {
     return res.status(401).json({ message: 'No se proporcionó token' });

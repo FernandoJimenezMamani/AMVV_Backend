@@ -16,7 +16,7 @@ const Pago = sequelize.define('Pago', {
     allowNull: true,
   },
   referencia: {
-    type: DataTypes.STRING(50),
+    type: DataTypes.STRING(150),
     allowNull: true,
   },
   tipo_pago: {

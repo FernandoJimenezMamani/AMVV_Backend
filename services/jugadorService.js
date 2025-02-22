@@ -11,6 +11,7 @@ exports.getAllJugadores = async () => {
         p.nombre AS nombre_persona,
         p.apellido AS apellido_persona,
         p.ci AS ci_persona,
+        P.genero AS genero_persona,
         p.fecha_nacimiento AS fecha_nacimiento_persona,
         c.id AS club_id,
         c.nombre AS nombre_club,
@@ -213,6 +214,7 @@ exports.getJugadoresByClubId = async (club_id) => {
       p.nombre AS nombre_persona,
       p.apellido AS apellido_persona,
       p.ci AS ci_persona,
+      p.genero AS genero_persona,
       p.fecha_nacimiento AS fecha_nacimiento_persona,
       im.persona_imagen AS imagen_persona
     FROM 
@@ -234,7 +236,7 @@ exports.getJugadoresByClubId = async (club_id) => {
 
 exports.getJugadoresByClubIdAndCategory = async (club_id,categoria_id,id_equipo) => {
   const jugadores = await sequelize.query(
-    `SELECT 
+    `SELECT DISTINCT  
     j.id AS jugador_id,
     j.jugador_id AS persona_id,
     p.nombre AS nombre_persona,
@@ -430,6 +432,7 @@ exports.getJugadoresByEquipoId = async (equipo_id) => {
         p.nombre AS nombre_persona,
         p.apellido AS apellido_persona,
         p.ci AS ci_persona,
+        p.genero,
         p.fecha_nacimiento AS fecha_nacimiento_persona,
         ip.persona_imagen AS imagen_persona,
          DATEDIFF(YEAR, p.fecha_nacimiento, GETDATE()) 
@@ -448,7 +451,7 @@ exports.getJugadoresByEquipoId = async (equipo_id) => {
       LEFT JOIN 
         ImagenPersona ip ON p.id = ip.persona_id
       WHERE 
-        je.equipo_id = :equipo_id AND p.eliminado = 'N'`, // Filtramos por equipo y jugadores no eliminados
+        je.equipo_id = :equipo_id AND p.eliminado = 'N'`,
       {
         replacements: { equipo_id },
         type: sequelize.QueryTypes.SELECT

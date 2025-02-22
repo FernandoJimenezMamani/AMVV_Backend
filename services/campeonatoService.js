@@ -91,11 +91,10 @@ exports.createCampeonato = async (nombre, fecha_inicio_campeonato, fecha_fin_cam
   }
 };
 
-
-
 exports.getCampeonatoCategoria = async (campeonato_id, categoria_id) => {
   const campeonato = await Campeonato.findOne({
     where: { id: campeonato_id },
+    attributes: ['nombre', 'estado'],
     include: [
       {
         model: EquipoCampeonato,
@@ -125,20 +124,20 @@ exports.getCampeonatoCategoria = async (campeonato_id, categoria_id) => {
   return {
     campeonato_nombre: campeonato.nombre,
     categoria_nombre: campeonato.equipos[0]?.equipo.categoria.nombre, 
+    estado: campeonato.estado,
   };
 };
 
-
 exports.getAllCampeonatos = async () => {
   const campeonatos = await Campeonato.findAll({
-    attributes: ['id', 'nombre', 'fecha_inicio', 'fecha_fin', 'fecha_inicio_transaccion' , 'fecha_fin_transaccion'],
+    attributes: ['id', 'nombre', 'fecha_inicio_campeonato', 'fecha_fin_campeonato', 'fecha_inicio_transaccion' , 'fecha_fin_transaccion' , 'estado'],
   });
   return campeonatos;
 };
 
 exports.getCampeonatoById = async (id) => {
   const campeonato = await Campeonato.findByPk(id, {
-    attributes: ['id', 'nombre', 'fecha_inicio', 'fecha_fin', 'fecha_inicio_transaccion', 'fecha_fin_transaccion'],
+    attributes: ['id', 'nombre', 'fecha_inicio_campeonato', 'fecha_fin_campeonato', 'fecha_inicio_transaccion', 'fecha_fin_transaccion', 'estado'],
   });
 
   if (!campeonato) {
@@ -437,3 +436,23 @@ exports.getChampionshipPositions = async (categoriaId,campeonato_id) => {
     throw new Error('Error al obtener los partidos');
   }
 };
+
+exports.obtenerFechasDePartidos = async (campeonatoId)  =>{
+  const campeonato = await Campeonato.findByPk(campeonatoId);
+    if (!campeonato) {
+        throw new Error('Campeonato no encontrado');
+    }
+
+    const fechas = [];
+    let fechaActual = new Date(campeonato.fecha_inicio_campeonato);
+    const fechaFin = new Date(campeonato.fecha_fin_campeonato);
+
+    while (fechaActual <= fechaFin) {
+        if (fechaActual.getDay() === 6 || fechaActual.getDay() === 0) { // Sábado (6) y Domingo (0)
+            fechas.push(fechaActual.toISOString().split('T')[0]); // Obtener solo la parte de la fecha (YYYY-MM-DD)
+        }
+        fechaActual.setDate(fechaActual.getDate() + 1);
+    }
+
+    return fechas;
+}

@@ -33,7 +33,7 @@ const ResultadoLocal = sequelize.define('ResultadoLocal', {
     allowNull: true,
   },
   walkover: {
-    type: DataTypes.CHAR(1),
+    type: DataTypes.CHAR(10),
     allowNull: true,
   },
 }, {

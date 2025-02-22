@@ -6,7 +6,7 @@ const http = require('http');
 const WebSocket = require('ws');
 const cron = require("node-cron");
 const { actualizarEstadosCampeonatos } = require("./services/cronService");
-
+const {clients, broadcastPositionsUpdate } = require('./utils/websocket');
 
 // Importar rutas
 const userRoutes = require('./routes/authRoutes');
@@ -39,7 +39,6 @@ app.use(cors({
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-const clients = new Map();
 const broadcastMessage = (message) => {
   console.log("Enviando mensaje a clientes WebSocket:", message);
 
@@ -54,13 +53,12 @@ const broadcastMessage = (message) => {
 };
 
 
-
 // Configurar tarea para ejecutar cada minuto
 cron.schedule("* * * * *", async () => {
   console.log("Ejecutando tarea de actualización de estados...");
   
   const cambios = await actualizarEstadosCampeonatos();
-  console.log("Estados actualizados:", cambios); // Log para ver los cambios obtenidos
+  console.log("Estados actualizados:", cambios); 
 
   if (cambios.length > 0) {
     console.log(`Enviando mensaje a ${clients.size} clientes conectados...`);
@@ -161,4 +159,5 @@ server.listen(PORT, () => {
   console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
 
-module.exports = { sendToClient, clients };
+module.exports.sendToClient = sendToClient;
+module.exports.clients = clients;

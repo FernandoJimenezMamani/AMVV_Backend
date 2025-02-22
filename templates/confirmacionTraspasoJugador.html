@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenido a tu Nuevo Club</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        h2 {
+            color: #2c3e50;
+        }
+        .club-box {
+            background: linear-gradient(to bottom, #507788, #141e22);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .info-box {
+            background: #e9e9e9;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+        .message {
+            font-size: 16px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🏆 ¡Bienvenido a tu Nuevo Club!</h2>
+
+    <p class="message">Hola <strong>{{jugador_nombre}} {{jugador_apellido}}</strong>,</p>
+
+    <p class="message">Nos complace informarte que tu traspaso ha sido confirmado con éxito y ahora eres oficialmente jugador del club:</p>
+
+    <div class="club-box">{{club_destino_nombre}}</div>
+
+    <div class="info-box">
+        <p><strong>Presidente del Club:</strong> {{nombre_presi_club_dest}} {{apellido_presi_club_dest}}</p>
+        <p><strong>Fecha de Incorporación:</strong> {{fecha_aprobacion}}</p>
+    </div>
+
+    <p class="message">A partir de ahora, representas a tu nuevo equipo en la <strong>{{nombre_campeonato}}</strong>. ¡Éxito en esta nueva etapa!</p>
+
+    <p class="message">Si tienes alguna pregunta, puedes comunicarte con tu nuevo club.</p>
+
+    <p>📧 <strong>Asociación Municipal de Voleibol de Vinto</strong></p>
+</div>
+
+</body>
+</html>

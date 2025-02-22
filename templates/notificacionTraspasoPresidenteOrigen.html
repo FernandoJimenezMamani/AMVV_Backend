@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notificación de Baja de Jugador</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        h2 {
+            color: #c0392b;
+        }
+        .info-box {
+            background: #e9e9e9;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+        .warning {
+            background-color: #e74c3c;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>⚠️ Notificación de Baja de Jugador</h2>
+
+    <p>Estimado(a) <strong>{{nombre_presi_club_origen}} {{apellido_presi_club_origen}}</strong>,</p>
+
+    <p>Le informamos que el jugador <strong>{{jugador_nombre}} {{jugador_apellido}}</strong> ha sido dado de baja oficialmente de su equipo <strong>{{club_origen_nombre}}</strong>.</p>
+
+    <div class="info-box">
+        <h3>📋 Información del Jugador</h3>
+        <p><strong>Nombre Completo:</strong> {{jugador_nombre}} {{jugador_apellido}}</p>
+        <p><strong>Cédula de Identidad:</strong> {{jugador_ci}}</p>
+        <p><strong>Fecha de Nacimiento:</strong> {{jugador_fecha_nacimiento}}</p>
+        <p><strong>Fecha de Baja:</strong> {{fecha_aprobacion}}</p>
+    </div>
+
+    <div class="warning">
+        ⚠️ El jugador ya no pertenece a su club.
+    </div>
+
+    <p>Si necesita más información, puede comunicarse con la Asociación Municipal de Voleibol de Vinto.</p>
+
+    <p>📧 <strong>Asociación Municipal de Voleibol de Vinto</strong></p>
+</div>
+
+</body>
+</html>

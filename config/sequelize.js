@@ -7,6 +7,7 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, proces
   dialectOptions: {
     options: {
       encrypt: true, 
+      requestTimeout: 60000
     }
   },
 });

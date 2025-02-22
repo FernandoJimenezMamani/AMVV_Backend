@@ -10,6 +10,7 @@ exports.getArbitros = async () => {
         Persona.apellido,
         Persona.fecha_nacimiento,
         Persona.ci,
+        Persona.genero AS genero_persona,
         Persona.direccion,
         Persona.fecha_registro,
         Persona.fecha_actualizacion,

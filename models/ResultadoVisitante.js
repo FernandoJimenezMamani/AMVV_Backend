@@ -33,7 +33,7 @@ const ResultadoVisitante = sequelize.define('ResultadoVisitante', {
     allowNull: true,
   },
   walkover: {
-    type: DataTypes.CHAR(1),
+    type: DataTypes.CHAR(10),
     allowNull: true,
   },
 }, {

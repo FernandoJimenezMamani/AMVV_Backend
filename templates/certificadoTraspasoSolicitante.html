@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificado de Transferencia</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2, h3 {
+            color: #333;
+        }
+        .info-box {
+            background: #e9e9e9;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .estado {
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+        }
+        .estado-pendiente { background: orange; color: white; }
+        .estado-aprobado { background: green; color: white; }
+        .estado-rechazado { background: red; color: white; }
+    </style>
+</head>
+<body>
+
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Confirmación de Traspaso</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #f4f4f4;
+                margin: 0;
+                padding: 20px;
+            }
+            .container {
+                max-width: 600px;
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                text-align: center;
+            }
+            h2, h3 {
+                color: #333;
+            }
+            .info-box {
+                background: #e9e9e9;
+                padding: 10px;
+                border-radius: 5px;
+                margin-bottom: 10px;
+                text-align: left;
+            }
+            .confirmation {
+                background: linear-gradient(to bottom, #507788, #141e22);
+                color: white;
+                padding: 10px;
+                border-radius: 5px;
+                font-size: 18px;
+                font-weight: bold;
+                text-align: center;
+                margin-top: 20px;
+            }
+        </style>
+    </head>
+    <body>
+    
+    <div class="container">
+        <h2>✅ Traspaso Confirmado</h2>
+    
+        <p>Nos complace informarle que el traspaso del jugador <strong>{{jugador_nombre}} {{jugador_apellido}}</strong> ha sido confirmado con éxito.</p>
+    
+        <div class="info-box">
+            <h3>🏆 Club de Origen</h3>
+            <p><strong>Nombre del Club:</strong> {{club_origen_nombre}}</p>
+            <p><strong>Presidente:</strong> {{nombre_presi_club_origen}} {{apellido_presi_club_origen}}</p>
+        </div>
+    
+        <div class="info-box">
+            <h3>🏅 Nuevo Club</h3>
+            <p><strong>Nombre del Club:</strong> {{club_destino_nombre}}</p>
+            <p><strong>Presidente:</strong> {{nombre_presi_club_dest}} {{apellido_presi_club_dest}}</p>
+        </div>
+    
+        <h3>📌 Información del Jugador</h3>
+        <div class="info-box">
+            <p><strong>Nombre Completo:</strong> {{jugador_nombre}} {{jugador_apellido}}</p>
+            <p><strong>Género:</strong> {{jugador_genero}}</p>
+            <p><strong>Cédula de Identidad:</strong> {{jugador_ci}}</p>
+            <p><strong>Fecha de Nacimiento:</strong> {{jugador_fecha_nacimiento}}</p>
+        </div>
+    
+        <div class="confirmation">
+            ✅ ¡El traspaso ha sido finalizado con éxito!  
+        </div>
+    
+        <p>El jugador ahora forma parte del club <strong>{{club_destino_nombre}}</strong> y podrá participar en el <strong>{{nombre_campeonato}}</strong>.</p>
+    
+        <p>Si tiene alguna consulta adicional, no dude en contactarnos.</p>
+    
+        <p>📧 <strong>Asociación Municipal de Voleibol de Vinto</strong></p>
+    </div>
+    </body>
+    </html>
+    
+
+</body>
+</html>

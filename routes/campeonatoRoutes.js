@@ -9,4 +9,6 @@ router.get('/select', campeonatoController.getAllCampeonatos);
 router.get('/:id', campeonatoController.getCampeonatoById);
 router.put('/edit/:id', campeonatoController.updateCampeonato);
 
+router.get('/obtenerFechas/:campeonatoId', campeonatoController.getFechasPartidos);
+
 module.exports = router;

@@ -12,8 +12,8 @@ const Arbitro = sequelize.define('Arbitro', {
     }
   },
   activo: {
-    type: DataTypes.TINYINT, // Campo para indicar si está activo o no ('S' para Sí, 'N' para No)
-    allowNull: true,// Por defecto, se puede asumir que el árbitro está activo cuando se crea
+    type: DataTypes.TINYINT, 
+    allowNull: true,
   },
 }, {
   tableName: 'Arbitro',

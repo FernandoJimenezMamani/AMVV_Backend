@@ -16,4 +16,7 @@ router.put('/rechazar/club/:id', traspasoController.rechazarTraspasoPorClub);
 router.put('/rechazar/jugador/:id', traspasoController.rechazarTraspasoPorJugador);
 router.put('/eliminar/:id', traspasoController.eliminarTraspaso);
 
+router.post('/test-email-traspaso', traspasoController.testSendTraspasoEmail);
+router.post('/test-email-traspasoJugador', traspasoController.sendJugadorEmail);
+router.post('/test-email-testSendPresidenteO', traspasoController.testSendPresidenteEmail);
 module.exports = router;

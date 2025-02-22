@@ -10,7 +10,7 @@ const path = require('path');
 const loadEmailTemplate = (templateName, replacements) => {
   try {
     // Ruta de la plantilla
-    const templatePath = path.join(__dirname, `../templates/emailTemplates/${templateName}.html`);
+    const templatePath = path.join(__dirname, `../templates/${templateName}.html`);
     let template = fs.readFileSync(templatePath, 'utf8');
 
     // Reemplazar las variables en la plantilla con los valores proporcionados

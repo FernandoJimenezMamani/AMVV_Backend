@@ -99,4 +99,19 @@ exports.updateCampeonato = async (req, res) => {
   }
 };
 
+exports.getFechasPartidos = async (req, res) => {
+  const { campeonatoId } = req.params;
+
+  if (!campeonatoId) {
+      return res.status(400).json({ message: 'El ID del campeonato es obligatorio' });
+  }
+
+  try {
+      const fechas = await campeonatoService.obtenerFechasDePartidos(campeonatoId);
+      res.status(200).json({ campeonatoId, fechas });
+  } catch (error) {
+      console.error('Error en getFechasPartidos:', error.message);
+      res.status(500).json({ message: 'Error al obtener las fechas de partidos', error: error.message });
+  }
+};
 

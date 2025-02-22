@@ -10,7 +10,7 @@ exports.actualizarEstadosCampeonatos = async () => {
         const campeonatosActualizados = []; // Lista de cambios
         const campeonato = await Campeonato.findOne({
             where: {
-                estado: { [Op.in]: [0, 1, 2] }
+                estado: { [Op.in]: [0, 1, 2,3] }
             }
         });
 

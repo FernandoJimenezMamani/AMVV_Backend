@@ -14,7 +14,7 @@
     }
 
     .header img { 
-      width: 180px; /* Aumenté el tamaño del logo */
+      width: 180px;
       height: auto; 
     }
 
@@ -40,8 +40,8 @@
     }
 
     th, td { 
-      border: 2px solid #4CAF50; /* Ahora las líneas de la tabla son verdes */
-      padding: 10px; /* Espaciado más amplio para mejorar la legibilidad */
+      border: 2px solid #2c2b2b;
+      padding: 10px; 
       text-align: center; 
     }
 
@@ -52,12 +52,12 @@
     }
 
     td { 
-      background-color: #EAF7EA; 
+      background-color: #000000; 
       font-size: 16px;
     }
 
     img { 
-      width: 180px; /* Más grande */
+      width: 180px; 
       height: auto; 
     }
   </style>
@@ -70,28 +70,10 @@
       <h3>ASOCIACIÓN MUNICIPAL DE VOLEIBOL VINTO</h3>
       <h3>{{campeonato_nombre}}</h3>
       <h1>ROL DE PARTIDOS</h1>
-      <h2>{{fecha}}</h2>
     </div>
   </div>
 
-  <!--<p><strong>LUGAR:</strong> {{lugar}}</p>-->
-
-  <table>
-     <!--<thead>
-      <tr>
-        <th>N°</th>
-        <th>HORA</th>
-        <th>CATEGORÍA</th>
-        <th>EQUIPO "A"</th>
-        <th>VS</th>
-        <th>EQUIPO "B"</th>
-        <th>ÁRBITRO</th>
-      </tr>
-    </thead>-->
-    <tbody>
-      {{partidos}}
-    </tbody>
-  </table>
+  {{partidos}}
 
 </body>
 </html>

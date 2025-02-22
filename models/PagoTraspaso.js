@@ -30,7 +30,7 @@ PagoTraspaso.belongsTo(Pago, { foreignKey: 'id', as: 'pago' });
 Pago.hasOne(PagoTraspaso, { foreignKey: 'id', as: 'pagoTraspaso' });
 
 // Relación 1 a 1 entre PagoTraspaso y Traspaso
-PagoTraspaso.belongsTo(Traspaso, { foreignKey: 'traspaso_id', as: 'traspaso' });
-Traspaso.hasOne(PagoTraspaso, { foreignKey: 'traspaso_id', as: 'pagoTraspaso' });
+PagoTraspaso.belongsTo(Traspaso, { foreignKey: 'id', as: 'traspaso' });
+Traspaso.hasMany(PagoTraspaso, { foreignKey: 'traspaso_id', as: 'pagoTraspaso' });
 
 module.exports = PagoTraspaso;

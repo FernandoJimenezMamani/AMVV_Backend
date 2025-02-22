@@ -1,5 +1,7 @@
 const traspasoService = require('../services/traspasoService');
 
+const sendEmailService =require('../services/sendEmailTraspaso')
+
 // Obtener traspaso por ID
 exports.getTraspasoById = async (req, res) => {
     const { id } = req.params;
@@ -147,3 +149,80 @@ exports.getTraspasos = async (req, res) => {
       res.status(500).json({ message: "Error al obtener la lista de traspasos", error: error.message });
     }
   };
+
+  exports.testSendTraspasoEmail = async (req, res) => {
+      try {
+          // Datos estáticos para prueba
+          const solicitud = {
+              club_origen_nombre: "Club Original",
+              nombre_presi_club_origen: "Juan",
+              apellido_presi_club_origen: "Pérez",
+              club_destino_nombre: "Club Destino",
+              nombre_presi_club_dest: "María",
+              apellido_presi_club_dest: "López",
+              jugador_nombre: "Carlos",
+              jugador_apellido: "Gómez",
+              jugador_genero: "V", // 'V' para varón, 'D' para dama
+              jugador_ci: "12345678",
+              jugador_fecha_nacimiento: "2000-05-15",
+              nombre_campeonato: "Campeonato Nacional 2024",
+              estado_jugador: "APROBADO",
+              estado_club: "APROBADO",
+              estado_deuda: "PENDIENTE"
+          };
+  
+          const destinatario = "raymondverletzer@gmail.com"; // Cambia por un correo válido para pruebas
+  
+          const result = await sendEmailService.sendTraspasoEmail(solicitud, destinatario);
+          return res.status(result.success ? 200 : 500).json(result);
+      } catch (error) {
+          console.error("Error en el endpoint de prueba:", error);
+          return res.status(500).json({ message: "Error en el servidor", error: error.message });
+      }
+  };
+
+  exports.sendJugadorEmail = async (req, res) => {
+    try {
+        const solicitud = {
+            jugador_nombre: "Carlos",
+            jugador_apellido: "Gómez",
+            club_destino_nombre: "Club Estrella",
+            nombre_presi_club_dest: "María",
+            apellido_presi_club_dest: "López",
+            nombre_campeonato: "Campeonato Nacional 2024"
+        };
+
+        const destinatario = "raymondverletzer@gmail.com"; // Cambia por un correo válido para pruebas
+
+        const result = await sendEmailService.sendJugadorEmail(solicitud, destinatario);
+        return res.status(result.success ? 200 : 500).json(result);
+    } catch (error) {
+        console.error("Error en el endpoint de prueba:", error);
+        return res.status(500).json({ message: "Error en el servidor", error: error.message });
+    }
+};
+
+exports.testSendPresidenteEmail = async (req, res) => {
+    try {
+        const solicitud = {
+            nombre_presi_club_origen: "Juan",
+            apellido_presi_club_origen: "Pérez",
+            club_origen_nombre: "Club Los Leones",
+            jugador_nombre: "Carlos",
+            jugador_apellido: "Gómez",
+            jugador_ci: "12345678",
+            jugador_fecha_nacimiento: "2000-05-15"
+        };
+
+        const destinatario = "raymondverletzer@gmail.com"; // Cambia por un correo válido para pruebas
+
+        const result = await sendEmailService.sendPresidenteEmail(solicitud, destinatario);
+        return res.status(result.success ? 200 : 500).json(result);
+    } catch (error) {
+        console.error("Error en el endpoint de prueba:", error);
+        return res.status(500).json({ message: "Error en el servidor", error: error.message });
+    }
+};
+
+
+  

@@ -16,6 +16,7 @@ exports.getAllPersonas = async () => {
         Persona.apellido,
         Persona.fecha_nacimiento,
         Persona.ci,
+        Persona.genero AS genero_persona,
         Persona.direccion,
         Persona.fecha_registro,
         Persona.fecha_actualizacion,
@@ -41,6 +42,7 @@ exports.getAllPersonas = async () => {
               Persona.apellido,
               Persona.fecha_nacimiento,
               Persona.ci,
+              Persona.genero,
               Persona.direccion,
               Persona.fecha_registro,
               Persona.fecha_actualizacion,
@@ -102,9 +104,7 @@ exports.getPersonaById = async (id) => {
         Persona.eliminado,
         ImagenPersona.persona_imagen,
         Usuario.correo,
-        STRING_AGG(Rol.nombre, ', ') AS roles,
-        Jugador.club_id as 'club_jugador',
-        PresidenteClub.club_id as 'club_presidente'
+        STRING_AGG(Rol.nombre, ', ') AS roles
       FROM
         Persona
       LEFT JOIN
@@ -117,24 +117,20 @@ exports.getPersonaById = async (id) => {
         Persona.id = Usuario.id
       iNNER JOIN PersonaRol ON Persona.id = PersonaRol.persona_id
       INNER JOIN Rol ON Rol.id= PersonaRol.rol_id AND PersonaRol.eliminado = 0
-      LEFT JOIN Jugador ON Persona.id =Jugador.jugador_id AND Jugador.activo = 1
-      LEFT JOIN PresidenteClub ON Persona.id = PresidenteClub.presidente_id AND PresidenteClub.activo = 1
       WHERE
         Persona.id = :id AND Persona.eliminado = 'N'
-		GROUP BY Persona.id,
+		        GROUP BY Persona.id,
             Persona.nombre,
             Persona.apellido,
             Persona.fecha_nacimiento,
             Persona.ci,
-			Persona.genero,
+			      Persona.genero,
             Persona.direccion,
             Persona.fecha_registro,
             Persona.fecha_actualizacion,
             Persona.eliminado,
             ImagenPersona.persona_imagen,
-            Usuario.correo,
-            Jugador.club_id,
-            PresidenteClub.club_id;
+            Usuario.correo;
     `, {
       replacements: { id },
       type: sequelize.QueryTypes.SELECT
