@@ -16,5 +16,6 @@ router.get('/getJugadoresByEquipo/:equipo_id', jugadorController.getJugadoresByE
 router.post('/post_jugadorEquipo', jugadorController.createJugadorEquipo);
 router.post('/intercambio', jugadorController.getJugadoresAbleToExchange);
 router.post('/intercambioEstado', jugadorController.getJugadoresPendingExchange);
+router.get('/ObtenerJugadoresPreviousClubs/:PersonaId', jugadorController.getJugadoresOtherClubs);
 
 module.exports = router;

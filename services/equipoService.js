@@ -1,7 +1,7 @@
 const { Equipo, Club, Categoria, ImagenClub, Sequelize } = require('../models');
 const sequelize = require('../config/sequelize');
 
-exports.getEquiposByCategoriaId = async (categoria_id) => {
+exports.getEquiposByCategoriaId = async (categoria_id, campeonato_id) => {
   try {
     const equipos = await sequelize.query(`
       SELECT Equipo.id, Equipo.nombre, Club.nombre AS club_nombre, Categoria.nombre AS categoria_nombre, ImagenClub.club_imagen
@@ -9,9 +9,10 @@ exports.getEquiposByCategoriaId = async (categoria_id) => {
       INNER JOIN Club ON Equipo.club_id = Club.id
       INNER JOIN Categoria ON Equipo.categoria_id = Categoria.id
       LEFT JOIN ImagenClub ON Club.id = ImagenClub.club_id
-      WHERE Equipo.eliminado = 'N' AND Equipo.categoria_id = :categoria_id
+      LEFT JOIN EquipoCampeonato EQ ON EQ.equipoId = Equipo.id
+      WHERE Equipo.eliminado = 'N' AND Equipo.categoria_id = :categoria_id AND EQ.campeonatoId = :campeonato_id AND EQ.estado = 'Inscrito'
     `, {
-      replacements: { categoria_id },
+      replacements: { categoria_id, campeonato_id },
       type: sequelize.QueryTypes.SELECT
     });
 

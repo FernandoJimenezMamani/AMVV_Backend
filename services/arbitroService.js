@@ -17,7 +17,7 @@ exports.getArbitros = async () => {
         Persona.eliminado,
         ImagenPersona.persona_imagen,
         Usuario.correo,
-		Arbitro.activo
+		    Arbitro.activo
       FROM
         Persona
       LEFT JOIN

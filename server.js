@@ -5,7 +5,7 @@ require('dotenv').config();
 const http = require('http');
 const WebSocket = require('ws');
 const cron = require("node-cron");
-const { actualizarEstadosCampeonatos } = require("./services/cronService");
+const { actualizarEstadosCampeonatos, monitorearJugadoresParticipacion } = require("./services/cronService");
 const {clients, broadcastPositionsUpdate } = require('./utils/websocket');
 
 // Importar rutas
@@ -72,6 +72,10 @@ cron.schedule("* * * * *", async () => {
   }
 });
 
+cron.schedule("* * * * *", async () => {
+  console.log("⏳ Ejecutando tarea: Monitoreo de jugadores y participaciones...");
+  await monitorearJugadoresParticipacion();
+});
 
 wss.on('connection', (ws) => {
   console.log('Cliente WebSocket conectado');

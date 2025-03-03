@@ -31,6 +31,17 @@ exports.getPartidosByCategoriaId = async (req, res) => {
   }
 };
 
+exports.getPartidosByEquipoId = async (req, res) => {
+  const { EquipoId ,campeonatoId } = req.params;
+
+  try {
+    const partidos = await partidoService.getPartidosByEquipoId(EquipoId,campeonatoId);
+    res.status(200).json(partidos);
+  } catch (err) {
+    res.status(500).json({ message: 'Error al obtener los partidos', error: err.message });
+  }
+};
+
 exports.getUpcomingMatchesByCategoria = async (req, res) => {
   const { categoria } = req.params;
 
@@ -143,13 +154,17 @@ exports.getPartidoCompletoById = async (req, res) => {
 
 // Obtener los jugadores de un equipo por su ID
 exports.getJugadoresByEquipoId = async (req, res) => {
-  const { equipoId } = req.params;
+  const { equipoId, campeonatoId } = req.params;
 
   try {
-    const jugadores = await partidoService.getJugadoresByEquipoId(equipoId);
+    const jugadores = await partidoService.getJugadoresByEquipoAndCampeonato(equipoId, campeonatoId);
     res.status(200).json(jugadores);
   } catch (error) {
-    res.status(500).json({ message: 'Error al obtener los jugadores del equipo', error: error.message });
+    console.error('Error en getJugadoresByEquipoAndCampeonato:', error);
+    res.status(500).json({ 
+      message: 'Error al obtener los jugadores del equipo en el campeonato', 
+      error: error.message 
+    });
   }
 };
 
@@ -387,4 +402,70 @@ exports.getPartidosByCampeonato = async (req, res) => {
         console.error('Error en getPartidosByCampeonatoYFecha:', err.message);
         res.status(500).json({ message: 'Error al obtener los partidos', error: err.message });
     }
+};
+
+exports.reprogramarPartidoController = async (req, res) => {
+  try {
+    const { partidoId } = req.params;
+
+    if (!partidoId) {
+      return res.status(400).json({ message: 'Falta el parámetro requerido: partidoId.' });
+    }
+
+    const resultadoSimulacion = await partidoService.reprogramarPartido(partidoId);
+
+    return res.status(200).json(resultadoSimulacion);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+exports.confirmarReprogramacionPartidoController = async (req, res) => {
+  try {
+    const { partidoId, nuevaFechaHora, nuevoLugar, arbitrosAsignados } = req.body;
+
+    if (!partidoId || !nuevaFechaHora || !nuevoLugar || !arbitrosAsignados) {
+      return res.status(400).json({ message: 'Faltan parámetros requeridos para confirmar la reprogramación.' });
+    }
+
+    const resultado = await partidoService.confirmarReprogramacionPartido(
+      partidoId,
+      nuevaFechaHora,
+      nuevoLugar,
+      arbitrosAsignados
+    );
+
+    return res.status(200).json(resultado);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+exports.obtenerResultadosPartidoController = async (req, res) => {
+  try {
+    const { partidoId } = req.params;
+
+    if (!partidoId) {
+      return res.status(400).json({ message: 'Falta el parámetro requerido: partidoId.' });
+    }
+
+    const resultados = await partidoService.obtenerResultadosPartido(partidoId);
+
+    return res.status(200).json(resultados);
+  } catch (error) {
+    console.error('Error al obtener los resultados del partido:', error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+exports.obtenerGanadorPartido = async (req, res) => {
+  const { partidoId } = req.params;
+
+  try {
+    const resultado = await partidoService.obtenerGanadorPartido(partidoId);
+    res.status(200).json(resultado);
+  } catch (error) {
+    console.error('🚨 Error en obtenerGanadorPartido:', error);
+    res.status(500).json({ message: 'Error al obtener el ganador del partido', error: error.message });
+  }
 };

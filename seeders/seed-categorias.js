@@ -14,7 +14,7 @@ const seedCategorias = async () => {
 
     // Datos de las categorías
     const categorias = [
-      { nombre: '1ras Honor', genero: 'V', division: 'MY' },
+      { nombre: '1ras de Honor', genero: 'V', division: 'MY' },
       { nombre: '3ras Ascenso', genero: 'D', division: 'MY' },
       { nombre: '1ras de Honor', genero: 'D', division: 'MY' },
       { nombre: 'Maxis', genero: 'V', division: 'MY' },

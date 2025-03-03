@@ -1,4 +1,4 @@
-const { Campeonato, EquipoCampeonato, Equipo, Categoria } = require('../models');
+const { Campeonato, EquipoCampeonato, Equipo, Categoria , JugadorEquipo, Participacion} = require('../models');
 const sequelize = require('../config/sequelize');
 const { Op, where } = require('sequelize');
 const campeonatoEstados = require('../constants/campeonatoEstados');
@@ -100,4 +100,56 @@ exports.actualizarEstadosCampeonatos = async () => {
     }
 };
 
+exports.monitorearJugadoresParticipacion = async () => {
+    try {
+        const campeonatoActivo = await Campeonato.findOne({
+            where: { estado: 1 } 
+        });
 
+        if (!campeonatoActivo) {
+            return;
+        }
+
+        const jugadoresActivos = await JugadorEquipo.findAll({
+            where: { activo: 1 }
+        });
+
+        if (jugadoresActivos.length === 0) {
+            return;
+        }
+
+        for (const jugador of jugadoresActivos) {
+            const equipoCampeonato = await EquipoCampeonato.findOne({
+                where: {
+                    equipoId: jugador.equipo_id,
+                    campeonatoId: campeonatoActivo.id,
+                    estado: campeonatoEquipoEstados.Inscrito
+                }
+            });
+
+            if (!equipoCampeonato) {
+                continue;
+            }
+
+            const participacionExistente = await Participacion.findOne({
+                where: {
+                    jugador_equipo_id: jugador.id,
+                    equipo_campeonato_id: equipoCampeonato.id
+                }
+            });
+
+            if (!participacionExistente) {
+
+                await Participacion.create({
+                    jugador_equipo_id: jugador.id,
+                    equipo_campeonato_id: equipoCampeonato.id
+                });
+            } else {
+                console.log(`🔄 El jugador ${jugador.jugador_id} ya está registrado en Participacion.`);
+            }
+        }
+
+    } catch (error) {
+        console.error("🚨 Error en el monitoreo de jugadores:", error);
+    }
+};

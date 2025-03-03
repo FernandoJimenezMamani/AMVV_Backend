@@ -432,6 +432,7 @@ exports.getJugadoresByEquipoId = async (equipo_id) => {
         p.nombre AS nombre_persona,
         p.apellido AS apellido_persona,
         p.ci AS ci_persona,
+        p.id AS persona_id,
         p.genero,
         p.fecha_nacimiento AS fecha_nacimiento_persona,
         ip.persona_imagen AS imagen_persona,
@@ -580,6 +581,47 @@ exports.getJugadoresPendingExchange = async (club_presidente , idTraspasoPreside
       `,
       {
         replacements:{club_presidente,idTraspasoPresidente},
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+
+    return jugadores;
+  } catch (error) {
+    console.error('Error al obtener los jugadores con sus clubes:', error);
+    throw new Error('Error al obtener los jugadores con sus clubes');
+  }
+};
+
+exports.getJugadoresOtherClubs = async (PersonaId) => {
+  try {
+    const jugadores = await sequelize.query(
+      `SELECT 
+    Persona.id,
+    Jugador.club_id,
+    Club.nombre AS club_nombre,
+    Jugador.activo AS estadoclub,
+    ImagenClub.club_imagen,
+    STRING_AGG(Equipo.nombre, ', ') AS equipos_jugador,
+    STRING_AGG(CAST(JugadorEquipo.activo AS VARCHAR), ', ') AS estado_equipos
+    FROM 
+        Persona
+    LEFT JOIN Jugador ON Persona.id = Jugador.jugador_id
+    LEFT JOIN Club ON Club.id = Jugador.club_id
+    LEFT JOIN ImagenClub ON ImagenClub.club_id = Club.id
+    LEFT JOIN JugadorEquipo ON JugadorEquipo.jugador_id = Jugador.id
+    LEFT JOIN Equipo ON Equipo.id = JugadorEquipo.equipo_id
+    WHERE 
+        Persona.id = :PersonaId AND Persona.eliminado = 'N'
+    GROUP BY 
+        Persona.id, 
+        Jugador.club_id, 
+        Club.nombre, 
+        Jugador.activo, 
+        ImagenClub.club_imagen;
+
+      `,
+      {
+        replacements:{PersonaId},
         type: sequelize.QueryTypes.SELECT
       }
     );

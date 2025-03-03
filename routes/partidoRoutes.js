@@ -6,13 +6,14 @@ const { upload } = require('../config/multer');
 router.post('/insert', partidoController.createPartido);
 router.post('/submitResultados', upload.single('imagenPlanilla'), partidoController.submitResultados);
 router.get('/select/:categoriaId/:campeonatoId', partidoController.getPartidosByCategoriaId);
+router.get('/selectPartidosById/:EquipoId/:campeonatoId', partidoController.getPartidosByEquipoId);
 router.get('/get_upcoming_matches/:categoria', partidoController.getUpcomingMatchesByCategoria);
 router.get('/get_all_matches/:categoria', partidoController.getAllMatchesExceptUpcoming);
 router.get('/:id', partidoController.getPartidoById);
 router.put('/edit/:id', partidoController.updatePartido);
 router.put('/delete/:id', partidoController.deletePartido);
 router.get('/get_partido_completo/:partidoId', partidoController.getPartidoCompletoById);
-router.get('/get_jugadores/:equipoId', partidoController.getJugadoresByEquipoId);
+router.get('/get_jugadores/:equipoId/campeonato/:campeonatoId', partidoController.getJugadoresByEquipoId);
 router.get('/get_arbitros/:partidoId', partidoController.getArbitrosByPartidoId);
 router.get('/partidos_pdf/filtrar', partidoController.getPartidosByLugarYFecha);
 router.get('/partidos_pdf/filtrar_fecha', partidoController.getPartidosByFecha);
@@ -23,5 +24,10 @@ router.get('/generar-fixture-completo/:campeonatoId/:categoriaId', partidoContro
 router.post('/registrar-partidos/:campeonatoId/:categoriaId', partidoController.registrarPartidos);
 
 router.get('/campeonatoPartidosPDF/:campeonatoId', partidoController.getPartidosByCampeonato);
+
+router.get('/reprogramar-partido/:partidoId', partidoController.reprogramarPartidoController);
+router.post('/confirmar-reprogramacion', partidoController.confirmarReprogramacionPartidoController);
+router.get('/resultados/:partidoId', partidoController.obtenerResultadosPartidoController);
+router.get('/ganador/:partidoId', partidoController.obtenerGanadorPartido);
 
 module.exports = router;

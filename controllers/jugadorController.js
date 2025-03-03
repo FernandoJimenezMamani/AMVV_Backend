@@ -262,3 +262,20 @@ exports.getJugadoresPendingExchange = async (req, res) => {
       return res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
+
+exports.getJugadoresOtherClubs = async (req, res) => {
+  try {
+      const { PersonaId } = req.params;
+
+      if (!PersonaId) {
+          return res.status(400).json({ error: 'Los parámetros Personas son requeridos' });
+      }
+
+      const jugadores = await jugadorService.getJugadoresOtherClubs(PersonaId);
+
+      return res.status(200).json(jugadores);
+  } catch (error) {
+      console.error('Error en el controlador al obtener jugadores:', error);
+      return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};

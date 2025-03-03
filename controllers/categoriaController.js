@@ -92,3 +92,19 @@ exports.deleteCategoria = async (req, res) => {
     res.status(500).json({ message: 'Error al eliminar categoría', error: err.message });
   }
 };
+
+exports.getNombresCategorias = async (req, res) => {
+  try {
+    const categorias = await categoriaService.getNombresCategorias();
+
+    if (!categorias.length) {
+      return res.status(404).json({ message: "No hay categorías registradas." });
+    }
+
+    return res.json({ categorias });
+  } catch (error) {
+    console.error("Error al obtener los nombres de las categorías:", error);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+};
+

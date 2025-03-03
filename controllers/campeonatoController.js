@@ -115,3 +115,22 @@ exports.getFechasPartidos = async (req, res) => {
   }
 };
 
+exports.getCampeonatoEnCurso = async (req, res) => {
+  try {
+    const campeonato = await campeonatoService.getCampeonatoEnCurso();
+    return res.json(campeonato);
+  } catch (error) {
+    console.error("Error al obtener el campeonato en curso:", error);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+};
+
+exports.getCampeonatoEnTransaccion = async (req, res) => {
+  try {
+    const campeonato = await campeonatoService.getCampeonatoEnTransaccion();
+    return res.json(campeonato);
+  } catch (error) {
+    console.error("Error al obtener el campeonato en transaccion:", error);
+    return res.status(500).json({ error: "Error interno del transaccion" });
+  }
+};

@@ -108,3 +108,19 @@ exports.deleteCategoria = async (id, user_id) => {
     }
   );
 };
+
+exports.getNombresCategorias = async () => {
+  try {
+    const categorias = await Categoria.findAll({
+      attributes: ["nombre"], 
+      group: ["nombre"], 
+      order: [["nombre", "ASC"]], 
+    });
+
+    return categorias.map((cat) => cat.nombre); 
+
+  } catch (error) {
+    console.error("Error al obtener los nombres de las categorías:", error);
+    throw new Error("Error al obtener los nombres de las categorías");
+  }
+};

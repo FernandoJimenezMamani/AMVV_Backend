@@ -94,6 +94,7 @@ exports.getClubTeams = async (id) => {
         Equipo.eliminado AS equipo_eliminado,
         Categoria.id AS categoria_id,
         Categoria.nombre AS categoria_nombre,
+        Categoria.genero AS categoria_genero,
         Persona.id AS presidente_id,
         CONCAT(Persona.nombre, ' ', Persona.apellido) AS presidente_nombre,
 		ImagenPersona.persona_imagen

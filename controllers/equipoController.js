@@ -1,10 +1,11 @@
 const equipoService = require('../services/equipoService');
+const campeonatoService = require('../services/campeonatoService');
 
 exports.getEquiposByCategoriaId = async (req, res) => {
-  const { categoria_id } = req.params;
+  const { categoria_id, campeonato_id } = req.params;
 
   try {
-    const equipos = await equipoService.getEquiposByCategoriaId(categoria_id);
+    const equipos = await equipoService.getEquiposByCategoriaId(categoria_id ,campeonato_id);
     res.status(200).json(equipos);
   } catch (err) {
     console.error('Error:', err.message);
@@ -95,5 +96,27 @@ exports.getEquiposPorPartido = async (req, res) => {
   } catch (error) {
     console.error('Error en el controlador getEquiposPorPartido:', error);
     return res.status(500).json({ error: 'Error al obtener los equipos por partido' });
+  }
+};
+
+exports.getTeamPosition = async (req, res) => {
+  const { categoria_id, campeonato_id, equipo_id } = req.params;
+
+  try {
+    // Convertir los parámetros a números (opcional, pero recomendable)
+    const categoria = parseInt(categoria_id);
+    const campeonato = parseInt(campeonato_id);
+    const equipo = parseInt(equipo_id);
+
+    if (isNaN(categoria) || isNaN(campeonato) || isNaN(equipo)) {
+      return res.status(400).json({ message: 'Parámetros inválidos' });
+    }
+
+    // Obtener la posición del equipo
+    const teamPosition = await campeonatoService.getTeamPosition(categoria, campeonato, equipo);
+
+    res.status(200).json(teamPosition);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };

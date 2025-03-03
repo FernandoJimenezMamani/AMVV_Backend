@@ -98,17 +98,17 @@ exports.getCampeonatoCategoria = async (campeonato_id, categoria_id) => {
     include: [
       {
         model: EquipoCampeonato,
-        as: 'equipos', 
+        as: 'equipos',
         include: [
           {
             model: Equipo,
-            as: 'equipo', 
+            as: 'equipo',
             include: [
               {
                 model: Categoria,
                 where: { id: categoria_id },
                 attributes: ['nombre'],
-                as: 'categoria', 
+                as: 'categoria',
               },
             ],
           },
@@ -118,15 +118,22 @@ exports.getCampeonatoCategoria = async (campeonato_id, categoria_id) => {
   });
 
   if (!campeonato) {
-    throw new Error('Campeonato o Categoría no encontrados');
+    throw new Error('Campeonato no encontrado');
+  }
+
+  // Verificar si hay equipos inscritos
+  const equipoCampeonato = campeonato.equipos?.find(ec => ec.equipo && ec.equipo.categoria);
+  if (!equipoCampeonato) {
+    throw new Error('No hay equipos en esta categoría dentro del campeonato');
   }
 
   return {
     campeonato_nombre: campeonato.nombre,
-    categoria_nombre: campeonato.equipos[0]?.equipo.categoria.nombre, 
+    categoria_nombre: equipoCampeonato.equipo.categoria.nombre || 'Categoría no encontrada',
     estado: campeonato.estado,
   };
 };
+
 
 exports.getAllCampeonatos = async () => {
   const campeonatos = await Campeonato.findAll({
@@ -456,3 +463,61 @@ exports.obtenerFechasDePartidos = async (campeonatoId)  =>{
 
     return fechas;
 }
+
+exports.getCampeonatoEnCurso = async () => {
+  try {
+    const campeonato = await Campeonato.findOne({
+      where: { estado: campeonatoEstados.campeonatoEnCurso },  
+      attributes: ['id', 'nombre'],  
+    });
+
+    return campeonato || null; 
+  } catch (error) {
+    console.error("Error al obtener el campeonato en curso:", error);
+    throw new Error("Error al obtener el campeonato en curso");
+  }
+};
+
+exports.getCampeonatoEnTransaccion = async () => {
+  try {
+    const campeonato = await Campeonato.findOne({
+      where: { estado: campeonatoEstados.transaccionProceso },  
+      attributes: ['id', 'nombre'],  
+    });
+
+    return campeonato || null; 
+  } catch (error) {
+    console.error("Error al obtener el campeonato en transaccion:", error);
+    throw new Error("Error al obtener el campeonato en transaccion");
+  }
+};
+
+exports.getTeamPosition = async (categoriaId, campeonato_id, equipoId) => {
+  try {
+    const positions = await exports.getChampionshipPositions(categoriaId, campeonato_id);
+
+    positions.forEach((team, index) => {
+      team.posicion = index + 1; 
+    });
+
+    const teamPosition = positions.find(team => team.equipo_id === equipoId);
+
+    if (!teamPosition) {
+      throw new Error('Equipo no encontrado en el campeonato');
+    }
+
+    return {
+      equipo_id: teamPosition.equipo_id,
+      equipo_nombre: teamPosition.equipo_nombre,
+      posicion: teamPosition.posicion, 
+      puntos: teamPosition.pts,
+      sets_a_favor: teamPosition.sets_a_favor,
+      diferencia_sets: teamPosition.diferencia_sets,
+      diferencia_puntos: teamPosition.diferencia_puntos,
+      escudo: teamPosition.escudo
+    };
+  } catch (error) {
+    console.error('Error al obtener la posición del equipo:', error);
+    throw new Error('Error al obtener la posición del equipo');
+  }
+};
