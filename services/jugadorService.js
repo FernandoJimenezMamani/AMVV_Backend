@@ -17,7 +17,8 @@ exports.getAllJugadores = async () => {
         c.nombre AS nombre_club,
         c.descripcion AS descripcion_club,
         im.persona_imagen AS imagen_persona,
-		    p.eliminado 
+		    p.eliminado,
+        j.jugador_id AS persona_id 
       FROM 
         Jugador j
       JOIN 

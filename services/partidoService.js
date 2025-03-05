@@ -111,7 +111,8 @@ exports.getPartidosByEquipoId= async (EquipoId,campeonatoId) => {
     eV.nombre AS equipo_visitante_nombre,
     ICL.club_imagen AS equipo_local_imagen,
     ICV.club_imagen AS equipo_visitante_imagen,
-    L.nombre AS lugar_nombre
+    L.nombre AS lugar_nombre,
+    el.categoria_id
   FROM Partido p
   JOIN Campeonato c ON p.campeonato_id = c.id
   JOIN Equipo el ON p.equipo_local_id = el.id
@@ -134,7 +135,7 @@ exports.getPartidosByEquipoId= async (EquipoId,campeonatoId) => {
   }
 };
 
-exports.getUpcomingMatchesByCategoria = async (categoriaId) => {
+exports.getUpcomingMatchesByCategoria = async (categoriaId ,CampeonatoId) => {
   try {
     const resultPartidos = await sequelize.query(`
       SELECT TOP 3 
@@ -143,7 +144,8 @@ exports.getUpcomingMatchesByCategoria = async (categoriaId) => {
         EL.nombre AS equipo_local_nombre, 
         EV.nombre AS equipo_visitante_nombre, 
         ICL.club_imagen AS equipo_local_imagen, 
-        ICV.club_imagen AS equipo_visitante_imagen 
+        ICV.club_imagen AS equipo_visitante_imagen,
+        P.estado 
       FROM Partido P
       JOIN Equipo EL ON P.equipo_local_id = EL.id
       JOIN Equipo EV ON P.equipo_visitante_id = EV.id
@@ -151,9 +153,12 @@ exports.getUpcomingMatchesByCategoria = async (categoriaId) => {
       JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
       JOIN Categoria C ON EL.categoria_id = C.id
       WHERE C.id = :categoriaId
+      AND P.estado != 'J' 
+      AND P.fecha >= GETDATE() 
+      AND P.campeonato_id = :CampeonatoId
       ORDER BY P.fecha ASC;
     `, {
-      replacements: { categoriaId },  
+      replacements: { categoriaId ,CampeonatoId },  
       type: sequelize.QueryTypes.SELECT
     });
 
@@ -164,7 +169,40 @@ exports.getUpcomingMatchesByCategoria = async (categoriaId) => {
   }
 };
 
-exports.getAllMatchesExceptUpcoming = async (categoriaId) => {
+exports.getPastMatchesByCategoria = async (categoriaId,CampeonatoId ) => {
+  try {
+    const resultPartidos = await sequelize.query(`
+      SELECT TOP 3 
+        P.id, 
+        P.fecha, 
+        EL.nombre AS equipo_local_nombre, 
+        EV.nombre AS equipo_visitante_nombre, 
+        ICL.club_imagen AS equipo_local_imagen, 
+        ICV.club_imagen AS equipo_visitante_imagen,
+        P.estado 
+      FROM Partido P
+      JOIN Equipo EL ON P.equipo_local_id = EL.id
+      JOIN Equipo EV ON P.equipo_visitante_id = EV.id
+      JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
+      JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
+      JOIN Categoria C ON EL.categoria_id = C.id
+      WHERE C.id = :categoriaId
+      AND (P.estado = 'J' OR P.fecha < GETDATE())
+      AND P.campeonato_id = :CampeonatoId
+      ORDER BY P.fecha DESC;
+    `, {
+      replacements: { categoriaId ,CampeonatoId },  
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    return resultPartidos;
+  } catch (error) {
+    console.error('Error al obtener los partidos jugados:', error);
+    throw new Error('Error al obtener los partidos');
+  }
+};
+
+exports.getAllMatchesExceptUpcoming = async (categoriaId,CampeonatoId) => {
   try {
     const resultPartidos = await sequelize.query(`
        SELECT 
@@ -173,7 +211,8 @@ exports.getAllMatchesExceptUpcoming = async (categoriaId) => {
         EL.nombre AS equipo_local_nombre, 
         EV.nombre AS equipo_visitante_nombre, 
         ICL.club_imagen AS equipo_local_imagen, 
-        ICV.club_imagen AS equipo_visitante_imagen 
+        ICV.club_imagen AS equipo_visitante_imagen,
+        P.estado 
       FROM Partido P
       JOIN Equipo EL ON P.equipo_local_id = EL.id
       JOIN Equipo EV ON P.equipo_visitante_id = EV.id
@@ -181,23 +220,72 @@ exports.getAllMatchesExceptUpcoming = async (categoriaId) => {
       JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
       JOIN Categoria C ON EL.categoria_id = C.id
       WHERE C.id = :categoriaId
+      AND P.estado != 'J' 
+      AND P.fecha >= GETDATE() 
+      AND P.campeonato_id = :CampeonatoId
       AND P.id NOT IN (
         SELECT TOP 3 P.id 
         FROM Partido P
         JOIN Equipo EL ON P.equipo_local_id = EL.id
         JOIN Categoria C ON EL.categoria_id = C.id
         WHERE C.id = :categoriaId
+        AND P.estado != 'J'
+        AND P.fecha >= GETDATE()
+        AND P.campeonato_id = :CampeonatoId
         ORDER BY P.fecha ASC
       )
       ORDER BY P.fecha ASC;
     `, {
-      replacements: { categoriaId },  
+      replacements: { categoriaId,CampeonatoId},  
       type: sequelize.QueryTypes.SELECT 
     });
 
     return resultPartidos;
   } catch (error) {
     console.error('Error al obtener los próximos partidos:', error);
+    throw new Error('Error al obtener los partidos');
+  }
+};
+
+exports.getAllMatchesExceptPrevious = async (categoriaId,CampeonatoId) => {
+  try {
+    const resultPartidos = await sequelize.query(`
+       SELECT 
+          P.id, 
+          P.fecha, 
+          EL.nombre AS equipo_local_nombre, 
+          EV.nombre AS equipo_visitante_nombre, 
+          ICL.club_imagen AS equipo_local_imagen, 
+          ICV.club_imagen AS equipo_visitante_imagen,
+          P.estado 
+        FROM Partido P
+        JOIN Equipo EL ON P.equipo_local_id = EL.id
+        JOIN Equipo EV ON P.equipo_visitante_id = EV.id
+        JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
+        JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
+        JOIN Categoria C ON EL.categoria_id = C.id
+        WHERE C.id = :categoriaId
+        AND (P.estado = 'J' OR P.fecha < GETDATE()) 
+        AND P.campeonato_id = :CampeonatoId
+        AND P.id NOT IN (
+          SELECT TOP 3 P.id 
+          FROM Partido P
+          JOIN Equipo EL ON P.equipo_local_id = EL.id
+          JOIN Categoria C ON EL.categoria_id = C.id
+          WHERE C.id = :categoriaId
+          AND (P.estado = 'J' OR P.fecha < GETDATE()) 
+          AND P.campeonato_id = :CampeonatoId
+          ORDER BY P.fecha DESC
+        )
+        ORDER BY P.fecha DESC;
+    `, {
+      replacements: { categoriaId,CampeonatoId},  
+      type: sequelize.QueryTypes.SELECT 
+    });
+
+    return resultPartidos;
+  } catch (error) {
+    console.error('Error al obtener los partidos previos:', error);
     throw new Error('Error al obtener los partidos');
   }
 };

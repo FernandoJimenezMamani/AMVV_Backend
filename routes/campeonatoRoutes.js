@@ -12,5 +12,6 @@ router.put('/edit/:id', campeonatoController.updateCampeonato);
 router.get('/obtenerFechas/:campeonatoId', campeonatoController.getFechasPartidos);
 router.get('/obtenerCampeonatosEnCurso/EnCurso', campeonatoController.getCampeonatoEnCurso);
 router.get('/obtenerCampeonatosEnTransaccion/EnTransaccion', campeonatoController.getCampeonatoEnTransaccion);
+router.post('/obtenerEquipoPosicion', campeonatoController.getTeamPosition);
 
 module.exports = router;

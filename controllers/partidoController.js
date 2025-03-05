@@ -43,23 +43,49 @@ exports.getPartidosByEquipoId = async (req, res) => {
 };
 
 exports.getUpcomingMatchesByCategoria = async (req, res) => {
-  const { categoria } = req.params;
+  const { categoria  ,CampeonatoId} = req.params;
 
   try {
-    const partidos = await partidoService.getUpcomingMatchesByCategoria(categoria);
+    const partidos = await partidoService.getUpcomingMatchesByCategoria(categoria,CampeonatoId);
     res.status(200).json(partidos);
   } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getPastMatchesByCategoria = async (req, res) => {
+  const { categoria ,CampeonatoId } = req.params;
+
+  try {
+    const partidos = await partidoService.getPastMatchesByCategoria(categoria,CampeonatoId);
+    res.status(200).json(partidos);
+  } catch (err) {
+    console.log(err);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.getAllMatchesExceptUpcoming = async (req, res) => {
-  const { categoria } = req.params;
+  const { categoria,CampeonatoId } = req.params;
 
   try {
-    const partidos = await partidoService.getAllMatchesExceptUpcoming(categoria);
+    const partidos = await partidoService.getAllMatchesExceptUpcoming(categoria,CampeonatoId);
     res.status(200).json(partidos);
   } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getAllMatchesExceptPrevious = async (req, res) => {
+  const { categoria ,CampeonatoId} = req.params;
+
+  try {
+    const partidos = await partidoService.getAllMatchesExceptPrevious(categoria,CampeonatoId);
+    res.status(200).json(partidos);
+  } catch (err) {
+    console.log(err);
     res.status(500).json({ error: err.message });
   }
 };

@@ -120,3 +120,12 @@ exports.getTeamPosition = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+exports.get_all_teams = async(req, res)=>{
+  try{
+    const equipos = await equipoService.get_all_equipos();
+    res.status(200).json(equipos)
+  }catch(err){
+    res.status(500).json({ message: err.message });
+  }
+}

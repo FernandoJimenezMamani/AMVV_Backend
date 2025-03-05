@@ -134,3 +134,18 @@ exports.getCampeonatoEnTransaccion = async (req, res) => {
     return res.status(500).json({ error: "Error interno del transaccion" });
   }
 };
+
+exports.getTeamPosition = async (req, res) => {
+  try {
+    const { categoriaId, campeonatoId, equipoId } = req.body;
+
+    if (!categoriaId || !campeonatoId || !equipoId) {
+      return res.status(400).json({ error: 'Faltan parámetros requeridos' });
+    }
+
+    const teamPosition = await campeonatoService.getTeamPosition(categoriaId, campeonatoId, equipoId);
+    res.json(teamPosition);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

@@ -122,3 +122,17 @@ exports.getEquiposByPartidoId = async (partido_id) => {
     throw new Error('Error al obtener los equipos por partido');
   }
 };
+
+exports.get_all_equipos = async () => {
+  try {
+    const equipos = await Equipo.findAll({
+      where: { eliminado: 'N' },
+      attributes: ['id', 'nombre'], // Ajusta los campos necesarios
+      raw: true, // Evita encapsulación de Sequelize
+    });
+    return equipos;
+  } catch (error) {
+    console.error("Error al obtener equipos:", error.message);
+    throw new Error("Error al obtener equipos");
+  }
+};

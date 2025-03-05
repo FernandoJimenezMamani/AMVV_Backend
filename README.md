@@ -21,6 +21,10 @@ node seeders/seed-super-admin.js
 node seeders/seed-categorias.js
 node seeders/seed-clubes.js
 node seeders/seed-equipos.js
+node seeders/seed-arbitro.js
+node seeders/seed-lugares.js
+node seeders/seed-jugadores.js
+node seeders/seed-partidos.js
 
 # CREDENCIALES PARA SUPERADMIN
 
