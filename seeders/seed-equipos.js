@@ -42,11 +42,12 @@ const nombresDamas = [
 const obtenerNombreUnico = async (baseNombre, categoriaId, transaction) => {
   console.log(`🔍 Buscando nombres para la categoría ${categoriaId}...`);
 
-  const query = `SELECT nombre FROM Equipo WHERE categoria_id = :categoriaId;`;
+  const query = `SELECT nombre FROM Equipo WHERE categoria_id = ?;`;
   try {
     console.log(`🟢 Ejecutando consulta para obtener nombres existentes en la categoría ${categoriaId}`);
     const nombresExistentes = await sequelize.query(query, {
       type: sequelize.QueryTypes.SELECT,
+      replacements: [categoriaId],
       transaction,
     });
 

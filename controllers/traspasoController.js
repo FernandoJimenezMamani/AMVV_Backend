@@ -79,6 +79,7 @@ exports.getTraspasosRecibidosPorClub = async (req, res) => {
 exports.createTraspaso = async (req, res) => {
     
     try {
+        console.log('respuesta traspaso', req.body);
         const traspaso = await traspasoService.createTraspaso(req.body);
         res.status(201).json({ message: 'Traspaso creado con éxito', traspaso });
     } catch (error) {

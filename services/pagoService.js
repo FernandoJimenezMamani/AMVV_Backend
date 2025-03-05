@@ -534,6 +534,7 @@ exports.obtenerEquiposPorCampeonato = async () => {
           JOIN Club cl ON cl.id = e.club_id
           JOIN ImagenClub ic ON ic.club_id = cl.id
           JOIN Categoria cat ON cat.id = e.categoria_id
+          JOIN PresidenteClub pc ON pc.club_id = cl.id
           WHERE c.estado != 3 AND ec.estado = 'Deuda'`,
       {
         type: sequelize.QueryTypes.SELECT

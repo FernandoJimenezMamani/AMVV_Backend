@@ -144,11 +144,11 @@ exports.getTraspasosPorPresidente = async (presidente_id) => {
 		      LEFT JOIN ImagenClub ic ON ic.club_id = clubDestino.id
           LEFT JOIN PresidenteClub pc ON pc.id = t.presidente_club_id_destino  
           LEFT JOIN Persona p ON p.id = pc.presidente_id
-		      JOIN ImagenPersona ippc ON ippc.persona_id = p.id
+		      LEFT JOIN ImagenPersona ippc ON ippc.persona_id = p.id
 
           LEFT JOIN Jugador j ON j.id = t.jugador_id
           LEFT JOIN Persona pj ON pj.id = j.jugador_id
-          JOIN ImagenPersona impj ON impj.persona_id = pj.id
+          LEFT JOIN ImagenPersona impj ON impj.persona_id = pj.id
           WHERE t.presidente_club_id_origen =:presidenteId;`,
       {
         replacements: {presidenteId},

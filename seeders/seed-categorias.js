@@ -10,7 +10,9 @@ const seedCategorias = async () => {
     const presidenteAsociacion = await PersonaRol.findOne({
       where: { rol_id: 1 },
       attributes: ['persona_id'],
+      raw: true, // Para obtener solo el objeto plano sin metadatos de Sequelize
     });
+    
 
     // Datos de las categorías
     const categorias = [
@@ -41,13 +43,10 @@ const seedCategorias = async () => {
       await Categoria.create(
         {
           ...categoria,
-          edad_minima: null, // Puede ser nulo
-          edad_maxima: null, // Puede ser nulo
-          costo_traspaso: 0.00, // Puede ser nulo
           fecha_registro: sequelize.fn('GETDATE'),
           fecha_actualizacion: sequelize.fn('GETDATE'),
           eliminado: 'N',
-          user_id:presidenteAsociacion
+          user_id: presidenteAsociacion ? presidenteAsociacion.persona_id : null
         },
         { transaction }
       );
