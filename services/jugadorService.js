@@ -1,5 +1,7 @@
-const { Jugador, Persona, Equipo, Categoria, PersonaRol, JugadorEquipo } = require('../models');
+const { Jugador, Persona, Equipo, Categoria, PersonaRol, JugadorEquipo ,Participacion,EquipoCampeonato,Campeonato} = require('../models');
 const { sequelize } = require('../models');
+const campeonatoEstados = require('../constants/campeonatoEstados');
+const campeonatoEquipoEstados = require('../constants/campeonatoEquipoEstado');
 
 // Método para obtener todos los jugadores junto con el club al que pertenecen
 exports.getAllJugadores = async () => {
@@ -453,7 +455,7 @@ exports.getJugadoresByEquipoId = async (equipo_id) => {
       LEFT JOIN 
         ImagenPersona ip ON p.id = ip.persona_id
       WHERE 
-        je.equipo_id = :equipo_id AND p.eliminado = 'N'`,
+        je.equipo_id = :equipo_id AND p.eliminado = 'N' AND je.activo = 1`,
       {
         replacements: { equipo_id },
         type: sequelize.QueryTypes.SELECT
@@ -467,25 +469,59 @@ exports.getJugadoresByEquipoId = async (equipo_id) => {
   }
 };
 
-exports.createNewJugadorEquipo = async (equipo_id,jugador_id) => {
-  try{
-    const VerificarJugadorEquipo = await JugadorEquipo.findOne({
-      where: {
-        equipo_id,
-        jugador_id
-      }
+exports.createNewJugadorEquipo = async (equipo_id, jugador_id) => {
+  try {
+    // Verificar si el jugador ya está en el equipo
+    const verificarJugadorEquipo = await JugadorEquipo.findOne({
+      where: { equipo_id, jugador_id }
     });
-    if(VerificarJugadorEquipo){
+
+    if (verificarJugadorEquipo) {
       throw new Error('El jugador ya está en el equipo');
     }
+
+    // Crear el jugador en el equipo
     const jugadorEquipo = await JugadorEquipo.create({
       equipo_id,
       jugador_id,
-      activo : 1
+      activo: 1
     });
 
+    // Buscar un campeonato activo (estado = 1)
+    const campeonatoActivo = await Campeonato.findOne({
+      where: { estado: campeonatoEstados.transaccionProceso }
+    });
+
+    if (campeonatoActivo) {
+      // Verificar si el equipo está inscrito en el campeonato activo
+      const equipoCampeonato = await EquipoCampeonato.findOne({
+        where: {
+          equipoId: equipo_id,
+          campeonatoId: campeonatoActivo.id,
+          estado: campeonatoEquipoEstados.Inscrito
+        }
+      });
+
+      if (equipoCampeonato) {
+        // Verificar si el jugador ya está registrado en Participacion
+        const participacionExistente = await Participacion.findOne({
+          where: {
+            jugador_equipo_id: jugadorEquipo.id,
+            equipo_campeonato_id: equipoCampeonato.id
+          }
+        });
+
+        if (!participacionExistente) {
+          await Participacion.create({
+            jugador_equipo_id: jugadorEquipo.id,
+            equipo_campeonato_id: equipoCampeonato.id
+          });
+        }
+      }
+    }
+
     return jugadorEquipo;
-  }catch(err){
+  } catch (err) {
     throw new Error('Error al crear jugador en equipo: ' + err.message);
   }
 };
@@ -500,6 +536,7 @@ exports.getJugadoresAbleToExchange = async (club_presidente , idTraspasoPresiden
       p.apellido AS apellido_persona,
       p.ci AS ci_persona,
       p.fecha_nacimiento AS fecha_nacimiento_persona,
+      p.genero AS persona_genero,
       c.id AS club_id,
       c.nombre AS nombre_club,
       c.descripcion AS descripcion_club,
@@ -554,6 +591,7 @@ exports.getJugadoresPendingExchange = async (club_presidente , idTraspasoPreside
         p.apellido AS apellido_persona,
         p.ci AS ci_persona,
         p.fecha_nacimiento AS fecha_nacimiento_persona,
+        p.genero AS persona_genero,
         c.id AS club_id,
         c.nombre AS nombre_club,
         c.descripcion AS descripcion_club,
@@ -633,3 +671,43 @@ exports.getJugadoresOtherClubs = async (PersonaId) => {
     throw new Error('Error al obtener los jugadores con sus clubes');
   }
 };
+
+exports.removeJugadorEquipo = async (jugador_id) => {
+  try {
+    // Buscar el registro del jugador en JugadorEquipo
+    const jugadorEquipo = await JugadorEquipo.findOne({
+      where: { jugador_id, activo: 1 }
+    });
+
+    if (!jugadorEquipo) {
+      throw new Error('El jugador no está actualmente en un equipo o ya ha sido removido.');
+    }
+
+    // Buscar un campeonato activo (estado = 1)
+    const campeonatoActivo = await Campeonato.findOne({
+      where: { estado: campeonatoEstados.transaccionProceso }
+    });
+
+    if (campeonatoActivo) {
+      // Buscar en Participacion si el jugador tiene un registro vinculado al campeonato activo
+      const participacion = await Participacion.findOne({
+        where: {
+          jugador_equipo_id: jugadorEquipo.id
+        }
+      });
+
+      if (participacion) {
+        // Eliminar el registro de Participacion
+        await participacion.destroy();
+      }
+    }
+
+    // Desactivar al jugador en JugadorEquipo
+    await jugadorEquipo.update({ activo: 0 });
+
+    return { message: 'Jugador removido del equipo correctamente.' };
+  } catch (err) {
+    throw new Error('Error al remover jugador del equipo: ' + err.message);
+  }
+};
+

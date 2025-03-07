@@ -1,5 +1,7 @@
-const { Equipo, Club, Categoria, ImagenClub, Sequelize } = require('../models');
+const { Equipo, Club, Categoria, ImagenClub, Sequelize,Campeonato,EquipoCampeonato } = require('../models');
 const sequelize = require('../config/sequelize');
+const campeonatoEquipoEstados = require('../constants/campeonatoEquipoEstado');
+const campeonatoEstados = require('../constants/campeonatoEstados');
 
 exports.getEquiposByCategoriaId = async (categoria_id, campeonato_id) => {
   try {
@@ -49,8 +51,8 @@ exports.getEquipoById = async (id) => {
   });
 };
 
-
 exports.createEquipo = async ({ nombre, club_id, categoria_id, user_id }) => {
+  // Verificar si ya existe un equipo con el mismo nombre en la misma categoría
   const existingEquipo = await Equipo.findOne({
     where: {
       nombre,
@@ -63,7 +65,8 @@ exports.createEquipo = async ({ nombre, club_id, categoria_id, user_id }) => {
     throw new Error(`Ya existe un equipo con el nombre "${nombre}" en la misma categoría.`);
   }
 
-  return await Equipo.create({
+  // Crear el equipo
+  const nuevoEquipo = await Equipo.create({
     nombre,
     club_id,
     categoria_id,
@@ -72,7 +75,24 @@ exports.createEquipo = async ({ nombre, club_id, categoria_id, user_id }) => {
     eliminado: 'N',
     user_id
   });
+
+  // Buscar un campeonato activo (estado = 1)
+  const campeonatoActivo = await Campeonato.findOne({
+    where: { estado: campeonatoEstados.transaccionProceso }
+  });
+
+  // Si hay un campeonato activo, registrar el equipo en EquipoCampeonato
+  if (campeonatoActivo) {
+    await EquipoCampeonato.create({
+      equipoId: nuevoEquipo.id,
+      campeonatoId: campeonatoActivo.id,
+      estado: campeonatoEquipoEstados.DeudaInscripcion
+    });
+  }
+
+  return nuevoEquipo;
 };
+
 
 exports.updateEquipo = async (id, data) => {
   const { nombre, club_id, categoria_id, user_id } = data;

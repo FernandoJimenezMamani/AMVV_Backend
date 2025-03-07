@@ -13,5 +13,6 @@ router.get('/obtenerFechas/:campeonatoId', campeonatoController.getFechasPartido
 router.get('/obtenerCampeonatosEnCurso/EnCurso', campeonatoController.getCampeonatoEnCurso);
 router.get('/obtenerCampeonatosEnTransaccion/EnTransaccion', campeonatoController.getCampeonatoEnTransaccion);
 router.post('/obtenerEquipoPosicion', campeonatoController.getTeamPosition);
+router.delete('/delete_campeonato/:id', campeonatoController.removeCampeonato);
 
 module.exports = router;

@@ -14,11 +14,14 @@ exports.createPartido = async (req, res) => {
 
   try {
     await partidoService.createPartido({ campeonato_id, equipo_local_id, equipo_visitante_id, fecha, lugar_id, arbitros });
-    res.status(201).json({ message: 'Partido creado exitosamente' });
+    return res.status(201).json({ message: 'Partido creado exitosamente' });
+
   } catch (err) {
-    res.status(500).json({ message: 'Error al crear el Partido', error: err.message });
+    console.error("Error en la creación del partido:", err.message);
+    return res.status(400).json({ message: err.message });
   }
 };
+
 
 exports.getPartidosByCategoriaId = async (req, res) => {
   const { categoriaId ,campeonatoId } = req.params;
@@ -493,5 +496,57 @@ exports.obtenerGanadorPartido = async (req, res) => {
   } catch (error) {
     console.error('🚨 Error en obtenerGanadorPartido:', error);
     res.status(500).json({ message: 'Error al obtener el ganador del partido', error: error.message });
+  }
+};
+
+exports.getFechasDisponiblesPorLugar = async (req, res) => {
+  try {
+    const { lugar_id } = req.params;
+
+    if (!lugar_id) {
+      return res.status(400).json({ error: "El lugar_id es requerido." });
+    }
+
+    const fechasDisponibles = await partidoService.obtenerFechasDisponiblesPorLugar(parseInt(lugar_id));
+    
+    return res.json({ fechas_disponibles: fechasDisponibles });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getHorariosDisponiblesPorFechaYLugar = async (req, res) => {
+  try {
+    const { lugar_id, fecha } = req.params;
+
+    if (!lugar_id || !fecha) {
+      return res.status(400).json({ error: "El lugar_id y la fecha son requeridos." });
+    }
+
+    const horariosDisponibles = await partidoService.obtenerHorariosDisponiblesPorFechaYLugar(parseInt(lugar_id), fecha);
+    
+    return res.json({ horarios_disponibles: horariosDisponibles });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getArbitrosDisponiblesPorFechaYLugar = async (req, res) => {
+  try {
+    const { fecha, hora, lugar_id } = req.params;
+
+    if (!fecha || !hora || !lugar_id) {
+      return res.status(400).json({ error: "La fecha, la hora y el lugar_id son requeridos." });
+    }
+
+    const arbitrosDisponibles = await partidoService.getArbitrosDisponiblesPorFechaYLugar(
+      fecha, 
+      hora, 
+      parseInt(lugar_id)
+    );
+    
+    return res.json({ arbitros_disponibles: arbitrosDisponibles });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 };

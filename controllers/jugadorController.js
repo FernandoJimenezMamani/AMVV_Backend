@@ -279,3 +279,14 @@ exports.getJugadoresOtherClubs = async (req, res) => {
       return res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
+
+exports.removeJugadorEquipoController = async (req, res) => {
+  try {
+    const { jugador_id } = req.params;
+    const response = await jugadorService.removeJugadorEquipo(jugador_id);
+    return res.status(200).json(response);
+  } catch (error) {
+    console.log(error)
+    return res.status(400).json({ error: error.message });   
+  }
+};

@@ -132,9 +132,11 @@ exports.getTraspasosPorPresidente = async (presidente_id) => {
           t.fecha_solicitud,
           p.nombre,
           p.apellido,
+          p.genero,
           t.estado_club,
           pj.nombre AS nombre_jugador,
           pj.apellido AS apellido_jugador,
+          pj.genero AS genero_persona,
           impj.persona_imagen AS imagen_jugador,
           ic.club_imagen,
           ippc.persona_imagen AS imagen_presidente

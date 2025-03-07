@@ -1,4 +1,4 @@
-const { Campeonato, EquipoCampeonato, Equipo, Categoria } = require('../models');
+const { Campeonato, EquipoCampeonato, Equipo, Categoria, Sequelize } = require('../models');
 const sequelize = require('../config/sequelize');
 const { Op, where } = require('sequelize');
 const moment = require('moment');
@@ -137,6 +137,7 @@ exports.getCampeonatoCategoria = async (campeonato_id, categoria_id) => {
 
 exports.getAllCampeonatos = async () => {
   const campeonatos = await Campeonato.findAll({
+    where:{eliminado: 'N'},
     attributes: ['id', 'nombre', 'fecha_inicio_campeonato', 'fecha_fin_campeonato', 'fecha_inicio_transaccion' , 'fecha_fin_transaccion' , 'estado'],
   });
   return campeonatos;
@@ -519,5 +520,25 @@ exports.getTeamPosition = async (categoriaId, campeonato_id, equipoId) => {
   } catch (error) {
     console.error('Error al obtener la posición del equipo:', error);
     throw new Error('Error al obtener la posición del equipo');
+  }
+};
+
+exports.eliminarCampeonato = async (campeonatoId) => {
+  try {
+    const campeonato = await Campeonato.findByPk(campeonatoId);
+
+    if (!campeonato) {
+      throw new Error('Campeonato no encontrado');
+    }
+
+    campeonato.eliminado = 'S';
+    campeonato.fecha_actualizacion = sequelize.fn("GETDATE"); // Opcional: actualiza la fecha
+
+    await campeonato.save();
+
+    return { message: 'Campeonato eliminado correctamente', campeonato };
+  } catch (error) {
+    console.error('Error al eliminar campeonato:', error);
+    throw new Error('No se pudo eliminar el campeonato');
   }
 };

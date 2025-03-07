@@ -32,4 +32,8 @@ router.post('/confirmar-reprogramacion', partidoController.confirmarReprogramaci
 router.get('/resultados/:partidoId', partidoController.obtenerResultadosPartidoController);
 router.get('/ganador/:partidoId', partidoController.obtenerGanadorPartido);
 
+router.get('/fechas-disponibles/:lugar_id', partidoController.getFechasDisponiblesPorLugar);
+router.get('/horarios-disponibles/:lugar_id/:fecha', partidoController.getHorariosDisponiblesPorFechaYLugar);
+router.get('/arbitros-disponibles/:fecha/:hora/:lugar_id', partidoController.getArbitrosDisponiblesPorFechaYLugar);
+
 module.exports = router;
