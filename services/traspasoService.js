@@ -74,7 +74,7 @@ exports.getTraspasosAprobados = async () => {
   });
 };
 
-exports.getTraspasosPorJugador = async (jugador_id) => {
+exports.getTraspasosPorJugador = async (jugador_id,CampeonatoId) => {
   try {
     const jugador = await Jugador.findOne({
       where: { jugador_id: jugador_id , activo :1  },
@@ -99,9 +99,9 @@ exports.getTraspasosPorJugador = async (jugador_id) => {
           LEFT JOIN Club clubDestino ON t.club_destino_id = clubDestino.id
           LEFT JOIN PresidenteClub pc ON pc.id = t.presidente_club_id_destino
           LEFT JOIN Persona p ON p.id = pc.presidente_id
-          WHERE t.jugador_id = :jugadorId;`,
+          WHERE t.jugador_id = :jugadorId AND t.eliminado = 'N'  AND t.estado_club != 'RECHAZADO' AND t.campeonato_id =:CampeonatoId;`,
       {
-        replacements: {jugadorId},
+        replacements: {jugadorId,CampeonatoId},
         type: sequelize.QueryTypes.SELECT
       }
     );
@@ -113,7 +113,7 @@ exports.getTraspasosPorJugador = async (jugador_id) => {
   }
 };
 
-exports.getTraspasosPorPresidente = async (presidente_id) => {
+exports.getTraspasosPorPresidente = async (presidente_id,CampeonatoId) => {
   try {
     const presidente = await PresidenteClub.findOne({
       where: { presidente_id: presidente_id , activo :1  , delegado : 'N' },
@@ -151,9 +151,9 @@ exports.getTraspasosPorPresidente = async (presidente_id) => {
           LEFT JOIN Jugador j ON j.id = t.jugador_id
           LEFT JOIN Persona pj ON pj.id = j.jugador_id
           LEFT JOIN ImagenPersona impj ON impj.persona_id = pj.id
-          WHERE t.presidente_club_id_origen =:presidenteId;`,
+          WHERE t.presidente_club_id_origen =:presidenteId AND t.eliminado = 'N' AND t.estado_jugador != 'RECHAZADO' AND t.campeonato_id = :CampeonatoId;`,
       {
-        replacements: {presidenteId},
+        replacements: {presidenteId,CampeonatoId},
         type: sequelize.QueryTypes.SELECT
       }
     );

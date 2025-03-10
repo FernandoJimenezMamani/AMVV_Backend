@@ -8,4 +8,5 @@ router.get('/getEquiposDebt', pagoController.getEquiposDebt);
 router.get('/getEquipoDebtById/:id', pagoController.getEquipoDebtById);
 router.get('/getTraspasosDebt', pagoController.getTraspasoDebt);
 router.get('/getTraspasoDebtById/:id', pagoController.getTraspasoDebtById);
+router.get('/resumen-campeonato', pagoController.getResumenCampeonato);
 module.exports = router;

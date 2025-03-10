@@ -130,3 +130,55 @@ exports.createArbitro = async (persona_id, activo) => {
     throw error;
   }
 };
+
+exports.getMatchesArbitro = async (arbitroId) => {
+  try {
+    const perfilArbitro = await sequelize.query(
+      `SELECT 
+          a.id AS arbitro_id,
+          COUNT(DISTINCT ap.partido_id) AS total_partidos_arbitrados
+      FROM Arbitro a
+      JOIN Persona p ON a.id = p.id
+      JOIN Arbitro_Partido ap ON a.id = ap.arbitro_id
+      JOIN Partido pa ON ap.partido_id = pa.id
+      JOIN Campeonato c ON pa.campeonato_id = c.id
+      WHERE pa.estado = 'J'
+      AND a.id = :arbitroId
+      GROUP BY a.id, p.nombre, p.apellido;`,
+      {
+        replacements: { arbitroId },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    return perfilArbitro.length > 0 ? perfilArbitro[0] : null;
+  } catch (error) {
+    console.error('Error al obtener perfil del árbitro:', error);
+    throw error;
+  }
+};
+
+exports.getCampeonatosPorArbitro = async (arbitroId) => {
+  try {
+    const campeonatos = await sequelize.query(
+      `SELECT DISTINCT 
+          c.id AS campeonato_id,
+          c.nombre AS campeonato_nombre
+      FROM Campeonato c
+      JOIN Partido pa ON c.id = pa.campeonato_id
+      JOIN Arbitro_Partido ap ON pa.id = ap.partido_id
+      WHERE ap.arbitro_id = :arbitroId
+      AND pa.estado = 'J'
+      ORDER BY c.id;`,
+      {
+        replacements: { arbitroId },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    return campeonatos;
+  } catch (error) {
+    console.error('Error al obtener campeonatos del árbitro:', error);
+    throw error;
+  }
+};

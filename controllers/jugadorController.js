@@ -246,15 +246,15 @@ exports.getJugadoresAbleToExchange = async (req, res) => {
 
 exports.getJugadoresPendingExchange = async (req, res) => {
   try {
-      const { club_presidente, idTraspasoPresidente } = req.body;
+      const { club_presidente, idTraspasoPresidente ,campeonatoId} = req.body;
 
       console.log('datos recibidos traspaso' ,req.body )
 
-      if (!club_presidente || !idTraspasoPresidente) {
+      if (!club_presidente || !idTraspasoPresidente || !campeonatoId) {
           return res.status(400).json({ error: 'Los parámetros club_presidente e idTraspasoPresidente son requeridos' });
       }
 
-      const jugadores = await jugadorService.getJugadoresPendingExchange(club_presidente, idTraspasoPresidente);
+      const jugadores = await jugadorService.getJugadoresPendingExchange(club_presidente, idTraspasoPresidente, campeonatoId);
 
       return res.status(200).json(jugadores);
   } catch (error) {

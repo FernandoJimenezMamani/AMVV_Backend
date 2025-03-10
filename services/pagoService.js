@@ -1,4 +1,4 @@
-const { Pago, PagoTraspaso, PagoInscripcion ,EquipoCampeonato,JugadorEquipo , Jugador ,Usuario, Traspaso} = require('../models'); // Asegúrate de importar los modelos
+const { Pago,Campeonato,Equipo, PagoTraspaso, PagoInscripcion ,EquipoCampeonato,JugadorEquipo , Jugador ,Usuario, Traspaso} = require('../models'); // Asegúrate de importar los modelos
 const sequelize = require('../config/sequelize'); 
 const pagoTipos = require('../constants/pagoTipos')
 const campeonatoEstado = require('../constants/campeonatoEquipoEstado');
@@ -602,5 +602,51 @@ exports.obtenerTraspasosPorCampeonato = async () => {
   } catch (error) {
     console.error("Error al obtener traspasos del campeonato:", error);
     throw error;
+  }
+};
+
+exports.obtenerResumenCampeonato = async () => {
+  try {
+    // Obtener el campeonato con estado = 1
+    const campeonato = await Campeonato.findOne({
+      where: { estado: 1 }
+    });
+
+    if (!campeonato) {
+      throw new Error('No se encontró un campeonato activo.');
+    }
+
+    // Obtener equipos con estado "DeudaInscripcion"
+    const equiposConDeuda = await EquipoCampeonato.findAll({
+      where: {
+        campeonatoId: campeonato.id,
+        estado: campeonatoEstado.DeudaInscripcion
+      },
+      include: [{ model: Equipo, as: 'equipo' }]
+    });
+
+    // Obtener traspasos con las condiciones requeridas
+    const traspasosPendientes = await Traspaso.findAll({
+      where: {
+        campeonato_id: campeonato.id,
+        estado_club: traspasoEstados.APROBADO,
+        estado_jugador: traspasoEstados.APROBADO,
+        estado_deuda: traspasoEstados.PENDIENTE,
+        eliminado: 'N'
+      }
+    });
+
+    // Contar resultados
+    const totalEquiposConDeuda = equiposConDeuda.length;
+    const totalTraspasosPendientes = traspasosPendientes.length;
+
+    return {
+      campeonato,
+      totalEquiposConDeuda,
+      totalTraspasosPendientes
+    };
+  } catch (error) {
+    console.error('Error en obtenerResumenCampeonato:', error);
+    throw new Error('Error al obtener el resumen del campeonato.');
   }
 };

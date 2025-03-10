@@ -470,7 +470,7 @@ exports.getJugadoresByEquipoAndCampeonato = async (equipoId, campeonatoId) => {
       JOIN Persona P ON J.id = P.id
       JOIN EquipoCampeonato EC ON PA.equipo_campeonato_id = EC.id
       WHERE JE.equipo_id = :equipoId
-      AND EC.campeonatoId = :campeonatoId; 
+      AND EC.campeonatoId = :campeonatoId AND P.eliminado = 'N'; 
     `, {
       replacements: { equipoId, campeonatoId },
       type: sequelize.QueryTypes.SELECT

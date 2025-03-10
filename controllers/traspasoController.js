@@ -30,8 +30,9 @@ exports.getTraspasosAprobados = async (req, res) => {
 // Obtener traspasos por jugador
 exports.getTraspasosPorJugador = async (req, res) => {
     const jugador_id = req.user.id; // Suponiendo que `req.user` tiene el ID del jugador en sesión
+    const {CampeonatoId} = req.params;
     try {
-        const solicitudes = await traspasoService.getTraspasosPorJugador(jugador_id);
+        const solicitudes = await traspasoService.getTraspasosPorJugador(jugador_id,CampeonatoId);
         res.status(200).json(solicitudes);
     } catch (error) {
         console.error('Error al obtener los traspasos del jugador:', error);
@@ -41,8 +42,10 @@ exports.getTraspasosPorJugador = async (req, res) => {
 
 exports.getTraspasosPorPresidente = async (req, res) => {
     const presidente_id = req.user.id; 
+    const {CampeonatoId} = req.params;
+    console.log(req.params)
     try {
-        const solicitudes = await traspasoService.getTraspasosPorPresidente(presidente_id);
+        const solicitudes = await traspasoService.getTraspasosPorPresidente(presidente_id,CampeonatoId);
         res.status(200).json(solicitudes);
     } catch (error) {
         console.error('Error al obtener los traspasos del presidente:', error);

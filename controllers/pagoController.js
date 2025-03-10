@@ -220,3 +220,12 @@ exports.getTraspasoDebtById = async (req, res) => {
     res.status(500).json({ message: "Error al obtener los equipos", error: error.message });
   }
 };
+
+exports.getResumenCampeonato = async (req, res) => {
+  try {
+    const resumen = await pagoService.obtenerResumenCampeonato();
+    res.json(resumen);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

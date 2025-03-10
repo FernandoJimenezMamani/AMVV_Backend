@@ -310,7 +310,7 @@ exports.updatePersonaImage = async (req, res) => {
 exports.deletePersona = async (req, res) => {
   const { id } = req.params; // ID de la persona a eliminar
   const { user_id, roles } = req.body; // ID del usuario que realiza la acción y roles asociados
-
+console.log()
   try {
     if (!id || !user_id || !roles || !Array.isArray(roles)) {
       return res.status(400).json({

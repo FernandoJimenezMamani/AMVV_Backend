@@ -529,7 +529,7 @@ exports.createNewJugadorEquipo = async (equipo_id, jugador_id) => {
 exports.getJugadoresAbleToExchange = async (club_presidente , idTraspasoPresidente) => {
   try {
     const jugadores = await sequelize.query(
-      `SELECT 
+      `SELECT DISTINCT
       j.id AS jugador_id,
       j.jugador_id AS persona_id,
       p.nombre AS nombre_persona,
@@ -543,31 +543,36 @@ exports.getJugadoresAbleToExchange = async (club_presidente , idTraspasoPresiden
       im.persona_imagen AS imagen_persona,
       p.eliminado,
       pp.nombre AS presidente_nombre
-      FROM 
-          Jugador j
-      JOIN 
-          Persona p ON j.jugador_id = p.id
-      LEFT JOIN 
-          Club c ON j.club_id = c.id
-      LEFT JOIN 
-          PresidenteClub pc ON pc.club_id = c.id AND pc.delegado = 'N' AND pc.activo = 1
-      JOIN 
-          Persona pp ON pp.id = pc.presidente_id 
-      JOIN 
-          Club cp ON cp.id = pc.club_id
-      LEFT JOIN 
-          ImagenPersona im ON p.id = im.persona_id
-      LEFT JOIN 
-          Traspaso t ON t.jugador_id = j.id
-      WHERE 
-        j.activo = 1 
-        AND p.eliminado = 'N' 
-        AND cp.id != :club_presidente
-        AND (t.presidente_club_id_destino IS NULL OR t.presidente_club_id_destino != :idTraspasoPresidente OR  t.id IS NULL
-        OR t.estado_jugador = 'RECHAZADO'
-        OR t.estado_club = 'RECHAZADO'
-        OR t.eliminado = 'S');
-      `,
+        FROM 
+            Jugador j
+        JOIN 
+            Persona p ON j.jugador_id = p.id
+        LEFT JOIN 
+            Club c ON j.club_id = c.id
+        LEFT JOIN 
+            PresidenteClub pc ON pc.club_id = c.id AND pc.delegado = 'N' AND pc.activo = 1
+        JOIN 
+            Persona pp ON pp.id = pc.presidente_id 
+        JOIN 
+            Club cp ON cp.id = pc.club_id
+        LEFT JOIN 
+            ImagenPersona im ON p.id = im.persona_id
+        OUTER APPLY 
+            (SELECT TOP 1 t.*
+            FROM Traspaso t
+            WHERE t.jugador_id = j.id
+            AND t.eliminado = 'N' -- Solo considerar traspasos NO eliminados
+            ORDER BY t.fecha_solicitud DESC
+            ) t
+        WHERE 
+            j.activo = 1 
+            AND p.eliminado = 'N' 
+            AND cp.id != :club_presidente
+            -- Excluir jugadores con un traspaso en estado PENDIENTE/PENDIENTE o APROBADO/APROBADO
+            AND NOT (
+                (t.id IS NOT NULL AND t.estado_jugador = 'PENDIENTE' AND t.estado_club = 'PENDIENTE') 
+                OR (t.id IS NOT NULL AND t.estado_jugador = 'APROBADO' AND t.estado_club = 'APROBADO')
+            );`,
       {
         replacements:{club_presidente,idTraspasoPresidente},
         type: sequelize.QueryTypes.SELECT
@@ -581,7 +586,7 @@ exports.getJugadoresAbleToExchange = async (club_presidente , idTraspasoPresiden
   }
 };
 
-exports.getJugadoresPendingExchange = async (club_presidente , idTraspasoPresidente) => {
+exports.getJugadoresPendingExchange = async (club_presidente , idTraspasoPresidente,campeonatoId) => {
   try {
     const jugadores = await sequelize.query(
       `SELECT 
@@ -616,10 +621,10 @@ exports.getJugadoresPendingExchange = async (club_presidente , idTraspasoPreside
         LEFT JOIN 
           ImagenPersona im ON p.id = im.persona_id
         LEFT JOIN Traspaso t ON t.jugador_id = j.id 
-          WHERE j.activo = 1 AND p.eliminado = 'N' AND cp.id != :club_presidente AND t.presidente_club_id_destino = :idTraspasoPresidente AND t.eliminado = 'N'
+          WHERE p.eliminado = 'N' AND t.presidente_club_id_destino = :idTraspasoPresidente AND t.eliminado = 'N' AND t.campeonato_id = :campeonatoId
       `,
       {
-        replacements:{club_presidente,idTraspasoPresidente},
+        replacements:{club_presidente,idTraspasoPresidente,campeonatoId},
         type: sequelize.QueryTypes.SELECT
       }
     );

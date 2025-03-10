@@ -5,8 +5,8 @@ const authMiddleware = require('../middlewares/auth');
 
 router.get('/detalle/:id', traspasoController.getTraspasoById);
 router.get('/aprobados', traspasoController.getTraspasosAprobados);
-router.get('/jugador', authMiddleware, traspasoController.getTraspasosPorJugador);
-router.get('/presidente', authMiddleware, traspasoController.getTraspasosPorPresidente);
+router.get('/jugador/:CampeonatoId', authMiddleware, traspasoController.getTraspasosPorJugador);
+router.get('/presidente/:CampeonatoId', authMiddleware, traspasoController.getTraspasosPorPresidente);
 router.get('/club/enviados/:club_id', traspasoController.getTraspasosEnviadosPorClub);
 router.get('/club/recibidos/:club_id', traspasoController.getTraspasosRecibidosPorClub);
 router.post('/crear', traspasoController.createTraspaso);

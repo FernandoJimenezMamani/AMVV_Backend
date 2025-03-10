@@ -309,3 +309,122 @@ exports.deletePresidenteClub = async (id, user_id) => {
 };
 
 
+exports.getClubActualPresidente = async (presidenteId) => {
+  try {
+    const clubActual = await sequelize.query(
+      `SELECT 
+          c.id AS club_id,
+          c.nombre AS club_nombre,
+          c.descripcion AS club_descripcion,
+          c.presidente_asignado,
+          c.fecha_registro,
+          c.fecha_actualizacion,
+		  ic.club_imagen
+      FROM PresidenteClub pc
+      JOIN Club c ON pc.club_id = c.id
+      LEFT JOIN ImagenClub ic ON ic.club_id = c.id 
+      WHERE pc.presidente_id = :presidenteId
+      AND pc.activo = 1
+      AND pc.delegado = 'N';`,
+      {
+        replacements: { presidenteId },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    return clubActual.length > 0 ? clubActual[0] : null;
+  } catch (error) {
+    console.error('Error al obtener el club actual del presidente:', error);
+    throw error;
+  }
+};
+
+exports.getClubesAnterioresPresidente = async (presidenteId) => {
+  try {
+    const clubesAnteriores = await sequelize.query(
+      `SELECT 
+          c.id AS club_id,
+          c.nombre AS club_nombre,
+          c.descripcion AS club_descripcion,
+          c.presidente_asignado,
+          c.fecha_registro,
+          c.fecha_actualizacion,
+		  ic.club_imagen
+      FROM PresidenteClub pc
+      JOIN Club c ON pc.club_id = c.id
+      LEFT JOIN ImagenClub ic ON ic.club_id = c.id 
+      WHERE pc.presidente_id = :presidenteId
+      AND pc.activo = 0
+      AND pc.delegado = 'N';`,
+      {
+        replacements: { presidenteId },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    return clubesAnteriores;
+  } catch (error) {
+    console.error('Error al obtener clubes anteriores del presidente:', error);
+    throw error;
+  }
+};
+
+exports.getClubActualDelegado = async (delegadoId) => {
+  try {
+    const clubActual = await sequelize.query(
+      `SELECT 
+          c.id AS club_id,
+          c.nombre AS club_nombre,
+          c.descripcion AS club_descripcion,
+          c.presidente_asignado,
+          c.fecha_registro,
+          c.fecha_actualizacion,
+		  ic.club_imagen
+      FROM PresidenteClub pc
+      JOIN Club c ON pc.club_id = c.id
+      LEFT JOIN ImagenClub ic ON ic.club_id = c.id 
+      WHERE pc.presidente_id = :delegadoId
+      AND pc.activo = 1
+      AND pc.delegado = 'S';`,
+      {
+        replacements: { delegadoId },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    return clubActual.length > 0 ? clubActual[0] : null;
+  } catch (error) {
+    console.error('Error al obtener el club actual del delegado:', error);
+    throw error;
+  }
+};
+
+exports.getClubesAnterioresDelegado = async (delegadoId) => {
+  try {
+    const clubesAnteriores = await sequelize.query(
+      `SELECT 
+          c.id AS club_id,
+          c.nombre AS club_nombre,
+          c.descripcion AS club_descripcion,
+          c.presidente_asignado,
+          c.fecha_registro,
+          c.fecha_actualizacion,
+		  ic.club_imagen
+      FROM PresidenteClub pc
+      JOIN Club c ON pc.club_id = c.id
+      LEFT JOIN ImagenClub ic ON ic.club_id = c.id 
+      WHERE pc.presidente_id = :delegadoId
+      AND pc.activo = 0
+      AND pc.delegado = 'S';`,
+      {
+        replacements: { delegadoId },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    return clubesAnteriores;
+  } catch (error) {
+    console.error('Error al obtener clubes anteriores del delegado:', error);
+    throw error;
+  }
+};

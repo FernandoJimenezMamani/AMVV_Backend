@@ -5,5 +5,7 @@ const arbitroController = require('../controllers/arbitroController'); // Asegú
 router.get('/get_arbitros', arbitroController.getArbitros);
 router.get('/get_arbitroById/:id', arbitroController.getArbitroById);
 router.post('/post_arbitro', arbitroController.createArbitro);
+router.get('/matchesTotal/:arbitroId', arbitroController.getTotalMatchesArbitro);
+router.get('/campeonatos/:arbitroId', arbitroController.getCampeonatosPorArbitro);
 
 module.exports = router;
