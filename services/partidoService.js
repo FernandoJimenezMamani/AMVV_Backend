@@ -87,20 +87,18 @@ exports.getPartidosByCategoriaId = async (categoriaId,campeonatoId) => {
         EV.nombre AS equipo_visitante_nombre,
         ICL.club_imagen AS equipo_local_imagen,
         ICV.club_imagen AS equipo_visitante_imagen,
-        C.nombre AS categoria_nombre,P.estado,
+        C.nombre AS categoria_nombre,
+        P.estado,
         L.nombre AS lugar_nombre
       FROM 
         Partido P
-      JOIN 
-        Equipo EL ON P.equipo_local_id = EL.id
-      JOIN 
-        Equipo EV ON P.equipo_visitante_id = EV.id
-      JOIN 
-        ImagenClub ICL ON EL.club_id = ICL.club_id
-      JOIN 
-        ImagenClub ICV ON EV.club_id = ICV.club_id
-      JOIN 
-        Categoria C ON EL.categoria_id = C.id
+      JOIN Equipo EL ON P.equipo_local_id = EL.id
+      JOIN Equipo EV ON P.equipo_visitante_id = EV.id
+      JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
+      JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
+      JOIN EquipoCampeonato ECL ON ECL.equipoId = EL.id AND ECL.campeonatoId = P.campeonato_id
+      JOIN EquipoCampeonato ECV ON ECV.equipoId = EV.id AND ECV.campeonatoId = P.campeonato_id
+      JOIN Categoria C ON ECL.categoria_id = C.id
       JOIN Lugar L ON P.lugar_id = L.id
       WHERE 
         C.id = :categoriaId AND p.campeonato_id = :campeonatoId 
@@ -122,29 +120,30 @@ exports.getPartidosByEquipoId= async (EquipoId,campeonatoId) => {
   try {
     const resultPartidos = await sequelize.query(`
       SELECT 
-    p.id AS partido_id,
-    p.fecha,
-    p.estado,
-    c.id AS campeonato_id,
-    c.nombre AS campeonato_nombre,
-    el.nombre AS equipo_local,
-    ev.nombre AS equipo_visitante,
-    eL.nombre AS equipo_local_nombre,
-    eV.nombre AS equipo_visitante_nombre,
-    ICL.club_imagen AS equipo_local_imagen,
-    ICV.club_imagen AS equipo_visitante_imagen,
-    L.nombre AS lugar_nombre,
-    el.categoria_id
-  FROM Partido p
-  JOIN Campeonato c ON p.campeonato_id = c.id
-  JOIN Equipo el ON p.equipo_local_id = el.id
-  JOIN Equipo ev ON p.equipo_visitante_id = ev.id
-  JOIN ImagenClub ICL ON eL.club_id = ICL.club_id
-  JOIN ImagenClub ICV ON eV.club_id = ICV.club_id
-  JOIN Lugar L ON p.lugar_id = L.id
-  WHERE (p.equipo_local_id = :EquipoId OR p.equipo_visitante_id = :EquipoId)
-  AND c.id = :campeonatoId
-
+        p.id AS partido_id,
+        p.fecha,
+        p.estado,
+        c.id AS campeonato_id,
+        c.nombre AS campeonato_nombre,
+        el.nombre AS equipo_local,
+        ev.nombre AS equipo_visitante,
+        el.nombre AS equipo_local_nombre,
+        ev.nombre AS equipo_visitante_nombre,
+        ICL.club_imagen AS equipo_local_imagen,
+        ICV.club_imagen AS equipo_visitante_imagen,
+        L.nombre AS lugar_nombre,
+        ECL.categoria_id
+      FROM Partido p
+      JOIN Campeonato c ON p.campeonato_id = c.id
+      JOIN Equipo el ON p.equipo_local_id = el.id
+      JOIN Equipo ev ON p.equipo_visitante_id = ev.id
+      JOIN ImagenClub ICL ON el.club_id = ICL.club_id
+      JOIN ImagenClub ICV ON ev.club_id = ICV.club_id
+      JOIN Lugar L ON p.lugar_id = L.id
+      JOIN EquipoCampeonato ECL ON ECL.equipoId = el.id AND ECL.campeonatoId = c.id
+      WHERE 
+        (p.equipo_local_id = :EquipoId OR p.equipo_visitante_id = :EquipoId)
+        AND c.id = :campeonatoId;
     `, {
       replacements: { EquipoId , campeonatoId }, 
       type: sequelize.QueryTypes.SELECT 
@@ -160,7 +159,7 @@ exports.getPartidosByEquipoId= async (EquipoId,campeonatoId) => {
 exports.getUpcomingMatchesByCategoria = async (categoriaId ,CampeonatoId) => {
   try {
     const resultPartidos = await sequelize.query(`
-      SELECT TOP 3 
+     SELECT TOP 3 
         P.id, 
         P.fecha, 
         EL.nombre AS equipo_local_nombre, 
@@ -173,11 +172,14 @@ exports.getUpcomingMatchesByCategoria = async (categoriaId ,CampeonatoId) => {
       JOIN Equipo EV ON P.equipo_visitante_id = EV.id
       JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
       JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
-      JOIN Categoria C ON EL.categoria_id = C.id
-      WHERE C.id = :categoriaId
-      AND P.estado != 'J' 
-      AND P.fecha >= GETDATE() 
-      AND P.campeonato_id = :CampeonatoId
+      JOIN EquipoCampeonato ECL ON ECL.equipoId = EL.id AND ECL.campeonatoId = P.campeonato_id
+      JOIN EquipoCampeonato ECV ON ECV.equipoId = EV.id AND ECV.campeonatoId = P.campeonato_id
+      WHERE 
+        ECL.categoria_id = :categoriaId AND
+        ECV.categoria_id = :categoriaId AND
+        P.estado != 'J' AND 
+        P.fecha >= GETDATE() AND 
+        P.campeonato_id = :CampeonatoId
       ORDER BY P.fecha ASC;
     `, {
       replacements: { categoriaId ,CampeonatoId },  
@@ -207,10 +209,13 @@ exports.getPastMatchesByCategoria = async (categoriaId,CampeonatoId ) => {
       JOIN Equipo EV ON P.equipo_visitante_id = EV.id
       JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
       JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
-      JOIN Categoria C ON EL.categoria_id = C.id
-      WHERE C.id = :categoriaId
-      AND (P.estado = 'J' OR P.fecha < GETDATE())
-      AND P.campeonato_id = :CampeonatoId
+      JOIN EquipoCampeonato ECL ON ECL.equipoId = EL.id AND ECL.campeonatoId = P.campeonato_id
+      JOIN EquipoCampeonato ECV ON ECV.equipoId = EV.id AND ECV.campeonatoId = P.campeonato_id
+      WHERE 
+        ECL.categoria_id = :categoriaId AND
+        ECV.categoria_id = :categoriaId AND
+        (P.estado = 'J' OR P.fecha < GETDATE()) AND 
+        P.campeonato_id = :CampeonatoId
       ORDER BY P.fecha DESC;
     `, {
       replacements: { categoriaId ,CampeonatoId },  
@@ -228,35 +233,40 @@ exports.getAllMatchesExceptUpcoming = async (categoriaId,CampeonatoId) => {
   try {
     const resultPartidos = await sequelize.query(`
        SELECT 
-        P.id, 
-        P.fecha, 
-        EL.nombre AS equipo_local_nombre, 
-        EV.nombre AS equipo_visitante_nombre, 
-        ICL.club_imagen AS equipo_local_imagen, 
-        ICV.club_imagen AS equipo_visitante_imagen,
-        P.estado 
-      FROM Partido P
-      JOIN Equipo EL ON P.equipo_local_id = EL.id
-      JOIN Equipo EV ON P.equipo_visitante_id = EV.id
-      JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
-      JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
-      JOIN Categoria C ON EL.categoria_id = C.id
-      WHERE C.id = :categoriaId
-      AND P.estado != 'J' 
-      AND P.fecha >= GETDATE() 
-      AND P.campeonato_id = :CampeonatoId
-      AND P.id NOT IN (
-        SELECT TOP 3 P.id 
+          P.id, 
+          P.fecha, 
+          EL.nombre AS equipo_local_nombre, 
+          EV.nombre AS equipo_visitante_nombre, 
+          ICL.club_imagen AS equipo_local_imagen, 
+          ICV.club_imagen AS equipo_visitante_imagen,
+          P.estado 
         FROM Partido P
         JOIN Equipo EL ON P.equipo_local_id = EL.id
-        JOIN Categoria C ON EL.categoria_id = C.id
-        WHERE C.id = :categoriaId
-        AND P.estado != 'J'
-        AND P.fecha >= GETDATE()
-        AND P.campeonato_id = :CampeonatoId
-        ORDER BY P.fecha ASC
-      )
-      ORDER BY P.fecha ASC;
+        JOIN Equipo EV ON P.equipo_visitante_id = EV.id
+        JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
+        JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
+        JOIN EquipoCampeonato ECL ON ECL.equipoId = EL.id AND ECL.campeonatoId = P.campeonato_id
+        JOIN EquipoCampeonato ECV ON ECV.equipoId = EV.id AND ECV.campeonatoId = P.campeonato_id
+        WHERE 
+          ECL.categoria_id = :categoriaId AND
+          ECV.categoria_id = :categoriaId AND
+          P.estado != 'J' AND 
+          P.fecha >= GETDATE() AND 
+          P.campeonato_id = :CampeonatoId AND
+          P.id NOT IN (
+            SELECT TOP 3 P2.id
+            FROM Partido P2
+            JOIN Equipo EL2 ON P2.equipo_local_id = EL2.id
+            JOIN EquipoCampeonato EC2 ON EC2.equipoId = EL2.id AND EC2.campeonatoId = P2.campeonato_id
+            WHERE 
+              EC2.categoria_id = :categoriaId AND
+              P2.estado != 'J' AND 
+              P2.fecha >= GETDATE() AND 
+              P2.campeonato_id = :CampeonatoId
+            ORDER BY P2.fecha ASC
+          )
+        ORDER BY P.fecha ASC;
+
     `, {
       replacements: { categoriaId,CampeonatoId},  
       type: sequelize.QueryTypes.SELECT 
@@ -272,34 +282,38 @@ exports.getAllMatchesExceptUpcoming = async (categoriaId,CampeonatoId) => {
 exports.getAllMatchesExceptPrevious = async (categoriaId,CampeonatoId) => {
   try {
     const resultPartidos = await sequelize.query(`
-       SELECT 
-          P.id, 
-          P.fecha, 
-          EL.nombre AS equipo_local_nombre, 
-          EV.nombre AS equipo_visitante_nombre, 
-          ICL.club_imagen AS equipo_local_imagen, 
-          ICV.club_imagen AS equipo_visitante_imagen,
-          P.estado 
-        FROM Partido P
-        JOIN Equipo EL ON P.equipo_local_id = EL.id
-        JOIN Equipo EV ON P.equipo_visitante_id = EV.id
-        JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
-        JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
-        JOIN Categoria C ON EL.categoria_id = C.id
-        WHERE C.id = :categoriaId
-        AND (P.estado = 'J' OR P.fecha < GETDATE()) 
-        AND P.campeonato_id = :CampeonatoId
-        AND P.id NOT IN (
-          SELECT TOP 3 P.id 
-          FROM Partido P
-          JOIN Equipo EL ON P.equipo_local_id = EL.id
-          JOIN Categoria C ON EL.categoria_id = C.id
-          WHERE C.id = :categoriaId
-          AND (P.estado = 'J' OR P.fecha < GETDATE()) 
-          AND P.campeonato_id = :CampeonatoId
-          ORDER BY P.fecha DESC
+      SELECT 
+        P.id, 
+        P.fecha, 
+        EL.nombre AS equipo_local_nombre, 
+        EV.nombre AS equipo_visitante_nombre, 
+        ICL.club_imagen AS equipo_local_imagen, 
+        ICV.club_imagen AS equipo_visitante_imagen,
+        P.estado 
+      FROM Partido P
+      JOIN Equipo EL ON P.equipo_local_id = EL.id
+      JOIN Equipo EV ON P.equipo_visitante_id = EV.id
+      JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
+      JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
+      JOIN EquipoCampeonato ECL ON ECL.equipoId = EL.id AND ECL.campeonatoId = P.campeonato_id
+      JOIN EquipoCampeonato ECV ON ECV.equipoId = EV.id AND ECV.campeonatoId = P.campeonato_id
+      WHERE 
+        ECL.categoria_id = :categoriaId AND
+        ECV.categoria_id = :categoriaId AND
+        (P.estado = 'J' OR P.fecha < GETDATE()) AND 
+        P.campeonato_id = :CampeonatoId AND
+        P.id NOT IN (
+          SELECT TOP 3 P2.id 
+          FROM Partido P2
+          JOIN Equipo EL2 ON P2.equipo_local_id = EL2.id
+          JOIN EquipoCampeonato EC2 ON EC2.equipoId = EL2.id AND EC2.campeonatoId = P2.campeonato_id
+          WHERE 
+            EC2.categoria_id = :categoriaId AND
+            (P2.estado = 'J' OR P2.fecha < GETDATE()) AND 
+            P2.campeonato_id = :CampeonatoId
+          ORDER BY P2.fecha DESC
         )
-        ORDER BY P.fecha DESC;
+      ORDER BY P.fecha DESC;
     `, {
       replacements: { categoriaId,CampeonatoId},  
       type: sequelize.QueryTypes.SELECT 
@@ -641,7 +655,7 @@ exports.getEquiposInscritos = async (campeonatoId, categoriaId) => {
       JOIN Club C ON C.id = E.club_id
       LEFT JOIN ImagenClub IC ON IC.club_id = C.id
       WHERE EC.campeonatoId = :campeonatoId
-      AND E.categoria_id = :categoriaId
+      AND EC.categoria_id = :categoriaId
       AND EC.estado = 'Inscrito'
     `, {
       replacements: { campeonatoId, categoriaId },
@@ -1085,11 +1099,14 @@ exports.registrarPartidos = async (partidos, campeonatoId, categoriaId) => {
     // 🔹 Buscar si hay partidos finalizados en el campeonato y la categoría
     const partidosExistentes = await sequelize.query(
       `
-      SELECT p.id, p.estado 
+     SELECT p.id, p.estado 
       FROM Partido p
-      JOIN Equipo e ON p.equipo_local_id = e.id OR p.equipo_visitante_id = e.id
+      JOIN EquipoCampeonato ec1 ON p.equipo_local_id = ec1.equipoId AND ec1.campeonatoId = p.campeonato_id
+      JOIN EquipoCampeonato ec2 ON p.equipo_visitante_id = ec2.equipoId AND ec2.campeonatoId = p.campeonato_id
       WHERE p.campeonato_id = :campeonatoId
-      AND e.categoria_id = :categoriaId
+      AND ec1.categoria_id = :categoriaId
+      AND ec2.categoria_id = :categoriaId
+
     `,
       {
         replacements: { campeonatoId, categoriaId },
@@ -1112,10 +1129,13 @@ exports.registrarPartidos = async (partidos, campeonatoId, categoriaId) => {
       `
       SELECT p.id 
       FROM Partido p
-      JOIN Equipo e ON p.equipo_local_id = e.id OR p.equipo_visitante_id = e.id
+      JOIN EquipoCampeonato ec1 ON p.equipo_local_id = ec1.equipoId AND ec1.campeonatoId = p.campeonato_id
+      JOIN EquipoCampeonato ec2 ON p.equipo_visitante_id = ec2.equipoId AND ec2.campeonatoId = p.campeonato_id
       WHERE p.campeonato_id = :campeonatoId
-      AND e.categoria_id = :categoriaId
+      AND ec1.categoria_id = :categoriaId
+      AND ec2.categoria_id = :categoriaId
       AND p.estado = :estadoConfirmado
+
       `,
       {
         replacements: {

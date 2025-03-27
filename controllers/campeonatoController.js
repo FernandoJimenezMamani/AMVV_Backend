@@ -52,10 +52,10 @@ exports.getCampeonatoCategoria = async (req, res) => {
 };
 
 exports.getCampeonatoPosiciones = async (req, res) => {
-  const { campeonato_id, categoria_id } = req.params;
+  const { campeonato_id, categoria_id , incluirNoInscritos } = req.params;
 
   try {
-    const data = await campeonatoService.getChampionshipPositions(campeonato_id, categoria_id);
+    const data = await campeonatoService.getChampionshipPositions(categoria_id, campeonato_id, incluirNoInscritos === 'true');
     res.status(200).json(data);
   } catch (err) {
     res.status(404).json({ message: err.message });
@@ -158,5 +158,16 @@ exports.getTeamPosition = async (req, res) => {
     res.status(200).json(resultado);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+exports.obtenerAscensosDescensos = async (req, res) => {
+  const { campeonatoId ,genero} = req.params;
+  try {
+    const resultado = await campeonatoService.getEquiposAscensoDescenso(campeonatoId,genero);
+    res.status(200).json(resultado);
+  } catch (error) {
+    console.error("Error en el controlador:", error);
+    res.status(500).json({ message: "Error al obtener ascensos y descensos" });
   }
 };

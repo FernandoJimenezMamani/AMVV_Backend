@@ -48,7 +48,7 @@ const Traspaso = sequelize.define('Traspaso', {
     allowNull: false,
     defaultValue: 'PENDIENTE',
   },
-  estado_club: {
+  estado_club_origen: {
     type: DataTypes.STRING(20),
     allowNull: false,
     defaultValue: 'PENDIENTE',
@@ -70,6 +70,14 @@ const Traspaso = sequelize.define('Traspaso', {
       model: Campeonato,
       key: 'id',
     }
+  },
+  estado_club_receptor: {
+    type: DataTypes.STRING(20),
+    allowNull: true
+  },
+  tipo_solicitud: {
+    type: DataTypes.STRING(20),
+    allowNull: false
   },
   presidente_club_id_origen:{
     type:DataTypes.INTEGER,

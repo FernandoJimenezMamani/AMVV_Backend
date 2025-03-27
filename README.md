@@ -6,6 +6,8 @@ DB_PASSWORD=Univalle
 DB_HOST=localhost 
 JWT_SECRET= 12345
 JWT_EXPIRATION=72h
+CORS_ORIGIN=http://localhost:3000
+PORT= 5002
 
 API_KEY = "AIzaSyD3DxbS07OvCEjjsnbeDwyBSh-ge3PazBg"
 AUTH_DOMAIN ="amvv-dbf.firebaseapp.com"

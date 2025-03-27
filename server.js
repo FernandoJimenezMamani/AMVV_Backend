@@ -28,11 +28,11 @@ const reporteRoutes = require('./routes/reporteRoutes');
 
 // Inicializar la app
 const app = express();
-const PORT = process.env.PORT || 5002;
+const PORT = process.env.PORT;
 
 // Middleware para CORS
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: process.env.CORS_ORIGIN,
   credentials: true,
 }));
 

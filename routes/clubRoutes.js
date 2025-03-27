@@ -11,5 +11,7 @@ router.post('/post_club', upload.single('image'), clubController.createClub);
 router.put('/update_club/:id', clubController.updateClub);
 router.put('/update_club_image/:id', upload.single('image'), clubController.updateClubImage);
 router.put('/delete_club/:id', clubController.deleteClub);
+router.post('/clubes-disponibles-by-jugador', clubController.obtenerClubesDisponiblesParaJugador);
+router.post('/clubes_pending_confirm', clubController.getClubesPendingConfirmation);
 
 module.exports = router;

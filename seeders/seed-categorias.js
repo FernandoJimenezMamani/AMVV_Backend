@@ -39,10 +39,23 @@ const seedCategorias = async () => {
     ];
 
     console.log('Insertando categorías en la tabla Categoria...');
+    // Mapeo de jerarquías de categorías de ascenso
+    const jerarquiaAscenso = {
+      "3ras Ascenso": 1,
+      "2das Ascenso": 2,
+      "1ras Ascenso": 3,
+      "1ras de Honor": 4
+    };
+
     for (const categoria of categorias) {
+      const esAscenso = Object.keys(jerarquiaAscenso).includes(categoria.nombre);
+
       await Categoria.create(
         {
           ...categoria,
+          es_ascenso: esAscenso ? 'S' : null,
+          nivel_jerarquico: esAscenso ? jerarquiaAscenso[categoria.nombre] : null,
+          cant_equipos_max: esAscenso ? 8 : null,
           fecha_registro: sequelize.fn('GETDATE'),
           fecha_actualizacion: sequelize.fn('GETDATE'),
           eliminado: 'N',

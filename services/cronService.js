@@ -4,6 +4,7 @@ const { Op, where } = require('sequelize');
 const campeonatoEstados = require('../constants/campeonatoEstados');
 const moment = require('moment-timezone');
 const campeonatoEquipoEstados = require('../constants/campeonatoEquipoEstado');
+const campeonatoService = require('./campeonatoService');
 
 exports.actualizarEstadosCampeonatos = async () => {
     try {
@@ -60,37 +61,83 @@ exports.actualizarEstadosCampeonatos = async () => {
 
         if (nuevoEstado === campeonatoEstados.transaccionProceso) {
             console.log(`Verificando nuevos equipos para el campeonato ID ${campeonato.id} en fase de preparación...`);
+            const [result] = await sequelize.query(`
+                SELECT TOP 1 * 
+                FROM Campeonato 
+                WHERE estado = :estadoFinalizado 
+                  AND fecha_fin_campeonato < :fechaReferencia 
+                ORDER BY fecha_fin_campeonato DESC
+              `, {
+                replacements: {
+                  estadoFinalizado: campeonatoEstados.campeonatoFinalizado,
+                  fechaReferencia: moment(campeonato.fecha_inicio_campeonato).format('YYYY-MM-DD HH:mm:ss')
+                },
+                type: sequelize.QueryTypes.SELECT
+              });
+              
+              const campeonatoAnterior = result || null;
+              
+              
+              if (!campeonatoAnterior) {
+                console.log('No se encontró un campeonato anterior finalizado. No se realizará asignación de categorías.');
+                return campeonatosActualizados; 
+              }
+                const equiposAnteriorCampeonato = await EquipoCampeonato.findAll({
+                    where: {
+                    campeonatoId: campeonatoAnterior.id
+                    },
+                    include: [{ model: Categoria, attributes: ['id', 'nombre', 'es_ascenso', 'genero'] }]
+                });
+            const categorias = await Categoria.findAll({
+                where: { eliminado: 'N' },
+                attributes: ['id', 'nombre', 'genero']
+              });
+              
+            const cambiosCategoria = new Map();
 
-            // Obtener todos los equipos existentes en la base de datos
-            const todosLosEquipos = await Equipo.findAll({ where:{ eliminado: 'N'}, attributes: ['id'] });
-            const idsTodosLosEquipos = todosLosEquipos.map(equipo => equipo.id);
-
-            // Obtener los equipos ya registrados en la tabla EquipoCampeonato para este campeonato
-            const equiposRegistrados = await EquipoCampeonato.findAll({
-                where: { campeonatoId: campeonato.id },
-                attributes: ['equipoId']
+            const ascensosVarones = await campeonatoService.getEquiposAscensoDescenso(campeonatoAnterior.id, 'V');
+            ascensosVarones.forEach((cambio) => {
+            const equipoId = cambio.equipo.equipo_id;
+            const nuevaCategoria = categorias.find(cat => cat.nombre === cambio.a && cat.genero === 'V');
+            if (nuevaCategoria) {
+                cambiosCategoria.set(equipoId, nuevaCategoria.id);
+            }
             });
 
-            const idsEquiposRegistrados = equiposRegistrados.map(ec => ec.equipoId);
-
-            // Encontrar equipos nuevos que aún no están en EquipoCampeonato
-            const equiposNuevos = idsTodosLosEquipos.filter(equipoId => !idsEquiposRegistrados.includes(equipoId));
-
-            if (equiposNuevos.length > 0) {
-                console.log(`Se encontraron ${equiposNuevos.length} equipos nuevos. Añadiéndolos al campeonato...`);
-
-                // Crear registros en la tabla EquipoCampeonato
-                const nuevosRegistros = equiposNuevos.map(equipoId => ({
-                    equipoId,
-                    campeonatoId: campeonato.id,
-                    estado: campeonatoEquipoEstados.DeudaInscripcion // Estado activo por defecto
-                }));
-
-                await EquipoCampeonato.bulkCreate(nuevosRegistros);
-                console.log(`Se añadieron ${equiposNuevos.length} nuevos equipos al campeonato.`);
-            } else {
-                console.log("No hay equipos nuevos para añadir.");
+            const ascensosMujeres = await campeonatoService.getEquiposAscensoDescenso(campeonatoAnterior.id, 'D');
+            ascensosMujeres.forEach((cambio) => {
+            const equipoId = cambio.equipo.equipo_id;
+            const nuevaCategoria = categorias.find(cat => cat.nombre === cambio.a && cat.genero === 'D');
+            if (nuevaCategoria) {
+                cambiosCategoria.set(equipoId, nuevaCategoria.id);
             }
+            });
+
+            console.log('Insertando equipos con categorías actualizadas...');
+
+            const nuevosRegistrosConCategoria = [];
+
+            for (const equipo of equiposAnteriorCampeonato) {
+
+            const equipoId = equipo.equipoid;
+
+            const nuevaCategoriaId = cambiosCategoria.get(equipoId) || equipo.categoria_id;
+
+            nuevosRegistrosConCategoria.push({
+                equipoId,
+                campeonatoId: campeonato.id,
+                categoria_id: nuevaCategoriaId,
+                estado: campeonatoEquipoEstados.DeudaInscripcion
+            });
+            }
+
+            if (nuevosRegistrosConCategoria.length > 0) {
+            await EquipoCampeonato.bulkCreate(nuevosRegistrosConCategoria);
+            console.log(`Se insertaron ${nuevosRegistrosConCategoria.length} equipos con sus categorías actualizadas.`);
+            } else {
+            console.log("No se encontraron equipos del campeonato anterior para insertar.");
+            }
+
         }
 
         return campeonatosActualizados;

@@ -2,6 +2,7 @@ const { Jugador, Persona, Equipo, Categoria, PersonaRol, JugadorEquipo ,Particip
 const { sequelize } = require('../models');
 const campeonatoEstados = require('../constants/campeonatoEstados');
 const campeonatoEquipoEstados = require('../constants/campeonatoEquipoEstado');
+const { where } = require('sequelize');
 
 // Método para obtener todos los jugadores junto con el club al que pertenecen
 exports.getAllJugadores = async () => {
@@ -61,7 +62,8 @@ exports.getJugadorById = async (id) => {
         Usuario.correo,
         Jugador.club_id as 'club_jugador',
         STRING_AGG(Rol.nombre, ', ') AS roles,
-		    PresidenteClub.club_id as 'club_presidente'
+		    PresidenteClub.club_id as 'club_presidente',
+        Jugador.id as 'jugador_id'
       FROM
         Persona
       LEFT JOIN
@@ -91,7 +93,8 @@ exports.getJugadorById = async (id) => {
             ImagenPersona.persona_imagen,
             Usuario.correo,
 			Jugador.club_id,
-			PresidenteClub.club_id;
+			PresidenteClub.club_id,
+      Jugador.id;
     `, {
       replacements: { id },
       type: sequelize.QueryTypes.SELECT
@@ -238,6 +241,13 @@ exports.getJugadoresByClubId = async (club_id) => {
 };
 
 exports.getJugadoresByClubIdAndCategory = async (club_id,categoria_id,id_equipo) => {
+
+  const campeonatoActivo = await Campeonato.findOne({
+    where: { estado : campeonatoEstados.transaccionProceso }
+  });
+  
+  const campeonato_id = campeonatoActivo.id;
+
   const jugadores = await sequelize.query(
     `SELECT DISTINCT  
     j.id AS jugador_id,
@@ -256,28 +266,22 @@ exports.getJugadoresByClubIdAndCategory = async (club_id,categoria_id,id_equipo)
         THEN 1 
         ELSE 0 
     END AS edad_jugador
-FROM 
-    Jugador j
-JOIN 
-    Persona p ON j.jugador_id = p.id
-LEFT JOIN 
-    ImagenPersona im ON p.id = im.persona_id
-INNER JOIN 
-    Club ON Club.id = j.club_id
-INNER JOIN 
-    Equipo ON Equipo.club_id = Club.id
-INNER JOIN 
-    Categoria ON Categoria.id = Equipo.categoria_id
-LEFT JOIN 
-    JugadorEquipo je ON je.jugador_id = j.id AND je.activo = 1 -- Validar solo relaciones activas
-WHERE 
+  FROM Jugador j
+  JOIN Persona p ON j.jugador_id = p.id
+  LEFT JOIN ImagenPersona im ON p.id = im.persona_id
+  INNER JOIN Club ON Club.id = j.club_id
+  INNER JOIN Equipo E ON E.id = :id_equipo
+  INNER JOIN EquipoCampeonato EC ON EC.equipoId = E.id
+  INNER JOIN Categoria ON Categoria.id = EC.categoria_id
+  LEFT JOIN JugadorEquipo je ON je.jugador_id = j.id AND je.activo = 1
+  WHERE 
     j.club_id = :club_id
     AND j.activo = 1 
     AND p.eliminado = 'N'
-    AND Categoria.id = :categoria_id
+    AND EC.campeonatoId = :campeonato_id 
     AND (
-        Categoria.genero = 'Mixto' -- Si la categoría es mixta, no filtrar por género
-        OR p.genero = Categoria.genero -- Si no es mixta, filtrar por género coincidente
+        Categoria.genero = 'Mixto'
+        OR p.genero = Categoria.genero
     )
     AND (
         (Categoria.edad_minima IS NULL OR Categoria.edad_minima <= 
@@ -304,12 +308,11 @@ WHERE
         FROM JugadorEquipo je_sub
         WHERE je_sub.jugador_id = j.id
           AND je_sub.equipo_id = :id_equipo
-          AND je_sub.activo = 1 -- Validar solo relaciones activas
+          AND je_sub.activo = 1
     );
-
     `, 
     {
-      replacements: { club_id, categoria_id ,id_equipo },
+      replacements: { club_id, categoria_id ,id_equipo, campeonato_id },
       type: sequelize.QueryTypes.SELECT
     }
   );
@@ -570,8 +573,8 @@ exports.getJugadoresAbleToExchange = async (club_presidente , idTraspasoPresiden
             AND cp.id != :club_presidente
             -- Excluir jugadores con un traspaso en estado PENDIENTE/PENDIENTE o APROBADO/APROBADO
             AND NOT (
-                (t.id IS NOT NULL AND t.estado_jugador = 'PENDIENTE' AND t.estado_club = 'PENDIENTE') 
-                OR (t.id IS NOT NULL AND t.estado_jugador = 'APROBADO' AND t.estado_club = 'APROBADO')
+                (t.id IS NOT NULL AND t.estado_jugador = 'PENDIENTE' AND t.estado_club_origen = 'PENDIENTE') 
+                OR (t.id IS NOT NULL AND t.estado_jugador = 'APROBADO' AND t.estado_club_origen = 'APROBADO')
             );`,
       {
         replacements:{club_presidente,idTraspasoPresidente},
@@ -604,7 +607,7 @@ exports.getJugadoresPendingExchange = async (club_presidente , idTraspasoPreside
         p.eliminado,
         pp.nombre,
         t.estado_jugador,
-        t.estado_club,
+        t.estado_club_origen,
         t.estado_deuda,
         t.eliminado,
 		    t.id AS id_traspaso,

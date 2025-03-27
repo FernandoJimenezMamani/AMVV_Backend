@@ -53,6 +53,18 @@ const Categoria = sequelize.define('Categoria', {
     type: DataTypes.INTEGER,
     allowNull: true,
   },
+  es_ascenso: {
+    type: DataTypes.CHAR(1),
+    allowNull: true,
+  },
+  nivel_jerarquico: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  cant_equipos_max: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
 }, {
   tableName: 'Categoria',
   timestamps: false,

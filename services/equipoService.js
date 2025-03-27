@@ -6,13 +6,23 @@ const campeonatoEstados = require('../constants/campeonatoEstados');
 exports.getEquiposByCategoriaId = async (categoria_id, campeonato_id) => {
   try {
     const equipos = await sequelize.query(`
-      SELECT Equipo.id, Equipo.nombre, Club.nombre AS club_nombre, Categoria.nombre AS categoria_nombre, ImagenClub.club_imagen
-      FROM Equipo
-      INNER JOIN Club ON Equipo.club_id = Club.id
-      INNER JOIN Categoria ON Equipo.categoria_id = Categoria.id
-      LEFT JOIN ImagenClub ON Club.id = ImagenClub.club_id
-      LEFT JOIN EquipoCampeonato EQ ON EQ.equipoId = Equipo.id
-      WHERE Equipo.eliminado = 'N' AND Equipo.categoria_id = :categoria_id AND EQ.campeonatoId = :campeonato_id AND EQ.estado = 'Inscrito'
+     SELECT 
+      Equipo.id, 
+      Equipo.nombre, 
+      Club.nombre AS club_nombre, 
+      Categoria.nombre AS categoria_nombre, 
+      ImagenClub.club_imagen
+    FROM 
+      Equipo
+    INNER JOIN Club ON Equipo.club_id = Club.id
+    LEFT JOIN ImagenClub ON Club.id = ImagenClub.club_id
+    INNER JOIN EquipoCampeonato EQ ON EQ.equipoId = Equipo.id 
+    INNER JOIN Categoria ON EQ.categoria_id = Categoria.id
+    WHERE 
+      Equipo.eliminado = 'N' 
+      AND EQ.categoria_id = :categoria_id
+      AND EQ.campeonatoId = :campeonato_id 
+      AND EQ.estado = 'Inscrito'
     `, {
       replacements: { categoria_id, campeonato_id },
       type: sequelize.QueryTypes.SELECT
@@ -26,29 +36,44 @@ exports.getEquiposByCategoriaId = async (categoria_id, campeonato_id) => {
 };
 
 exports.getEquipoById = async (id) => {
-  return await Equipo.findOne({
-    where: { id, eliminado: 'N' },
-    attributes: ['id', 'nombre', 'club_id', 'categoria_id'],
-    include: [
-      {
-        model: Club,
-        as: 'club',
-        attributes: ['nombre'],
-        include: [
-          {
-            model: ImagenClub,
-            as: 'imagenClub',
-            attributes: ['club_imagen'] // Agregar la imagen del club
-          }
-        ]
-      },
-      {
-        model: Categoria,
-        as: 'categoria',
-        attributes: ['nombre', 'genero' , 'division'] // Incluir también el género de la categoría
-      }
-    ]
+  const query = `
+    SELECT 
+      e.id AS equipo_id,
+      e.nombre AS equipo_nombre,
+      e.club_id,
+      cl.nombre AS club_nombre,
+      ic.club_imagen,
+      cat.id AS categoria_id,
+      cat.nombre AS categoria_nombre,
+      cat.genero,
+      cat.division
+    FROM 
+      Equipo e
+    JOIN 
+      Club cl ON e.club_id = cl.id
+    LEFT JOIN 
+      ImagenClub ic ON ic.club_id = cl.id
+    LEFT JOIN (
+      SELECT ec1.*
+      FROM EquipoCampeonato ec1
+      INNER JOIN (
+        SELECT equipoId, MAX(campeonatoId) AS ultimo_campeonato
+        FROM EquipoCampeonato
+        GROUP BY equipoId
+      ) ec2 ON ec1.equipoId = ec2.equipoId AND ec1.campeonatoId = ec2.ultimo_campeonato
+    ) AS ult_ec ON ult_ec.equipoId = e.id
+    LEFT JOIN 
+      Categoria cat ON cat.id = ult_ec.categoria_id
+    WHERE 
+      e.id = :id AND e.eliminado = 'N';
+  `;
+
+  const [results] = await sequelize.query(query, {
+    replacements: { id },
+    type: sequelize.QueryTypes.SELECT
   });
+
+  return results || null;
 };
 
 exports.createEquipo = async ({ nombre, club_id, categoria_id, user_id }) => {
@@ -120,17 +145,19 @@ exports.getEquiposByPartidoId = async (partido_id) => {
   try {
     const equipos = await sequelize.query(`
       SELECT 
-        e.id AS equipo_id, 
-        e.nombre AS equipo_nombre, 
-        c.nombre AS club_nombre, 
-        cat.nombre AS categoria_nombre, 
-        ic.club_imagen
+          e.id AS equipo_id, 
+          e.nombre AS equipo_nombre, 
+          c.nombre AS club_nombre, 
+          cat.nombre AS categoria_nombre, 
+          ic.club_imagen
       FROM Partido p
       INNER JOIN Equipo e ON e.id = p.equipo_local_id OR e.id = p.equipo_visitante_id
       INNER JOIN Club c ON e.club_id = c.id
-      INNER JOIN Categoria cat ON e.categoria_id = cat.id
+      LEFT JOIN EquipoCampeonato ec ON ec.equipoId = e.id AND ec.campeonatoId = p.campeonato_id
+      LEFT JOIN Categoria cat ON ec.categoria_id = cat.id
       LEFT JOIN ImagenClub ic ON c.id = ic.club_id
       WHERE p.id = :partido_id AND e.eliminado = 'N'
+
     `, {
       replacements: { partido_id },
       type: sequelize.QueryTypes.SELECT

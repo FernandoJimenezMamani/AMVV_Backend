@@ -23,14 +23,6 @@ Equipo.init({
       key: 'id',
     }
   },
-  categoria_id: {
-    type: DataTypes.SMALLINT,
-    allowNull: true,
-    references: {
-      model: Categoria,
-      key: 'id',
-    }
-  },
   fecha_registro: {
     type: DataTypes.DATE,
     allowNull: true,
@@ -54,8 +46,7 @@ Equipo.init({
   timestamps: false,
 });
 
-Equipo.belongsTo(Categoria, { foreignKey: 'categoria_id', as: 'categoria' });
-Categoria.hasMany(Equipo, { foreignKey: 'categoria_id', as: 'equipos' });
+
 
 
 Equipo.belongsTo(Club, { foreignKey: 'club_id', as: 'club' });

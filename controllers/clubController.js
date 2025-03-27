@@ -97,3 +97,39 @@ exports.deleteClub = async (req, res) => {
     res.status(500).json({ message: 'Error al eliminar club', error: err.message });
   }
 };
+
+exports.obtenerClubesDisponiblesParaJugador = async (req, res) => {
+  try {
+    const { jugador_id } = req.body;
+    console.log('jugador_id:', jugador_id);
+
+    if (!jugador_id) {
+      return res.status(400).json({ error: 'El ID del jugador es requerido' });
+    }
+
+    const clubes = await clubService.getClubesAvailableForJugador(jugador_id);
+
+    res.status(200).json({ clubes });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getClubesPendingConfirmation = async (req, res) => {
+  try {
+      const { jugador_id ,campeonatoId} = req.body;
+
+      console.log('datos recibidos traspaso' ,req.body )
+
+      if (!jugador_id || !campeonatoId) {
+          return res.status(400).json({ error: 'Los parámetros club_presidente e idTraspasoPresidente son requeridos' });
+      }
+
+      const jugadores = await clubService.getClubesPendingConfirmation(jugador_id, campeonatoId);
+
+      return res.status(200).json(jugadores);
+  } catch (error) {
+      console.error('Error en el controlador al obtener jugadores:', error);
+      return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};

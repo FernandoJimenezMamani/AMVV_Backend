@@ -12,30 +12,34 @@ exports.obtenerEquiposPorCampeonatoById = async (id) => {
   try {
     const equipo = await sequelize.query(
       `SELECT 
-          e.id AS equipo_id,
-          e.nombre AS equipo_nombre,
-          cat.nombre AS Categoria,
-          cat.costo_inscripcion ,
-          cat.genero,
-          c.id AS campeonato_id,
-          c.nombre AS campeonato_nombre,
-          ec.estado AS estado_equipo,
-          cl.nombre AS nombre_club,
-          ic.club_imagen AS imagen_club,
-          pc.presidente_id,
-          p.nombre AS nombre_presidente,
-          p.apellido AS apellido_presidente,
-		      u.correo AS correo_presidente
-          FROM EquipoCampeonato ec
-          JOIN Equipo e ON ec.equipoId = e.id
-          JOIN Campeonato c ON ec.campeonatoId = c.id
-          JOIN Club cl ON cl.id = e.club_id
-          JOIN PresidenteClub pc ON PC.club_id = CL.id
-          JOIN Persona p ON p.id = pc.presidente_id
-		      JOIN Usuario u ON u.id = p.id
-          JOIN ImagenClub ic ON ic.club_id = cl.id
-          JOIN Categoria cat ON cat.id = e.categoria_id
-          WHERE c.estado != 3 AND e.id = :id`,
+        e.id AS equipo_id,
+        e.nombre AS equipo_nombre,
+        cat.nombre AS Categoria,
+        cat.costo_inscripcion,
+        cat.genero,
+        c.id AS campeonato_id,
+        c.nombre AS campeonato_nombre,
+        ec.estado AS estado_equipo,
+        cl.nombre AS nombre_club,
+        ic.club_imagen AS imagen_club,
+        pc.presidente_id,
+        p.nombre AS nombre_presidente,
+        p.apellido AS apellido_presidente,
+        u.correo AS correo_presidente
+      FROM 
+        EquipoCampeonato ec
+      JOIN Equipo e ON ec.equipoId = e.id
+      JOIN Campeonato c ON ec.campeonatoId = c.id
+      JOIN Club cl ON cl.id = e.club_id
+      JOIN PresidenteClub pc ON pc.club_id = cl.id
+      JOIN Persona p ON p.id = pc.presidente_id
+      JOIN Usuario u ON u.id = p.id
+      JOIN ImagenClub ic ON ic.club_id = cl.id
+      JOIN Categoria cat ON cat.id = ec.categoria_id
+      WHERE 
+        c.estado != 3 
+        AND e.id = :id;
+      `,
       {
         replacements: { id },
         type: sequelize.QueryTypes.SELECT
@@ -59,7 +63,7 @@ exports.obtenerTraspasosPorCampeonatoById = async (id) => {
           clubDestino.id AS club_destino_id,
           clubDestino.nombre AS club_destino_nombre,
           j.id AS jugador_id,
-		      j.jugador_id AS jugador_persona_id,
+          j.jugador_id AS jugador_persona_id,
           p.nombre AS jugador_nombre,
           p.apellido AS jugador_apellido,
           p.ci AS jugador_ci,
@@ -72,32 +76,37 @@ exports.obtenerTraspasosPorCampeonatoById = async (id) => {
           ppco.nombre AS nombre_presi_club_origen,
           ppco.apellido AS apellido_presi_club_origen,
           c.id AS campeonato_id,
-	        c.nombre AS nombre_campeonato,
+          c.nombre AS nombre_campeonato,
           t.estado_deuda,
           cat.costo_traspaso,
           ico.club_imagen AS club_origen_imagen,
-		      icd.club_imagen AS club_destino_imagen,
-		      impj.persona_imagen
-          FROM Traspaso t
-          LEFT JOIN Club clubOrigen ON t.club_origen_id = clubOrigen.id
-		      LEFT JOIN ImagenClub ico ON ico.club_id = clubOrigen.id
-          LEFT JOIN Club clubDestino ON t.club_destino_id = clubDestino.id
-		      LEFT JOIN ImagenClub icd ON icd.club_id = clubDestino.id
-          LEFT JOIN Jugador j ON t.jugador_id = j.id
-          LEFT JOIN JugadorEquipo je ON je.jugador_id = j.id AND je.activo = 1
-          LEFT JOIN Equipo e ON  e.id = je .equipo_id
-          LEFT JOIN Categoria cat ON cat.id = e.categoria_id
-          LEFT JOIN Persona p ON j.jugador_id = p.id
-          LEFT JOIN ImagenPersona impj ON impj.persona_id = p.id
-
-          LEFT JOIN PresidenteClub pcd ON pcd.id = t.presidente_club_id_destino
-          LEFT JOIN Persona ppcd ON ppcd.id = pcd.presidente_id
-
-          LEFT JOIN PresidenteClub pco ON pco.id = t.presidente_club_id_origen
-          LEFT JOIN Persona ppco ON ppco.id = pco.presidente_id
-          LEFT JOIN Campeonato c ON c.id = t.campeonato_id
-
-          WHERE t.estado_club = 'APROBADO' AND t.estado_jugador = 'APROBADO' AND t.estado_deuda = 'PENDIENTE' AND t.eliminado = 'N' AND c.estado != 3 AND t.id = :id` ,
+          icd.club_imagen AS club_destino_imagen,
+          impj.persona_imagen
+      FROM Traspaso t
+      LEFT JOIN Club clubOrigen ON t.club_origen_id = clubOrigen.id
+      LEFT JOIN ImagenClub ico ON ico.club_id = clubOrigen.id
+      LEFT JOIN Club clubDestino ON t.club_destino_id = clubDestino.id
+      LEFT JOIN ImagenClub icd ON icd.club_id = clubDestino.id
+      LEFT JOIN Jugador j ON t.jugador_id = j.id
+      LEFT JOIN JugadorEquipo je ON je.jugador_id = j.id AND je.activo = 1
+      LEFT JOIN Equipo e ON e.id = je.equipo_id
+      LEFT JOIN EquipoCampeonato ec ON ec.equipoId = e.id AND ec.campeonatoId = t.campeonato_id
+      LEFT JOIN Categoria cat ON cat.id = ec.categoria_id
+      LEFT JOIN Persona p ON j.jugador_id = p.id
+      LEFT JOIN ImagenPersona impj ON impj.persona_id = p.id
+      LEFT JOIN PresidenteClub pcd ON pcd.id = t.presidente_club_id_destino
+      LEFT JOIN Persona ppcd ON ppcd.id = pcd.presidente_id
+      LEFT JOIN PresidenteClub pco ON pco.id = t.presidente_club_id_origen
+      LEFT JOIN Persona ppco ON ppco.id = pco.presidente_id
+      LEFT JOIN Campeonato c ON c.id = t.campeonato_id
+      WHERE 
+          t.estado_club_origen = 'APROBADO'
+          AND t.estado_jugador = 'APROBADO'
+          AND t.estado_deuda = 'PENDIENTE'
+          AND t.eliminado = 'N'
+          AND c.estado = 1
+          AND t.id = :id;
+      ` ,
       {
         replacements: { id },
         type: sequelize.QueryTypes.SELECT
@@ -268,7 +277,7 @@ exports.createPagoTraspaso = async (data) => {
       {
         where: {
           estado_jugador: traspasoEstados.APROBADO,
-          estado_club: traspasoEstados.APROBADO,
+          estado_club_origen: traspasoEstados.APROBADO,
           jugador_id: jugador_id
         }
       },
@@ -431,7 +440,7 @@ exports.createPago = async (data) => {
 
       await Traspaso.update({
         estado_deuda : traspasoEstados.FINALIZADO},
-        {where:{estado_jugador : traspasoEstados.APROBADO , estado_club : traspasoEstados.APROBADO , jugador_id : jugador_id }}
+        {where:{estado_jugador : traspasoEstados.APROBADO , estado_club_origen : traspasoEstados.APROBADO , jugador_id : jugador_id }}
       );
     
       await PagoTraspaso.create(
@@ -518,24 +527,28 @@ exports.obtenerEquiposPorCampeonato = async () => {
   try {
     const equipos = await sequelize.query(
       `SELECT 
-          e.id AS equipo_id,
-          e.nombre AS equipo_nombre,
-          cat.nombre AS Categoria,
-          cat.costo_inscripcion ,
-          cat.genero,
-          c.id AS campeonato_id,
-          c.nombre AS campeonato_nombre,
-          ec.estado AS estado_equipo,
-          cl.nombre AS nombre_club,
-          ic.club_imagen AS imagen_club
-          FROM EquipoCampeonato ec
-          JOIN Equipo e ON ec.equipoId = e.id
-          JOIN Campeonato c ON ec.campeonatoId = c.id
-          JOIN Club cl ON cl.id = e.club_id
-          JOIN ImagenClub ic ON ic.club_id = cl.id
-          JOIN Categoria cat ON cat.id = e.categoria_id
-          JOIN PresidenteClub pc ON pc.club_id = cl.id
-          WHERE c.estado != 3 AND ec.estado = 'Deuda'`,
+        e.id AS equipo_id,
+        e.nombre AS equipo_nombre,
+        cat.nombre AS Categoria,
+        cat.costo_inscripcion,
+        cat.genero,
+        c.id AS campeonato_id,
+        c.nombre AS campeonato_nombre,
+        ec.estado AS estado_equipo,
+        cl.nombre AS nombre_club,
+        ic.club_imagen AS imagen_club
+      FROM 
+        EquipoCampeonato ec
+      JOIN Equipo e ON ec.equipoId = e.id
+      JOIN Campeonato c ON ec.campeonatoId = c.id
+      JOIN Club cl ON cl.id = e.club_id
+      JOIN ImagenClub ic ON ic.club_id = cl.id
+      JOIN Categoria cat ON cat.id = ec.categoria_id
+      JOIN PresidenteClub pc ON pc.club_id = cl.id
+      WHERE 
+        c.estado != 3 
+        AND ec.estado = 'Deuda'
+      `,
       {
         type: sequelize.QueryTypes.SELECT
       }
@@ -567,32 +580,36 @@ exports.obtenerTraspasosPorCampeonato = async () => {
           ppcd.apellido AS apellido_presi_club_dest,
           ppco.nombre AS nombre_presi_club_origen,
           ppco.apellido AS apellido_presi_club_origen,
-	        c.nombre AS nombre_campeonato,
+          c.nombre AS nombre_campeonato,
           t.estado_deuda,
           cat.costo_traspaso,
           ico.club_imagen AS club_origen_imagen,
-		      icd.club_imagen AS club_destino_imagen,
-		      impj.persona_imagen
-          FROM Traspaso t
-          LEFT JOIN Club clubOrigen ON t.club_origen_id = clubOrigen.id
-		      LEFT JOIN ImagenClub ico ON ico.club_id = clubOrigen.id
-          LEFT JOIN Club clubDestino ON t.club_destino_id = clubDestino.id
-		      LEFT JOIN ImagenClub icd ON icd.club_id = clubDestino.id
-          LEFT JOIN Jugador j ON t.jugador_id = j.id
-          LEFT JOIN JugadorEquipo je ON je.jugador_id = j.id AND je.activo = 1
-          LEFT JOIN Equipo e ON  e.id = je .equipo_id
-          LEFT JOIN Categoria cat ON cat.id = e.categoria_id
-          LEFT JOIN Persona p ON j.jugador_id = p.id
-          LEFT JOIN ImagenPersona impj ON impj.persona_id = p.id
-
-          LEFT JOIN PresidenteClub pcd ON pcd.id = t.presidente_club_id_destino
-          LEFT JOIN Persona ppcd ON ppcd.id = pcd.presidente_id
-
-          LEFT JOIN PresidenteClub pco ON pco.id = t.presidente_club_id_origen
-          LEFT JOIN Persona ppco ON ppco.id = pco.presidente_id
-          LEFT JOIN Campeonato c ON c.id = t.campeonato_id
-
-          WHERE t.estado_club = 'APROBADO' AND t.estado_jugador = 'APROBADO' AND t.estado_deuda = 'PENDIENTE' AND t.eliminado = 'N' AND c.estado != 3`,
+          icd.club_imagen AS club_destino_imagen,
+          impj.persona_imagen
+      FROM Traspaso t
+      LEFT JOIN Club clubOrigen ON t.club_origen_id = clubOrigen.id
+      LEFT JOIN ImagenClub ico ON ico.club_id = clubOrigen.id
+      LEFT JOIN Club clubDestino ON t.club_destino_id = clubDestino.id
+      LEFT JOIN ImagenClub icd ON icd.club_id = clubDestino.id
+      LEFT JOIN Jugador j ON t.jugador_id = j.id
+      LEFT JOIN JugadorEquipo je ON je.jugador_id = j.id AND je.activo = 1
+      LEFT JOIN Equipo e ON e.id = je.equipo_id
+      LEFT JOIN EquipoCampeonato ec ON ec.equipoId = e.id AND ec.campeonatoId = t.campeonato_id
+      LEFT JOIN Categoria cat ON cat.id = ec.categoria_id
+      LEFT JOIN Persona p ON j.jugador_id = p.id
+      LEFT JOIN ImagenPersona impj ON impj.persona_id = p.id
+      LEFT JOIN PresidenteClub pcd ON pcd.id = t.presidente_club_id_destino
+      LEFT JOIN Persona ppcd ON ppcd.id = pcd.presidente_id
+      LEFT JOIN PresidenteClub pco ON pco.id = t.presidente_club_id_origen
+      LEFT JOIN Persona ppco ON ppco.id = pco.presidente_id
+      LEFT JOIN Campeonato c ON c.id = t.campeonato_id
+      WHERE 
+          t.estado_club_origen = 'APROBADO'
+          AND t.estado_jugador = 'APROBADO'
+          AND t.estado_club_receptor = 'APROBADO'
+          AND t.estado_deuda = 'PENDIENTE'
+          AND t.eliminado = 'N'
+          AND c.estado = 1;`,
       {
         type: sequelize.QueryTypes.SELECT
       }
@@ -629,7 +646,7 @@ exports.obtenerResumenCampeonato = async () => {
     const traspasosPendientes = await Traspaso.findAll({
       where: {
         campeonato_id: campeonato.id,
-        estado_club: traspasoEstados.APROBADO,
+        estado_club_origen: traspasoEstados.APROBADO,
         estado_jugador: traspasoEstados.APROBADO,
         estado_deuda: traspasoEstados.PENDIENTE,
         eliminado: 'N'

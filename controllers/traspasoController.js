@@ -53,6 +53,19 @@ exports.getTraspasosPorPresidente = async (req, res) => {
     }
 };
 
+exports.getTraspasosRelacionadosConPresidente = async (req, res) => {
+    const presidente_id = req.user.id; 
+    const {CampeonatoId} = req.params;
+    console.log(req.params)
+    try {
+        const solicitudes = await traspasoService.getTraspasosRelacionadosConPresidente(presidente_id,CampeonatoId);
+        res.status(200).json(solicitudes);
+    } catch (error) {
+        console.error('Error al obtener los traspasos del presidente:', error);
+        res.status(500).json({ message: 'Error al obtener los traspasos del presidente' });
+    }
+};
+
 exports.getTraspasosEnviadosPorClub = async (req, res) => {
   const { club_id } = req.params;
 
@@ -82,8 +95,19 @@ exports.getTraspasosRecibidosPorClub = async (req, res) => {
 exports.createTraspaso = async (req, res) => {
     
     try {
-        console.log('respuesta traspaso', req.body);
         const traspaso = await traspasoService.createTraspaso(req.body);
+        res.status(201).json({ message: 'Traspaso creado con éxito', traspaso });
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ message: 'Error al crear el traspaso', error: error.message });
+    }
+};
+
+exports.createTraspasoJugador = async (req, res) => {
+
+    try {
+        console.log('datos',req.body)
+        const traspaso = await traspasoService.createTraspasoJugador(req.body);
         res.status(201).json({ message: 'Traspaso creado con éxito', traspaso });
     } catch (error) {
         console.log(error)
@@ -228,5 +252,27 @@ exports.testSendPresidenteEmail = async (req, res) => {
     }
 };
 
+exports.aprobarTraspasoJugador = async (req, res) => {
+    const { id } = req.params;
+    const { presidenteId } = req.body;
+  
+    try {
+      await traspasoService.aprobarTraspasoDeJugadorPorPresidente(id, presidenteId);
+      res.status(200).json({ message: 'Traspaso aprobado correctamente' });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  };
 
+  exports.rechazarTraspasoJugador = async (req, res) => {
+    const { id } = req.params;
+    const { presidenteId } = req.body;
+  
+    try {
+      await traspasoService.rechazarTraspasoDeJugadorPorPresidente(id, presidenteId);
+      res.status(200).json({ message: 'Traspaso aprobado correctamente' });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  };
   

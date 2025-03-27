@@ -94,46 +94,42 @@ exports.createCampeonato = async (nombre, fecha_inicio_campeonato, fecha_fin_cam
 exports.getCampeonatoCategoria = async (campeonato_id, categoria_id) => {
   const campeonato = await Campeonato.findOne({
     where: { id: campeonato_id },
-    attributes: ['nombre', 'estado'],
-    include: [
-      {
-        model: EquipoCampeonato,
-        as: 'equipos',
-        include: [
-          {
-            model: Equipo,
-            as: 'equipo',
-            include: [
-              {
-                model: Categoria,
-                where: { id: categoria_id },
-                attributes: ['nombre'],
-                as: 'categoria',
-              },
-            ],
-          },
-        ],
-      },
-    ],
+    attributes: ['id', 'nombre', 'estado'],
   });
 
   if (!campeonato) {
     throw new Error('Campeonato no encontrado');
   }
 
-  // Verificar si hay equipos inscritos
-  const equipoCampeonato = campeonato.equipos?.find(ec => ec.equipo && ec.equipo.categoria);
-  if (!equipoCampeonato) {
+  const equipoConCategoria = await EquipoCampeonato.findOne({
+    where: {
+      campeonatoId: campeonato_id,
+      categoria_id: categoria_id
+    },
+    include: [
+      {
+        model: Categoria,
+        as: 'categoria',
+        attributes: ['nombre']
+      },
+      {
+        model: Equipo,
+        as: 'equipo',
+        attributes: ['id', 'nombre']
+      }
+    ]
+  });
+
+  if (!equipoConCategoria) {
     throw new Error('No hay equipos en esta categoría dentro del campeonato');
   }
 
   return {
     campeonato_nombre: campeonato.nombre,
-    categoria_nombre: equipoCampeonato.equipo.categoria.nombre || 'Categoría no encontrada',
-    estado: campeonato.estado,
+    categoria_nombre: equipoConCategoria.categoria?.nombre || 'Categoría no encontrada',
+    estado: campeonato.estado
   };
 };
-
 
 exports.getAllCampeonatos = async () => {
   const campeonatos = await Campeonato.findAll({
@@ -290,24 +286,25 @@ exports.updateCampeonato = async (
   }
 };
 
-exports.getChampionshipPositions = async (categoriaId,campeonato_id) => {
+exports.getChampionshipPositions = async (categoriaId,campeonato_id , incluirNoInscritos = false) => {
   try {
-    const positions = await sequelize.query(`
-       SELECT 
-    e.id AS equipo_id,
-    e.nombre AS equipo_nombre,
-    COALESCE(SUM(CASE WHEN p.estado = 'J' THEN 1 ELSE 0 END), 0) AS partidos_jugados,
-    COALESCE(SUM(CASE 
+    const estadoFiltro = incluirNoInscritos ? '' : `AND ec.estado = 'Inscrito'`;
+    const query = `
+    SELECT 
+        e.id AS equipo_id,
+        e.nombre AS equipo_nombre,
+        COALESCE(SUM(CASE WHEN p.estado = 'J' THEN 1 ELSE 0 END), 0) AS partidos_jugados,
+        COALESCE(SUM(CASE 
             WHEN p.estado = 'J' AND e.id = p.equipo_local_id AND rl.resultado = 'G' THEN 1 
             WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id AND rv.resultado = 'G' THEN 1 
             ELSE 0 
         END), 0) AS partidos_ganados,
-    COALESCE(SUM(CASE 
+        COALESCE(SUM(CASE 
             WHEN p.estado = 'J' AND e.id = p.equipo_local_id AND rl.resultado = 'P' THEN 1 
             WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id AND rv.resultado = 'P' THEN 1 
             ELSE 0 
         END), 0) AS partidos_perdidos,
-    COALESCE(SUM(
+        COALESCE(SUM(
         CASE 
             WHEN p.estado = 'J' AND e.id = p.equipo_local_id AND rl.set1 > rv.set1 THEN 1 
             WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id AND rv.set1 > rl.set1 THEN 1 
@@ -323,8 +320,8 @@ exports.getChampionshipPositions = async (categoriaId,campeonato_id) => {
             WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id AND COALESCE(rv.set3, 0) > COALESCE(rl.set3, 0) THEN 1 
             ELSE 0 
         END
-    ), 0) AS sets_a_favor,
-    COALESCE(SUM(
+        ), 0) AS sets_a_favor,
+        COALESCE(SUM(
         CASE 
             WHEN p.estado = 'J' AND e.id = p.equipo_local_id AND rl.set1 < rv.set1 THEN 1 
             WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id AND rv.set1 < rl.set1 THEN 1 
@@ -340,8 +337,8 @@ exports.getChampionshipPositions = async (categoriaId,campeonato_id) => {
             WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id AND COALESCE(rv.set3, 0) < COALESCE(rl.set3, 0) THEN 1 
             ELSE 0 
         END
-    ), 0) AS sets_en_contra,
-    COALESCE(SUM(
+       ), 0) AS sets_en_contra,
+        COALESCE(SUM(
         (CASE 
             WHEN p.estado = 'J' AND e.id = p.equipo_local_id AND rl.set1 > rv.set1 THEN 1 
             WHEN p.estado = 'J' AND e.id = p.equipo_local_id AND rl.set1 < rv.set1 THEN -1 
@@ -372,22 +369,22 @@ exports.getChampionshipPositions = async (categoriaId,campeonato_id) => {
             WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id AND COALESCE(rv.set3, 0) < COALESCE(rl.set3, 0) THEN -1 
             ELSE 0 
         END)
-    ), 0) AS diferencia_sets,
-    COALESCE(SUM(
+        ), 0) AS diferencia_sets,
+        COALESCE(SUM(
         CASE 
             WHEN p.estado = 'J' AND e.id = p.equipo_local_id THEN rl.set1 + rl.set2 + COALESCE(rl.set3, 0) 
             WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id THEN rv.set1 + rv.set2 + COALESCE(rv.set3, 0)
             ELSE 0 
         END
-    ), 0) AS puntos_a_favor,
-    COALESCE(SUM(
+        ), 0) AS puntos_a_favor,
+        COALESCE(SUM(
         CASE 
             WHEN p.estado = 'J' AND e.id = p.equipo_local_id THEN rv.set1 + rv.set2 + COALESCE(rv.set3, 0) 
             WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id THEN rl.set1 + rl.set2 + COALESCE(rl.set3, 0)
             ELSE 0 
         END
-    ), 0) AS puntos_en_contra,
-    COALESCE(SUM(
+        ), 0) AS puntos_en_contra,
+        COALESCE(SUM(
         (CASE 
             WHEN p.estado = 'J' AND e.id = p.equipo_local_id THEN rl.set1 + rl.set2 + COALESCE(rl.set3, 0) 
             WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id THEN rv.set1 + rv.set2 + COALESCE(rv.set3, 0)
@@ -398,9 +395,9 @@ exports.getChampionshipPositions = async (categoriaId,campeonato_id) => {
             WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id THEN rl.set1 + rl.set2 + COALESCE(rl.set3, 0)
             ELSE 0 
         END)
-    ), 0) AS diferencia_puntos,
-    COALESCE(SUM(
-    CASE 
+        ), 0) AS diferencia_puntos,
+        COALESCE(SUM(
+        CASE 
         WHEN p.estado = 'J' AND e.id = p.equipo_local_id AND rv.walkover = 'Y' THEN 2
         WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id AND rl.walkover = 'Y' THEN 2
         WHEN p.estado = 'J' AND e.id = p.equipo_local_id AND rl.walkover = 'Y' THEN 0
@@ -410,33 +407,39 @@ exports.getChampionshipPositions = async (categoriaId,campeonato_id) => {
         WHEN p.estado = 'J' AND e.id = p.equipo_local_id AND rl.resultado = 'P' THEN 1 
         WHEN p.estado = 'J' AND e.id = p.equipo_visitante_id AND rv.resultado = 'P' THEN 1 
         ELSE 0 
-    END
-), 0) AS pts,
-        ic.club_imagen AS escudo
-    FROM 
+        END
+        ), 0) AS pts,
+        ic.club_imagen AS escudo,
+        ec.estado  AS estado
+        FROM 
         EquipoCampeonato ec
-    INNER JOIN 
+        INNER JOIN 
         Equipo e ON ec.equipoid = e.id
-    LEFT JOIN 
+        LEFT JOIN 
         Partido p ON e.id = p.equipo_local_id OR e.id = p.equipo_visitante_id
-    LEFT JOIN 
+        LEFT JOIN 
         ResultadoLocal rl ON p.id = rl.partido_id
-    LEFT JOIN 
+        LEFT JOIN 
         ResultadoVisitante rv ON p.id = rv.partido_id
-    LEFT JOIN
+        LEFT JOIN
         Club c ON e.club_id = c.id
-    LEFT JOIN
+        LEFT JOIN
         ImagenClub ic ON c.id = ic.club_id
-    WHERE 
-        ec.campeonatoid = :campeonato_id AND ec.estado = 'Inscrito' AND e.categoria_id = :categoriaId
-    GROUP BY 
-        e.id, e.nombre, ic.club_imagen
-    ORDER BY 
+        WHERE 
+        ec.campeonatoId = :campeonato_id  
+         ${estadoFiltro} AND 
+        ec.categoria_id = :categoriaId
+
+        GROUP BY 
+        e.id, e.nombre, ic.club_imagen , ec.estado 
+        ORDER BY 
         pts DESC, sets_a_favor DESC, diferencia_sets DESC, diferencia_puntos DESC;
-    `, {
-      replacements: { categoriaId , campeonato_id},  
-      type: sequelize.QueryTypes.SELECT 
-    });
+      `;
+
+      const positions = await sequelize.query(query, {
+        replacements: { categoriaId, campeonato_id },
+        type: sequelize.QueryTypes.SELECT
+      });
 
     return positions;
   } catch (error) {
@@ -495,7 +498,7 @@ exports.getCampeonatoEnTransaccion = async () => {
 
 exports.getTeamPosition = async (categoriaId, campeonato_id, equipoId) => {
   try {
-    const positions = await exports.getChampionshipPositions(categoriaId, campeonato_id);
+    const positions = await exports.getChampionshipPositions(categoriaId, campeonato_id, incluirNoInscritos  = true);
 
     positions.forEach((team, index) => {
       team.posicion = index + 1; 
@@ -542,3 +545,58 @@ exports.eliminarCampeonato = async (campeonatoId) => {
     throw new Error('No se pudo eliminar el campeonato');
   }
 };
+
+exports.getEquiposAscensoDescenso = async (campeonatoId , genero = 'V') => {
+  try {
+    const categorias = await Categoria.findAll({
+      where: { eliminado: 'N', division: 'MY' ,es_ascenso : 'S' , genero},
+      order: [['nivel_jerarquico', 'DESC']]
+    });
+
+
+
+    const resultados = [];
+
+    for (let i = 0; i < categorias.length; i++) {
+      const categoria = categorias[i];
+      const siguiente = categorias[i - 1]; // categoría superior
+      const anterior = categorias[i + 1]; // categoría inferior
+
+      const posiciones = await exports.getChampionshipPositions(categoria.id, campeonatoId , incluirNoInscritos  = true);
+
+      if (!posiciones.length) continue;
+
+      const primero = posiciones[0];
+      const ultimo = posiciones[posiciones.length - 1];
+
+      // ASCENSO: si existe una categoría superior (no es la primera en la lista)
+      if (i > 0) {
+        resultados.push({
+          tipo: 'ASCENSO',
+          de: categoria.nombre,
+          a: siguiente.nombre,
+          equipo: primero
+        });
+      }
+
+      // DESCENSO: si existe una categoría inferior (no es la última en la lista)
+      if (i < categorias.length - 1) {
+        resultados.push({
+          tipo: 'DESCENSO',
+          de: categoria.nombre,
+          a: anterior.nombre,
+          equipo: ultimo
+        });
+      }
+    }
+
+    console.log('Categorías:', categorias);
+
+    return resultados;
+  } catch (error) {
+    console.error('Error al calcular ascensos/descensos:', error);
+    throw error;
+  }
+};
+
+

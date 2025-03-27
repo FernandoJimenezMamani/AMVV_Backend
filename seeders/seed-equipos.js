@@ -1,6 +1,8 @@
 const { sequelize } = require('../models');
 const { Op } = require('sequelize');
-const { Equipo, Club, Categoria, PersonaRol } = require('../models');
+const { Equipo, Club, Categoria, PersonaRol, Campeonato, EquipoCampeonato } = require('../models');
+const campeonatoEquipoEstados = require('../constants/campeonatoEquipoEstado');
+const campeonatoEstados = require('../constants/campeonatoEstados');
 
 const categoriasARegistrar = [
   { nombre: '1ras de Honor', genero: 'V', division: 'MY' },
@@ -39,19 +41,16 @@ const nombresDamas = [
   'Estrellas Doradas', 'Brillantes', 'Diosas', 'Ángeles', 'Gladiadoras'
 ];
 
-const obtenerNombreUnico = async (baseNombre, categoriaId, transaction) => {
-  console.log(`🔍 Buscando nombres para la categoría ${categoriaId}...`);
+const obtenerNombreUnico = async (baseNombre, transaction) => {
+  console.log(`🔍 Buscando nombres de equipo existentes con base: ${baseNombre}`);
 
-  const query = `SELECT nombre FROM Equipo WHERE categoria_id = ?;`;
+  const query = `SELECT nombre FROM Equipo WHERE eliminado = 'N';`;
+
   try {
-    console.log(`🟢 Ejecutando consulta para obtener nombres existentes en la categoría ${categoriaId}`);
     const nombresExistentes = await sequelize.query(query, {
       type: sequelize.QueryTypes.SELECT,
-      replacements: [categoriaId],
       transaction,
     });
-
-    console.log(`📊 Nombres obtenidos en la categoría ${categoriaId}: ${JSON.stringify(nombresExistentes)}`);
 
     const nombresUsados = new Set(nombresExistentes.map(e => e.nombre));
     let nombreFinal = baseNombre;
@@ -65,7 +64,7 @@ const obtenerNombreUnico = async (baseNombre, categoriaId, transaction) => {
     console.log(`✅ Nombre único generado: ${nombreFinal}`);
     return nombreFinal;
   } catch (error) {
-    console.error(`🚨 Error al buscar nombres en la categoría ${categoriaId}:`, error);
+    console.error(`🚨 Error al verificar nombres existentes:`, error);
     throw error;
   }
 };
@@ -76,41 +75,55 @@ const seedEquipos = async () => {
     transaction = await sequelize.transaction();
     console.log("🚀 Iniciando transacción");
 
+    const campeonatoActivo = await Campeonato.findOne({
+      where: { estado: campeonatoEstados.transaccionProceso },
+      transaction
+    });
+
+    if (!campeonatoActivo) {
+      throw new Error('❌ No se encontró un campeonato en preparación (estado = 2).');
+    }
+
     const categorias = await Categoria.findAll({
       where: { [Op.or]: categoriasARegistrar },
       attributes: ['id', 'nombre', 'genero', 'division'],
-      raw: true
+      raw: true,
+      transaction
     });
-    console.log(`📂 Categorías obtenidas: ${JSON.stringify(categorias)}`);
 
     if (!categorias.length) throw new Error('No se encontraron las categorías especificadas.');
 
-    const clubes = await Club.findAll({ attributes: ['id'], raw: true });
+    const clubes = await Club.findAll({ attributes: ['id'], raw: true, transaction });
     const clubIds = clubes.map(club => club.id);
-    console.log(`🏢 Clubes obtenidos: ${JSON.stringify(clubIds)}`);
-
     if (!clubIds.length) throw new Error('No se encontraron clubes en la base de datos.');
 
-    const idPresidente = await PersonaRol.findOne({ where: { rol_id: 1 }, attributes: ['persona_id'], raw: true });
-    console.log(`👤 ID del presidente obtenido: ${JSON.stringify(idPresidente)}`);
-
+    const idPresidente = await PersonaRol.findOne({
+      where: { rol_id: 1 },
+      attributes: ['persona_id'],
+      raw: true,
+      transaction
+    });
     if (!idPresidente) throw new Error('No se encontró un usuario con rol de Presidente.');
 
     let clubIndex = 0;
+
     for (const categoria of categorias) {
-      console.log(`📌 Procesando categoría: ${categoria.nombre}`);
-      const equiposExistentes = await Equipo.findAll({
-        where: { categoria_id: categoria.id },
-        attributes: ['nombre'],
+      // Buscar equipos ya registrados en esta categoría para este campeonato
+      const registrados = await EquipoCampeonato.findAll({
+        where: {
+          campeonatoId: campeonatoActivo.id,
+          categoria_id: categoria.id
+        },
+        attributes: ['equipoId'],
         raw: true,
         transaction
       });
+      
 
-      console.log(`📊 Equipos existentes en ${categoria.nombre}: ${JSON.stringify(equiposExistentes)}`);
-      if (equiposExistentes.length >= 5) continue;
+      const nombresRegistrados = registrados.map(r => r.equipo?.nombre).filter(Boolean);
+      if (nombresRegistrados.length >= 5) continue;
 
-      const equiposFaltantes = 5 - equiposExistentes.length;
-      console.log(`⚠️ Se necesitan ${equiposFaltantes} equipos en ${categoria.nombre}`);
+      const equiposFaltantes = 5 - nombresRegistrados.length;
       const nombresDisponibles = categoria.genero === 'V' ? nombresVarones : nombresDamas;
 
       for (let i = 0; i < equiposFaltantes; i++) {
@@ -118,37 +131,41 @@ const seedEquipos = async () => {
         clubIndex++;
 
         const nombreBase = nombresDisponibles[i % nombresDisponibles.length];
-        console.log(`🆕 Generando equipo con base: ${nombreBase} en categoría ${categoria.nombre}`);
-        const nombreEquipo = await obtenerNombreUnico(nombreBase, categoria.id, transaction);
+        const nombreEquipo = await obtenerNombreUnico(nombreBase, transaction);
 
-        console.log(`✍ Insertando equipo: ${nombreEquipo} en la categoría ${categoria.nombre}`);
-        await Equipo.create(
-          {
-            nombre: nombreEquipo,
-            club_id: clubId,
-            categoria_id: categoria.id,
-            fecha_registro: sequelize.fn('GETDATE'),
-            fecha_actualizacion: sequelize.fn('GETDATE'),
-            eliminado: 'N',
-            user_id: idPresidente.persona_id
-          },
-          { transaction }
-        );
+        // Crear el equipo (sin categoría)
+        const nuevoEquipo = await Equipo.create({
+          nombre: nombreEquipo,
+          club_id: clubId,
+          fecha_registro: sequelize.fn('GETDATE'),
+          fecha_actualizacion: sequelize.fn('GETDATE'),
+          eliminado: 'N',
+          user_id: idPresidente.persona_id
+        }, { transaction });
+
+        // Asociar equipo al campeonato con categoría
+        await EquipoCampeonato.create({
+          equipoId: nuevoEquipo.id,
+          campeonatoId: campeonatoActivo.id,
+          categoria_id: categoria.id,
+          estado: campeonatoEquipoEstados.DeudaInscripcion
+        }, { transaction });
       }
     }
 
-    console.log("✅ Confirmando la transacción...");
     await transaction.commit();
+    console.log("✅ Seed completado con éxito.");
   } catch (error) {
-    console.error('❌ Error en el seed:', error);
+    console.error("❌ Error en el seed:", error);
     if (transaction) {
-      console.log("⚠️ Haciendo rollback de la transacción...");
       await transaction.rollback();
+      console.log("⚠️ Rollback ejecutado.");
     }
   } finally {
-    console.log("🔄 Cerrando la conexión a la base de datos...");
     await sequelize.close();
+    console.log("🔒 Conexión cerrada.");
   }
 };
+
 
 seedEquipos();
