@@ -2,9 +2,12 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { Usuario, Persona, Rol, ImagenPersona, Jugador, PresidenteClub, Club  } = require('../models');
 require('dotenv').config();
+const moment = require('moment'); 
+const nodemailer = require('nodemailer');
+const sequelize = require('../config/sequelize'); 
 
 exports.login = async (correo, contraseña, selectedRoleId = null) => {
-  try{
+  try {
     const usuario = await Usuario.findOne({
       where: { correo },
       include: [
@@ -23,40 +26,72 @@ exports.login = async (correo, contraseña, selectedRoleId = null) => {
         },
       ],
     });
-  
+
     if (!usuario) throw new Error('Correo o contraseña incorrectos');
-  
+
+    const ahora = new Date(Date.now() - 4 * 60 * 60 * 1000); // Resta 4 horas
+
+    if (usuario.bloqueadoHasta && usuario.bloqueadoHasta > ahora) {
+      throw new Error('Cuenta bloqueada temporalmente. Intente nuevamente en unos minutos.');
+    }
+
+
     const isPasswordMatch = await bcrypt.compare(contraseña, usuario.contraseña);
-    if (!isPasswordMatch) throw new Error('Correo o contraseña incorrectos');
-  
+
+    if (!isPasswordMatch) {
+      usuario.intentosFallidos += 1;
+
+      if (usuario.intentosFallidos >= 3) {
+        usuario.bloqueadoHasta = sequelize.literal("DATEADD(MINUTE, 3, GETDATE())");
+
+
+        usuario.intentosFallidos = 0; 
+        await usuario.save();
+
+        // Enviar correo de alerta
+        // Esto se ejecuta "en segundo plano", sin bloquear el flujo
+        enviarCorreoAlerta(usuario.correo, usuario.persona.nombre)
+        .then(() => console.log('Correo de alerta enviado'))
+        .catch((err) => console.error('Error al enviar correo de alerta:', err));
+
+
+        throw new Error('Demasiados intentos fallidos. Tu cuenta ha sido bloqueada temporalmente.');
+      }
+
+      await usuario.save();
+      throw new Error('Correo o contraseña incorrectos');
+    }
+
+    // Login exitoso
+    usuario.intentosFallidos = 0;
+    usuario.bloqueadoHasta = null;
+    await usuario.save();
+
     const roles = usuario.persona.roles.map((rol) => ({ id: rol.id, nombre: rol.nombre }));
-  
+
     if (roles.length > 1 && !selectedRoleId) {
       return { requireRoleSelection: true, roles };
     }
 
     const selectedRole = roles.find((rol) => rol.id === parseInt(selectedRoleId, 10)) || roles[0];
-  
-    if (!selectedRole) {
-      throw new Error('El rol seleccionado no es válido');
-    }
+
+    if (!selectedRole) throw new Error('El rol seleccionado no es válido');
 
     const payload = {
       id: usuario.id,
       correo: usuario.correo,
       rol: selectedRole,
     };
-    console.log('🔑 Clave secreta usada para JWT:', process.env.JWT_SECRET);
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRATION || '1h',
     });
-  
+
     return { token, user: payload };
-  }catch(error){
+  } catch (error) {
     console.log(error);
+    throw error;
   }
-  
 };
 
 
@@ -105,3 +140,26 @@ exports.resetPassword = async (correo) => {
 
   return newPassword;  // Devuelve la nueva contraseña generada
 };
+
+async function enviarCorreoAlerta(destinatario, nombre) {
+  const transporter = nodemailer.createTransport({
+    service: 'gmail', // o el servicio que uses
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  await transporter.sendMail({
+    from: `"Asociacion Municipal de Voleibol Vinto" <${process.env.EMAIL_USER}>`,
+    to: destinatario,
+    subject: '⚠️ Alerta de intento de acceso a tu cuenta',
+    html: `
+      <p>Hola ${nombre},</p>
+      <p>Detectamos múltiples intentos fallidos de inicio de sesión en tu cuenta.</p>
+      <p>Si no fuiste tú, te recomendamos cambiar tu contraseña lo antes posible.</p>
+      <p><b>Tu cuenta ha sido bloqueada temporalmente por seguridad.</b></p>
+      <p>Atentamente,<br/>El equipo de seguridad</p>
+    `,
+  });
+}

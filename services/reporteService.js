@@ -311,7 +311,7 @@ exports.getComparacionEquipos = async (campeonatoA, campeonatoB) => {
           COUNT(DISTINCT ec.equipoid) AS total_equipos
       FROM Campeonato c
       LEFT JOIN EquipoCampeonato ec ON c.id = ec.campeonatoid
-      WHERE c.id IN (:campeonatoA, :campeonatoB)
+      WHERE c.id IN (:campeonatoA, :campeonatoB) AND ec.estado = 'Inscrito'
       GROUP BY c.id, c.nombre;
     `, { 
       type: sequelize.QueryTypes.SELECT,

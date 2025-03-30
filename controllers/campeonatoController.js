@@ -2,7 +2,6 @@ const campeonatoService = require('../services/campeonatoService');
 
 exports.createCampeonato = async (req, res) => {
   const { nombre, fecha_inicio_transaccion, fecha_fin_transaccion ,fecha_inicio_campeonato, fecha_fin_campeonato} = req.body;
-  console.log(req.body);
 
   // Validar que todos los campos requeridos estén presentes
   if (!nombre || !fecha_inicio_campeonato || !fecha_fin_campeonato || !fecha_inicio_transaccion || !fecha_fin_transaccion) {
@@ -23,18 +22,15 @@ exports.createCampeonato = async (req, res) => {
       fecha_fin_transaccion
     );
 
-    // Responder con éxito si el campeonato se crea correctamente
     res.status(201).json({ 
       message: 'Campeonato creado exitosamente', 
       campeonatoId: campeonato.id 
     });
   } catch (err) {
-    console.log(err);
-    // Capturar y devolver el mensaje de error del servicio
-    res.status(400).json({ 
-      message: 'Error al crear el campeonato', 
-      error: err.message 
+    res.status(400).json({
+      message: err.message || 'Error al crear el campeonato'
     });
+    
     
   }
 };
@@ -137,13 +133,13 @@ exports.getCampeonatoEnTransaccion = async (req, res) => {
 
 exports.getTeamPosition = async (req, res) => {
   try {
-    const { categoriaId, campeonatoId, equipoId } = req.body;
+    const { campeonatoId, equipoId } = req.body;
 
-    if (!categoriaId || !campeonatoId || !equipoId) {
+    if ( !campeonatoId || !equipoId) {
       return res.status(400).json({ error: 'Faltan parámetros requeridos' });
     }
 
-    const teamPosition = await campeonatoService.getTeamPosition(categoriaId, campeonatoId, equipoId);
+    const teamPosition = await campeonatoService.getTeamPosition( campeonatoId, equipoId);
     res.json(teamPosition);
   } catch (error) {
     res.status(500).json({ error: error.message });

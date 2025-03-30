@@ -1237,9 +1237,13 @@ exports.getPartidosByCampeonatoYFecha = async (campeonatoId,fecha) => {
     JOIN 
         ImagenClub ICV ON EV.club_id = ICV.club_id
     JOIN 
-        Categoria C ON EL.categoria_id = C.id
-    JOIN 
         Lugar L ON P.lugar_id = L.id
+    -- ↓↓↓ NUEVAS UNIONES PARA OBTENER CATEGORÍA DESDE EQUIPO CAMPEONATO ↓↓↓
+    JOIN 
+        EquipoCampeonato EC ON EC.equipoId = EL.id AND EC.campeonatoId = P.campeonato_id
+    JOIN 
+        Categoria C ON EC.categoria_id = C.id
+    -- ↓↓↓ ÁRBITROS ↓↓↓
     LEFT JOIN 
         Arbitro_Partido AP ON P.id = AP.partido_id
     LEFT JOIN 
@@ -1249,7 +1253,7 @@ exports.getPartidosByCampeonatoYFecha = async (campeonatoId,fecha) => {
     WHERE 
         P.campeonato_id = :campeonatoId
         AND (P.estado IS NULL OR P.estado != 'J')
-        AND CONVERT(DATE, P.fecha) = :fecha  -- Aquí pasamos la fecha específica
+        AND CONVERT(DATE, P.fecha) = :fecha
     GROUP BY 
         P.id, P.campeonato_id, P.equipo_local_id, P.equipo_visitante_id, P.fecha, 
         P.lugar_id, EL.nombre, EV.nombre, ICL.club_imagen, ICV.club_imagen, 

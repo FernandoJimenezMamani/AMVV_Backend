@@ -11,7 +11,7 @@ router.post('/asignar_jugador_equipo', jugadorController.asignarJugadorAEquipo);
 router.get('/get_jugador_club/:club_id', jugadorController.getJugadoresByClubId);
 router.post('/get_jugador_club_Category', jugadorController.getJugadoresByClubIdAndCategory);
 router.get('/search_jugadores_club/:club_id', jugadorController.searchJugadoresByClubId);
-router.get('/get_jugadores_equipo/:equipo_id', jugadorController.getJugadoresByEquipoId);
+router.get('/get_jugadores_equipo/:equipo_id/:campeonato_id', jugadorController.getJugadoresByEquipoId);
 router.get('/getJugadoresByEquipo/:equipo_id', jugadorController.getJugadoresByEquipo);
 router.post('/post_jugadorEquipo', jugadorController.createJugadorEquipo);
 router.post('/intercambio', jugadorController.getJugadoresAbleToExchange);

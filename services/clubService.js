@@ -116,8 +116,8 @@ LEFT JOIN (
 ) AS UltimoEquipoCampeonato ON UltimoEquipoCampeonato.equipoId = Equipo.id
 
 LEFT JOIN Categoria ON UltimoEquipoCampeonato.categoria_id = Categoria.id
-LEFT JOIN PresidenteClub ON Club.id = PresidenteClub.club_id AND PresidenteClub.activo = 1
-LEFT JOIN Persona ON PresidenteClub.presidente_id = Persona.id AND Persona.eliminado = 'N'
+LEFT JOIN PresidenteClub ON Club.id = PresidenteClub.club_id AND PresidenteClub.activo = 1 AND delegado = 'N'
+LEFT JOIN Persona ON PresidenteClub.presidente_id = Persona.id AND Persona.eliminado = 'N' 
 LEFT JOIN ImagenPersona ON ImagenPersona.persona_id = Persona.id
 
 WHERE

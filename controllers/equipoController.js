@@ -129,3 +129,18 @@ exports.get_all_teams = async(req, res)=>{
     res.status(500).json({ message: err.message });
   }
 }
+
+exports.getCategoriaByEquipoAndCampeonato = async (req, res) => {
+  const { equipoId, campeonatoId } = req.params;
+
+  try {
+    const categoria = await equipoService.getCategoriaEquipoByCampeonato(equipoId, campeonatoId);
+    if (!categoria) {
+      return res.status(404).json({ message: 'No se encontró la categoría para este equipo en el campeonato especificado.' });
+    }
+    res.json(categoria);
+  } catch (error) {
+    console.error('Error al obtener la categoría:', error);
+    res.status(500).json({ message: 'Error al obtener la categoría.' });
+  }
+};

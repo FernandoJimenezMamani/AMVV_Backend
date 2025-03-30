@@ -303,13 +303,7 @@ exports.getJugadoresByClubIdAndCategory = async (club_id,categoria_id,id_equipo)
             END)
         )
     )
-    AND NOT EXISTS (
-        SELECT 1
-        FROM JugadorEquipo je_sub
-        WHERE je_sub.jugador_id = j.id
-          AND je_sub.equipo_id = :id_equipo
-          AND je_sub.activo = 1
-    );
+
     `, 
     {
       replacements: { club_id, categoria_id ,id_equipo, campeonato_id },
@@ -430,7 +424,7 @@ exports.searchJugadoresByClubId = async (club_id, searchTerm, genero) => {
   }
 };
 
-exports.getJugadoresByEquipoId = async (equipo_id) => {
+exports.getJugadoresByEquipoYCampeonato = async (equipo_id, campeonato_id) => {
   try {
     const jugadores = await sequelize.query(`
       SELECT 
@@ -442,35 +436,40 @@ exports.getJugadoresByEquipoId = async (equipo_id) => {
         p.genero,
         p.fecha_nacimiento AS fecha_nacimiento_persona,
         ip.persona_imagen AS imagen_persona,
-         DATEDIFF(YEAR, p.fecha_nacimiento, GETDATE()) 
-        - CASE 
-            WHEN MONTH(p.fecha_nacimiento) > MONTH(GETDATE()) OR 
-                 (MONTH(p.fecha_nacimiento) = MONTH(GETDATE()) AND DAY(p.fecha_nacimiento) > DAY(GETDATE()))
-            THEN 1 
-            ELSE 0 
-          END AS edad_jugador
+        DATEDIFF(YEAR, p.fecha_nacimiento, GETDATE()) 
+          - CASE 
+              WHEN MONTH(p.fecha_nacimiento) > MONTH(GETDATE()) OR 
+                   (MONTH(p.fecha_nacimiento) = MONTH(GETDATE()) AND DAY(p.fecha_nacimiento) > DAY(GETDATE()))
+              THEN 1 
+              ELSE 0 
+            END AS edad_jugador
       FROM 
-        JugadorEquipo je
+        Participacion pa
+      JOIN 
+        JugadorEquipo je ON pa.jugador_equipo_id = je.id
       JOIN 
         Jugador j ON je.jugador_id = j.id
       JOIN 
         Persona p ON j.jugador_id = p.id
       LEFT JOIN 
         ImagenPersona ip ON p.id = ip.persona_id
+      JOIN 
+        EquipoCampeonato ec ON pa.equipo_campeonato_id = ec.id
       WHERE 
-        je.equipo_id = :equipo_id AND p.eliminado = 'N' AND je.activo = 1`,
-      {
-        replacements: { equipo_id },
-        type: sequelize.QueryTypes.SELECT
-      }
-    );
+        ec.equipoId = :equipo_id AND 
+        ec.campeonatoId = :campeonato_id AND 
+        p.eliminado = 'N' 
+    `, {
+      replacements: { equipo_id, campeonato_id },
+      type: sequelize.QueryTypes.SELECT
+    });
 
     return jugadores;
   } catch (err) {
-    throw new Error('Error al obtener los jugadores del equipo: ' + err.message);
-
+    throw new Error('Error al obtener los jugadores del equipo y campeonato: ' + err.message);
   }
 };
+
 
 exports.createNewJugadorEquipo = async (equipo_id, jugador_id) => {
   try {

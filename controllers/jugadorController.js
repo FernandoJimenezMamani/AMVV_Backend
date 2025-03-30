@@ -188,14 +188,18 @@ exports.searchJugadoresByClubId = async (req, res) => {
 };
 
 exports.getJugadoresByEquipoId = async (req, res) => {
-  const { equipo_id } = req.params;
+  const { equipo_id,campeonato_id } = req.params;
 
   if (!equipo_id) {
     return res.status(400).json({ message: 'El equipo_id debe ser proporcionado' });
   }
 
+  if (!campeonato_id) {
+    return res.status(400).json({ message: 'El campeonato_id debe ser proporcionado' });
+  }
+
   try {
-    const jugadores = await jugadorService.getJugadoresByEquipoId(equipo_id);
+    const jugadores = await jugadorService.getJugadoresByEquipoYCampeonato(equipo_id,campeonato_id);
     res.status(200).json(jugadores);
   } catch (err) {
     res.status(500).json({ message: 'Error al obtener los jugadores del equipo', error: err.message });

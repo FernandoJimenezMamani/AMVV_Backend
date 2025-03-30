@@ -11,7 +11,7 @@ exports.actualizarEstadosCampeonatos = async () => {
         const campeonatosActualizados = []; // Lista de cambios
         const campeonato = await Campeonato.findOne({
             where: {
-                estado: { [Op.in]: [0, 1, 2,3] }
+                estado: { [Op.in]: [0, 1, 2] }
             }
         });
 
@@ -65,12 +65,12 @@ exports.actualizarEstadosCampeonatos = async () => {
                 SELECT TOP 1 * 
                 FROM Campeonato 
                 WHERE estado = :estadoFinalizado 
-                  AND fecha_fin_campeonato < :fechaReferencia 
-                ORDER BY fecha_fin_campeonato DESC
+                  AND fecha_registro < :fechaReferencia 
+                ORDER BY fecha_registro DESC
               `, {
                 replacements: {
                   estadoFinalizado: campeonatoEstados.campeonatoFinalizado,
-                  fechaReferencia: moment(campeonato.fecha_inicio_campeonato).format('YYYY-MM-DD HH:mm:ss')
+                  fechaReferencia: moment(campeonato.fecha_registro).format('YYYY-MM-DD HH:mm:ss')
                 },
                 type: sequelize.QueryTypes.SELECT
               });
@@ -82,12 +82,17 @@ exports.actualizarEstadosCampeonatos = async () => {
                 console.log('No se encontró un campeonato anterior finalizado. No se realizará asignación de categorías.');
                 return campeonatosActualizados; 
               }
-                const equiposAnteriorCampeonato = await EquipoCampeonato.findAll({
-                    where: {
-                    campeonatoId: campeonatoAnterior.id
-                    },
-                    include: [{ model: Categoria, attributes: ['id', 'nombre', 'es_ascenso', 'genero'] }]
-                });
+              const equiposAnteriorCampeonato = await EquipoCampeonato.findAll({
+                where: {
+                  campeonatoId: campeonatoAnterior.id
+                },
+                include: [{
+                  model: Categoria,
+                  as: 'categoria',
+                  attributes: ['id', 'nombre', 'es_ascenso', 'genero']
+                }]
+              });
+              
             const categorias = await Categoria.findAll({
                 where: { eliminado: 'N' },
                 attributes: ['id', 'nombre', 'genero']
@@ -116,20 +121,29 @@ exports.actualizarEstadosCampeonatos = async () => {
             console.log('Insertando equipos con categorías actualizadas...');
 
             const nuevosRegistrosConCategoria = [];
+            const equiposYaRegistrados = await EquipoCampeonato.findAll({
+                where: { campeonatoId: campeonato.id },
+                attributes: ['equipoId'],
+            });
+            const idsYaRegistrados = new Set(equiposYaRegistrados.map(e => e.equipoId));
 
             for (const equipo of equiposAnteriorCampeonato) {
+                const equipoId = equipo.equipoId;
 
-            const equipoId = equipo.equipoid;
-
-            const nuevaCategoriaId = cambiosCategoria.get(equipoId) || equipo.categoria_id;
-
-            nuevosRegistrosConCategoria.push({
+                if (idsYaRegistrados.has(equipoId)) {
+                continue; 
+                }
+            
+                const nuevaCategoriaId = cambiosCategoria.get(equipoId) || equipo.categoria_id;
+            
+                nuevosRegistrosConCategoria.push({
                 equipoId,
                 campeonatoId: campeonato.id,
                 categoria_id: nuevaCategoriaId,
-                estado: campeonatoEquipoEstados.DeudaInscripcion
-            });
+                estado: campeonatoEquipoEstados.DeudaInscripcion,
+                });
             }
+  
 
             if (nuevosRegistrosConCategoria.length > 0) {
             await EquipoCampeonato.bulkCreate(nuevosRegistrosConCategoria);

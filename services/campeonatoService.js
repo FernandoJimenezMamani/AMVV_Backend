@@ -87,7 +87,7 @@ exports.createCampeonato = async (nombre, fecha_inicio_campeonato, fecha_fin_cam
     return campeonato;
   } catch (err) {
     console.log('Error al crear el campeonato:', err);
-    throw new Error('Error al crear el campeonato');
+    throw err;
   }
 };
 
@@ -415,8 +415,9 @@ exports.getChampionshipPositions = async (categoriaId,campeonato_id , incluirNoI
         EquipoCampeonato ec
         INNER JOIN 
         Equipo e ON ec.equipoid = e.id
-        LEFT JOIN 
-        Partido p ON e.id = p.equipo_local_id OR e.id = p.equipo_visitante_id
+        LEFT JOIN Partido p 
+        ON (e.id = p.equipo_local_id OR e.id = p.equipo_visitante_id)
+        AND p.campeonato_id = ec.campeonatoId
         LEFT JOIN 
         ResultadoLocal rl ON p.id = rl.partido_id
         LEFT JOIN 
@@ -496,9 +497,24 @@ exports.getCampeonatoEnTransaccion = async () => {
   }
 };
 
-exports.getTeamPosition = async (categoriaId, campeonato_id, equipoId) => {
+exports.getTeamPosition = async (campeonato_id, equipoId) => {
   try {
-    const positions = await exports.getChampionshipPositions(categoriaId, campeonato_id, incluirNoInscritos  = true);
+    // 🔍 Obtener la categoría a partir de EquipoCampeonato
+    const equipoCampeonato = await EquipoCampeonato.findOne({
+      where: {
+        campeonatoId: campeonato_id,
+        equipoId: equipoId,
+      },
+    });
+
+    if (!equipoCampeonato || !equipoCampeonato.categoria_id) {
+      throw new Error('No se encontró la categoría del equipo para este campeonato');
+    }
+
+    const categoriaId = equipoCampeonato.categoria_id;
+    const estadoParticipacion = equipoCampeonato.estado;
+
+    const positions = await exports.getChampionshipPositions(categoriaId, campeonato_id, incluirNoInscritos  = false);
 
     positions.forEach((team, index) => {
       team.posicion = index + 1; 
@@ -513,18 +529,20 @@ exports.getTeamPosition = async (categoriaId, campeonato_id, equipoId) => {
     return {
       equipo_id: teamPosition.equipo_id,
       equipo_nombre: teamPosition.equipo_nombre,
-      posicion: teamPosition.posicion, 
+      posicion: teamPosition.posicion,
       puntos: teamPosition.pts,
       sets_a_favor: teamPosition.sets_a_favor,
       diferencia_sets: teamPosition.diferencia_sets,
       diferencia_puntos: teamPosition.diferencia_puntos,
-      escudo: teamPosition.escudo
+      escudo: teamPosition.escudo,
+      estado_equipo_campeonato: estadoParticipacion
     };
   } catch (error) {
     console.error('Error al obtener la posición del equipo:', error);
     throw new Error('Error al obtener la posición del equipo');
   }
 };
+
 
 exports.eliminarCampeonato = async (campeonatoId) => {
   try {

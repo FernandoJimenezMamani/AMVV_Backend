@@ -183,3 +183,28 @@ exports.get_all_equipos = async () => {
     throw new Error("Error al obtener equipos");
   }
 };
+
+exports.getCategoriaEquipoByCampeonato = async (equipoId, campeonatoId) => {
+  const query = `
+    SELECT 
+      c.id AS categoria_id,
+      c.nombre AS categoria_nombre,
+      c.genero,
+      c.division
+    FROM 
+      EquipoCampeonato ec
+    JOIN 
+      Categoria c ON ec.categoria_id = c.id
+    WHERE 
+      ec.equipoId = :equipoId 
+      AND ec.campeonatoId = :campeonatoId
+  `;
+
+  const [result] = await sequelize.query(query, {
+    replacements: { equipoId, campeonatoId },
+    type: sequelize.QueryTypes.SELECT
+  });
+
+  return result || null;
+};
+

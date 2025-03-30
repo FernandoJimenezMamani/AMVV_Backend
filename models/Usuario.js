@@ -19,6 +19,14 @@ const Usuario = sequelize.define('Usuario', {
     type: DataTypes.STRING(250),
     allowNull: true,
   },
+  intentosFallidos: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  bloqueadoHasta: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
 }, {
   tableName: 'Usuario',
   timestamps: false,

@@ -229,3 +229,19 @@ exports.getResumenCampeonato = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+exports.getPagosInscripcionPorCampeonato = async (req, res) => {
+  try {
+    const { campeonatoId } = req.params;
+
+    if (!campeonatoId) {
+      return res.status(400).json({ error: 'campeonatoId es requerido' });
+    }
+
+    const pagos = await pagoService.getPagosInscripcionPorCampeonato(campeonatoId);
+    res.json(pagos);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: 'Error al obtener pagos de inscripción' });
+  }
+};

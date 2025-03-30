@@ -667,3 +667,44 @@ exports.obtenerResumenCampeonato = async () => {
     throw new Error('Error al obtener el resumen del campeonato.');
   }
 };
+
+exports.getPagosInscripcionPorCampeonato = async (campeonatoId) => {
+  try {
+    const query = `
+       SELECT 
+        p.id,
+        p.monto,
+        p.fecha,
+        p.referencia,
+        p.estado,
+        p.tipo_pago,
+        e.nombre AS equipo,
+        e.id AS equipoId,
+        ec.campeonatoId,
+        cat.nombre AS categoria,
+        cat.genero,
+        c.nombre AS nombre_club,
+        ic.club_imagen AS imagen_club
+      FROM PagoInscripcion pi
+      JOIN Pago p ON pi.id = p.id
+      JOIN EquipoCampeonato ec ON pi.equipoCampeonatoId = ec.id
+      JOIN Equipo e ON ec.equipoId = e.id
+      JOIN Club c ON e.club_id = c.id
+	    LEFT JOIN ImagenClub ic ON ic.club_id = c.id
+      LEFT JOIN Categoria cat ON ec.categoria_id = cat.id
+      WHERE ec.campeonatoId = :campeonatoId
+        AND p.tipo_pago = 'Inscripción'
+    `;
+
+    const results = await sequelize.query(query, {
+      replacements: { campeonatoId },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    return results;
+    
+  } catch (error) {
+    console.error('Error al obtener pagos de inscripción (raw):', error);
+    throw new Error('No se pudo obtener el historial de pagos');
+  }
+};
