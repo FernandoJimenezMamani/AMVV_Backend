@@ -17,6 +17,6 @@ router.post('/post_jugadorEquipo', jugadorController.createJugadorEquipo);
 router.post('/intercambio', jugadorController.getJugadoresAbleToExchange);
 router.post('/intercambioEstado', jugadorController.getJugadoresPendingExchange);
 router.get('/ObtenerJugadoresPreviousClubs/:PersonaId', jugadorController.getJugadoresOtherClubs);
-router.delete('/delete_jugador_equipo/:jugador_id', jugadorController.removeJugadorEquipoController);
+router.delete('/delete_jugador_equipo/:jugador_id/:equipo_id', jugadorController.removeJugadorEquipoController);
 
 module.exports = router;

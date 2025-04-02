@@ -475,16 +475,19 @@ exports.getJugadoresByEquipoAndCampeonato = async (equipoId, campeonatoId) => {
   try {
     const jugadores = await sequelize.query(`
       SELECT 
-        J.id AS jugador_id,
-        P.nombre AS jugador_nombre,
-        P.apellido AS jugador_apellido
-      FROM Participacion PA
-      JOIN JugadorEquipo JE ON PA.jugador_equipo_id = JE.id
-      JOIN Jugador J ON JE.jugador_id = J.id
-      JOIN Persona P ON J.id = P.id
-      JOIN EquipoCampeonato EC ON PA.equipo_campeonato_id = EC.id
-      WHERE JE.equipo_id = :equipoId
-      AND EC.campeonatoId = :campeonatoId AND P.eliminado = 'N'; 
+      J.id AS jugador_id,
+      P.nombre AS jugador_nombre,
+      P.apellido AS jugador_apellido
+      FROM 
+          JugadorEquipo JE
+      JOIN 
+          Jugador J ON JE.jugador_id = J.id
+      JOIN 
+          Persona P ON J.jugador_id = P.id
+      WHERE 
+          JE.equipo_id = :equipoId AND 
+          JE.campeonato_id = :campeonatoId AND 
+          P.eliminado = 'N';
     `, {
       replacements: { equipoId, campeonatoId },
       type: sequelize.QueryTypes.SELECT
@@ -826,7 +829,6 @@ exports.asignarFechasHorarios = async (fixture, campeonato) => {
           }
       }
   }
-
   return partidosAsignados;
 };
 
@@ -1238,12 +1240,10 @@ exports.getPartidosByCampeonatoYFecha = async (campeonatoId,fecha) => {
         ImagenClub ICV ON EV.club_id = ICV.club_id
     JOIN 
         Lugar L ON P.lugar_id = L.id
-    -- ↓↓↓ NUEVAS UNIONES PARA OBTENER CATEGORÍA DESDE EQUIPO CAMPEONATO ↓↓↓
     JOIN 
         EquipoCampeonato EC ON EC.equipoId = EL.id AND EC.campeonatoId = P.campeonato_id
     JOIN 
         Categoria C ON EC.categoria_id = C.id
-    -- ↓↓↓ ÁRBITROS ↓↓↓
     LEFT JOIN 
         Arbitro_Partido AP ON P.id = AP.partido_id
     LEFT JOIN 

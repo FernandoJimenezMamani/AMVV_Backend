@@ -72,11 +72,6 @@ cron.schedule("* * * * *", async () => {
   }
 });
 
-cron.schedule("* * * * *", async () => {
-  console.log("⏳ Ejecutando tarea: Monitoreo de jugadores y participaciones...");
-  await monitorearJugadoresParticipacion();
-});
-
 wss.on('connection', (ws) => {
   console.log('Cliente WebSocket conectado');
   

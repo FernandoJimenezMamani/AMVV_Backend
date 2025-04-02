@@ -240,74 +240,99 @@ exports.getJugadoresByClubId = async (club_id) => {
   return jugadores;
 };
 
-exports.getJugadoresByClubIdAndCategory = async (club_id,categoria_id,id_equipo) => {
 
+exports.getJugadoresByClubIdAndCategory = async (club_id, id_equipo) => {
+  // 1. Obtener el campeonato activo
   const campeonatoActivo = await Campeonato.findOne({
-    where: { estado : campeonatoEstados.transaccionProceso }
+    where: { estado: 1 },
   });
-  
-  const campeonato_id = campeonatoActivo.id;
 
+  if (!campeonatoActivo) return [];
+
+  // 2. Obtener la categoría del equipo para ese campeonato
+  const equipoCampeonato = await EquipoCampeonato.findOne({
+    where: {
+      equipoId: id_equipo,
+      campeonatoId: campeonatoActivo.id,
+    },
+    include: {
+      model: Categoria,
+      as: 'categoria',
+    }
+  });
+
+  if (!equipoCampeonato || !equipoCampeonato.categoria) return [];
+
+  const { genero, edad_minima, edad_maxima } = equipoCampeonato.categoria;
+
+  // 3. Ejecutar la consulta SQL con filtros aplicados
   const jugadores = await sequelize.query(
     `SELECT DISTINCT  
-    j.id AS jugador_id,
-    j.jugador_id AS persona_id,
-    p.nombre AS nombre_persona,
-    p.apellido AS apellido_persona,
-    p.ci AS ci_persona,
-    p.fecha_nacimiento AS fecha_nacimiento_persona,
-    p.genero,
-    im.persona_imagen AS imagen_persona,
-    club.nombre AS nombre_club,
-    DATEDIFF(YEAR, p.fecha_nacimiento, GETDATE()) - 
-    CASE 
-        WHEN MONTH(p.fecha_nacimiento) > MONTH(GETDATE()) OR 
-             (MONTH(p.fecha_nacimiento) = MONTH(GETDATE()) AND DAY(p.fecha_nacimiento) > DAY(GETDATE())) 
-        THEN 1 
-        ELSE 0 
-    END AS edad_jugador
-  FROM Jugador j
-  JOIN Persona p ON j.jugador_id = p.id
-  LEFT JOIN ImagenPersona im ON p.id = im.persona_id
-  INNER JOIN Club ON Club.id = j.club_id
-  INNER JOIN Equipo E ON E.id = :id_equipo
-  INNER JOIN EquipoCampeonato EC ON EC.equipoId = E.id
-  INNER JOIN Categoria ON Categoria.id = EC.categoria_id
-  LEFT JOIN JugadorEquipo je ON je.jugador_id = j.id AND je.activo = 1
-  WHERE 
-    j.club_id = :club_id
-    AND j.activo = 1 
-    AND p.eliminado = 'N'
-    AND EC.campeonatoId = :campeonato_id 
-    AND (
-        Categoria.genero = 'Mixto'
-        OR p.genero = Categoria.genero
-    )
-    AND (
-        (Categoria.edad_minima IS NULL OR Categoria.edad_minima <= 
-            (DATEDIFF(YEAR, p.fecha_nacimiento, GETDATE()) - 
-            CASE 
-                WHEN MONTH(p.fecha_nacimiento) > MONTH(GETDATE()) OR 
-                     (MONTH(p.fecha_nacimiento) = MONTH(GETDATE()) AND DAY(p.fecha_nacimiento) > DAY(GETDATE())) 
-                THEN 1 
-                ELSE 0 
-            END)
-        )
-        AND (Categoria.edad_maxima IS NULL OR Categoria.edad_maxima >= 
-            (DATEDIFF(YEAR, p.fecha_nacimiento, GETDATE()) - 
-            CASE 
-                WHEN MONTH(p.fecha_nacimiento) > MONTH(GETDATE()) OR 
-                     (MONTH(p.fecha_nacimiento) = MONTH(GETDATE()) AND DAY(p.fecha_nacimiento) > DAY(GETDATE())) 
-                THEN 1 
-                ELSE 0 
-            END)
-        )
-    )
-
-    `, 
+      j.id AS jugador_id,
+      j.jugador_id AS persona_id,
+      p.nombre AS nombre_persona,
+      p.apellido AS apellido_persona,
+      p.ci AS ci_persona,
+      p.fecha_nacimiento AS fecha_nacimiento_persona,
+      p.genero,
+      im.persona_imagen AS imagen_persona,
+      club.nombre AS nombre_club,
+      DATEDIFF(YEAR, p.fecha_nacimiento, GETDATE()) - 
+      CASE 
+          WHEN MONTH(p.fecha_nacimiento) > MONTH(GETDATE()) OR 
+               (MONTH(p.fecha_nacimiento) = MONTH(GETDATE()) AND DAY(p.fecha_nacimiento) > DAY(GETDATE())) 
+          THEN 1 
+          ELSE 0 
+      END AS edad_jugador
+    FROM Jugador j
+    JOIN Persona p ON j.jugador_id = p.id
+    LEFT JOIN ImagenPersona im ON p.id = im.persona_id
+    INNER JOIN Club ON Club.id = j.club_id
+    INNER JOIN Equipo E ON E.id = :id_equipo
+    LEFT JOIN JugadorEquipo je 
+      ON je.jugador_id = j.id 
+      AND je.equipo_id = :id_equipo 
+      AND je.campeonato_id = :campeonato_id
+    WHERE 
+      j.club_id = :club_id
+      AND j.activo = 1 
+      AND p.eliminado = 'N'
+      AND je.id IS NULL
+      AND (
+          :genero_categoria = 'Mixto'
+          OR p.genero = :genero_categoria
+      )
+      AND (
+          (:edad_minima IS NULL OR :edad_minima <= 
+              (DATEDIFF(YEAR, p.fecha_nacimiento, GETDATE()) - 
+              CASE 
+                  WHEN MONTH(p.fecha_nacimiento) > MONTH(GETDATE()) OR 
+                       (MONTH(p.fecha_nacimiento) = MONTH(GETDATE()) AND DAY(p.fecha_nacimiento) > DAY(GETDATE())) 
+                  THEN 1 
+                  ELSE 0 
+              END)
+          )
+          AND (:edad_maxima IS NULL OR :edad_maxima >= 
+              (DATEDIFF(YEAR, p.fecha_nacimiento, GETDATE()) - 
+              CASE 
+                  WHEN MONTH(p.fecha_nacimiento) > MONTH(GETDATE()) OR 
+                       (MONTH(p.fecha_nacimiento) = MONTH(GETDATE()) AND DAY(p.fecha_nacimiento) > DAY(GETDATE())) 
+                  THEN 1 
+                  ELSE 0 
+              END)
+          )
+      )
+    `,
     {
-      replacements: { club_id, categoria_id ,id_equipo, campeonato_id },
-      type: sequelize.QueryTypes.SELECT
+      replacements: {
+        club_id,
+        id_equipo,
+        campeonato_id: campeonatoActivo.id,
+        genero_categoria: genero,
+        edad_minima,
+        edad_maxima,
+      },
+      type: sequelize.QueryTypes.SELECT,
     }
   );
 
@@ -439,26 +464,23 @@ exports.getJugadoresByEquipoYCampeonato = async (equipo_id, campeonato_id) => {
         DATEDIFF(YEAR, p.fecha_nacimiento, GETDATE()) 
           - CASE 
               WHEN MONTH(p.fecha_nacimiento) > MONTH(GETDATE()) OR 
-                   (MONTH(p.fecha_nacimiento) = MONTH(GETDATE()) AND DAY(p.fecha_nacimiento) > DAY(GETDATE()))
+                  (MONTH(p.fecha_nacimiento) = MONTH(GETDATE()) AND DAY(p.fecha_nacimiento) > DAY(GETDATE()))
               THEN 1 
               ELSE 0 
             END AS edad_jugador
-      FROM 
-        Participacion pa
-      JOIN 
-        JugadorEquipo je ON pa.jugador_equipo_id = je.id
-      JOIN 
+    FROM 
+        JugadorEquipo je
+    JOIN 
         Jugador j ON je.jugador_id = j.id
-      JOIN 
+    JOIN 
         Persona p ON j.jugador_id = p.id
-      LEFT JOIN 
+    LEFT JOIN 
         ImagenPersona ip ON p.id = ip.persona_id
-      JOIN 
-        EquipoCampeonato ec ON pa.equipo_campeonato_id = ec.id
-      WHERE 
-        ec.equipoId = :equipo_id AND 
-        ec.campeonatoId = :campeonato_id AND 
-        p.eliminado = 'N' 
+    WHERE 
+        je.equipo_id = :equipo_id AND 
+        je.campeonato_id = :campeonato_id AND 
+        p.eliminado = 'N'
+
     `, {
       replacements: { equipo_id, campeonato_id },
       type: sequelize.QueryTypes.SELECT
@@ -470,57 +492,49 @@ exports.getJugadoresByEquipoYCampeonato = async (equipo_id, campeonato_id) => {
   }
 };
 
-
 exports.createNewJugadorEquipo = async (equipo_id, jugador_id) => {
   try {
-    // Verificar si el jugador ya está en el equipo
-    const verificarJugadorEquipo = await JugadorEquipo.findOne({
-      where: { equipo_id, jugador_id }
-    });
-
-    if (verificarJugadorEquipo) {
-      throw new Error('El jugador ya está en el equipo');
-    }
-
-    // Crear el jugador en el equipo
-    const jugadorEquipo = await JugadorEquipo.create({
-      equipo_id,
-      jugador_id,
-      activo: 1
-    });
-
     // Buscar un campeonato activo (estado = 1)
     const campeonatoActivo = await Campeonato.findOne({
       where: { estado: campeonatoEstados.transaccionProceso }
     });
 
-    if (campeonatoActivo) {
-      // Verificar si el equipo está inscrito en el campeonato activo
-      const equipoCampeonato = await EquipoCampeonato.findOne({
-        where: {
-          equipoId: equipo_id,
-          campeonatoId: campeonatoActivo.id,
-          estado: campeonatoEquipoEstados.Inscrito
-        }
-      });
-
-      if (equipoCampeonato) {
-        // Verificar si el jugador ya está registrado en Participacion
-        const participacionExistente = await Participacion.findOne({
-          where: {
-            jugador_equipo_id: jugadorEquipo.id,
-            equipo_campeonato_id: equipoCampeonato.id
-          }
-        });
-
-        if (!participacionExistente) {
-          await Participacion.create({
-            jugador_equipo_id: jugadorEquipo.id,
-            equipo_campeonato_id: equipoCampeonato.id
-          });
-        }
-      }
+    if (!campeonatoActivo) {
+      throw new Error('No hay un campeonato activo disponible');
     }
+
+    // Verificar si el equipo está inscrito en ese campeonato
+    const equipoCampeonato = await EquipoCampeonato.findOne({
+      where: {
+        equipoId: equipo_id,
+        campeonatoId: campeonatoActivo.id,
+        estado: campeonatoEquipoEstados.Inscrito
+      }
+    });
+
+    if (!equipoCampeonato) {
+      throw new Error('El equipo no está inscrito en el campeonato activo');
+    }
+
+    // Verificar si el jugador ya está registrado en ese equipo y campeonato
+    const jugadorExistente = await JugadorEquipo.findOne({
+      where: {
+        equipo_id,
+        jugador_id,
+        campeonato_id: campeonatoActivo.id
+      }
+    });
+
+    if (jugadorExistente) {
+      throw new Error('El jugador ya está registrado en este equipo y campeonato');
+    }
+
+    // Crear el registro en JugadorEquipo
+    const jugadorEquipo = await JugadorEquipo.create({
+      equipo_id,
+      jugador_id,
+      campeonato_id: campeonatoActivo.id
+    });
 
     return jugadorEquipo;
   } catch (err) {
@@ -638,36 +652,32 @@ exports.getJugadoresPendingExchange = async (club_presidente , idTraspasoPreside
   }
 };
 
-exports.getJugadoresOtherClubs = async (PersonaId) => {
+exports.getJugadoresOtherClubs = async (persona_id) => {
   try {
     const jugadores = await sequelize.query(
       `SELECT 
-    Persona.id,
-    Jugador.club_id,
-    Club.nombre AS club_nombre,
-    Jugador.activo AS estadoclub,
-    ImagenClub.club_imagen,
-    STRING_AGG(Equipo.nombre, ', ') AS equipos_jugador,
-    STRING_AGG(CAST(JugadorEquipo.activo AS VARCHAR), ', ') AS estado_equipos
-    FROM 
-        Persona
-    LEFT JOIN Jugador ON Persona.id = Jugador.jugador_id
-    LEFT JOIN Club ON Club.id = Jugador.club_id
-    LEFT JOIN ImagenClub ON ImagenClub.club_id = Club.id
-    LEFT JOIN JugadorEquipo ON JugadorEquipo.jugador_id = Jugador.id
-    LEFT JOIN Equipo ON Equipo.id = JugadorEquipo.equipo_id
-    WHERE 
-        Persona.id = :PersonaId AND Persona.eliminado = 'N'
-    GROUP BY 
+        Persona.id,
+        Jugador.club_id,
+        Club.nombre AS club_nombre,
+        Jugador.activo AS estadoclub,
+        ImagenClub.club_imagen,
+        STRING_AGG(Equipo.nombre, ', ') AS equipos_jugador
+        FROM Persona
+        LEFT JOIN Jugador ON Persona.id = Jugador.jugador_id
+        LEFT JOIN Club ON Club.id = Jugador.club_id
+        LEFT JOIN ImagenClub ON ImagenClub.club_id = Club.id
+        LEFT JOIN JugadorEquipo ON JugadorEquipo.jugador_id = Jugador.id
+        LEFT JOIN Equipo ON Equipo.id = JugadorEquipo.equipo_id
+        WHERE Persona.id = :persona_id AND Persona.eliminado = 'N'
+        GROUP BY 
         Persona.id, 
         Jugador.club_id, 
         Club.nombre, 
         Jugador.activo, 
         ImagenClub.club_imagen;
-
       `,
       {
-        replacements:{PersonaId},
+        replacements:{persona_id},
         type: sequelize.QueryTypes.SELECT
       }
     );
@@ -679,42 +689,35 @@ exports.getJugadoresOtherClubs = async (PersonaId) => {
   }
 };
 
-exports.removeJugadorEquipo = async (jugador_id) => {
+exports.removeJugadorEquipo = async (jugador_id, equipo_id) => {
   try {
-    // Buscar el registro del jugador en JugadorEquipo
-    const jugadorEquipo = await JugadorEquipo.findOne({
-      where: { jugador_id, activo: 1 }
-    });
-
-    if (!jugadorEquipo) {
-      throw new Error('El jugador no está actualmente en un equipo o ya ha sido removido.');
-    }
-
-    // Buscar un campeonato activo (estado = 1)
+    // Buscar el campeonato activo (estado = 1)
     const campeonatoActivo = await Campeonato.findOne({
       where: { estado: campeonatoEstados.transaccionProceso }
     });
 
-    if (campeonatoActivo) {
-      // Buscar en Participacion si el jugador tiene un registro vinculado al campeonato activo
-      const participacion = await Participacion.findOne({
-        where: {
-          jugador_equipo_id: jugadorEquipo.id
-        }
-      });
-
-      if (participacion) {
-        // Eliminar el registro de Participacion
-        await participacion.destroy();
-      }
+    if (!campeonatoActivo) {
+      throw new Error('No hay un campeonato activo en proceso.');
     }
 
-    // Desactivar al jugador en JugadorEquipo
-    await jugadorEquipo.update({ activo: 0 });
+    // Buscar el registro del jugador en JugadorEquipo para ese campeonato y equipo
+    const jugadorEquipo = await JugadorEquipo.findOne({
+      where: {
+        jugador_id,
+        equipo_id,
+        campeonato_id: campeonatoActivo.id
+      }
+    });
+
+    if (!jugadorEquipo) {
+      throw new Error('El jugador no está registrado en este equipo para el campeonato activo.');
+    }
+
+    // Eliminar el registro directamente
+    await jugadorEquipo.destroy();
 
     return { message: 'Jugador removido del equipo correctamente.' };
   } catch (err) {
     throw new Error('Error al remover jugador del equipo: ' + err.message);
   }
 };
-

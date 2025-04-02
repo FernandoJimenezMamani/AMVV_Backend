@@ -105,50 +105,59 @@ exports.getProgresoPartidosDashboard = async (categoria, genero) => {
     const [totalPartidos] = await sequelize.query(`
       SELECT COUNT(*) as total FROM Partido 
       JOIN EquipoCampeonato ec ON Partido.equipo_local_id = ec.equipoid
-      JOIN Equipo e ON ec.equipoid = e.id
-      JOIN Categoria c ON e.categoria_id = c.id
+      JOIN Categoria c ON ec.categoria_id = c.id
       WHERE ec.campeonatoid = :campeonatoId
       ${categoria ? "AND c.nombre = :categoria" : ""}
       ${genero ? "AND c.genero = :genero" : ""}
-    `, { type: sequelize.QueryTypes.SELECT, replacements: filtros });
+    `, {
+      type: sequelize.QueryTypes.SELECT,
+      replacements: filtros
+    });
+    
 
     // Partidos jugados (estado = 'J')
     const [partidosJugados] = await sequelize.query(`
       SELECT COUNT(*) as total FROM Partido 
       JOIN EquipoCampeonato ec ON Partido.equipo_local_id = ec.equipoid
-      JOIN Equipo e ON ec.equipoid = e.id
-      JOIN Categoria c ON e.categoria_id = c.id
+      JOIN Categoria c ON ec.categoria_id = c.id
       WHERE ec.campeonatoid = :campeonatoId 
       AND Partido.estado = 'J'
       ${categoria ? "AND c.nombre = :categoria" : ""}
       ${genero ? "AND c.genero = :genero" : ""}
-    `, { type: sequelize.QueryTypes.SELECT, replacements: filtros });
+    `, {
+      type: sequelize.QueryTypes.SELECT,
+      replacements: filtros
+    });    
 
     // Partidos vencidos sin registro (estado = 'C' y fecha pasada)
     const [partidosVencidosSinRegistro] = await sequelize.query(`
       SELECT COUNT(*) as total FROM Partido 
       JOIN EquipoCampeonato ec ON Partido.equipo_local_id = ec.equipoid
-      JOIN Equipo e ON ec.equipoid = e.id
-      JOIN Categoria c ON e.categoria_id = c.id
+      JOIN Categoria c ON ec.categoria_id = c.id
       WHERE ec.campeonatoid = :campeonatoId
       AND Partido.estado = 'C'
       AND Partido.fecha < GETDATE()
       ${categoria ? "AND c.nombre = :categoria" : ""}
       ${genero ? "AND c.genero = :genero" : ""}
-    `, { type: sequelize.QueryTypes.SELECT, replacements: filtros });
+    `, {
+      type: sequelize.QueryTypes.SELECT,
+      replacements: filtros
+    });    
 
     // Partidos pendientes (estado = 'C' y fecha futura)
     const [partidosPendientes] = await sequelize.query(`
       SELECT COUNT(*) as total FROM Partido 
       JOIN EquipoCampeonato ec ON Partido.equipo_local_id = ec.equipoid
-      JOIN Equipo e ON ec.equipoid = e.id
-      JOIN Categoria c ON e.categoria_id = c.id
+      JOIN Categoria c ON ec.categoria_id = c.id
       WHERE ec.campeonatoid = :campeonatoId
       AND Partido.estado = 'C'
       AND Partido.fecha >= GETDATE()
       ${categoria ? "AND c.nombre = :categoria" : ""}
       ${genero ? "AND c.genero = :genero" : ""}
-    `, { type: sequelize.QueryTypes.SELECT, replacements: filtros });
+    `, {
+      type: sequelize.QueryTypes.SELECT,
+      replacements: filtros
+    });    
 
     // Cálculo de partidos faltantes
     const partidosFaltantes = totalPartidos.total - partidosJugados.total;

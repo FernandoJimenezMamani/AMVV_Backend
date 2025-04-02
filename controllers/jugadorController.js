@@ -145,7 +145,7 @@ exports.getJugadoresByClubId = async (req, res) => {
 };
 
 exports.getJugadoresByClubIdAndCategory = async (req, res) => {
-  const { club_id,categoria_id ,id_equipo} = req.body;
+  const { club_id ,id_equipo} = req.body;
   console.log(req.body);
 
   if (!club_id) {
@@ -153,7 +153,7 @@ exports.getJugadoresByClubIdAndCategory = async (req, res) => {
   }
 
   try {
-    const jugadores = await jugadorService.getJugadoresByClubIdAndCategory(club_id,categoria_id,id_equipo);
+    const jugadores = await jugadorService.getJugadoresByClubIdAndCategory(club_id,id_equipo);
     res.status(200).json(jugadores);
   } catch (err) {
     res.status(500).json({ message: 'Error al obtener los jugadores del club', error: err.message });
@@ -286,8 +286,8 @@ exports.getJugadoresOtherClubs = async (req, res) => {
 
 exports.removeJugadorEquipoController = async (req, res) => {
   try {
-    const { jugador_id } = req.params;
-    const response = await jugadorService.removeJugadorEquipo(jugador_id);
+    const { jugador_id, equipo_id} = req.params;
+    const response = await jugadorService.removeJugadorEquipo(jugador_id,equipo_id);
     return res.status(200).json(response);
   } catch (error) {
     console.log(error)
