@@ -1,26 +1,44 @@
-const { Partido, Equipo, Lugar, Campeonato,ResultadoLocal,ResultadoVisitante,Tarjeta ,ImagePlanilla,ArbitroPartido, Jugador } = require('../models');
+const {
+  Partido,
+  Equipo,
+  Lugar,
+  Campeonato,
+  ResultadoLocal,
+  ResultadoVisitante,
+  Tarjeta,
+  ImagePlanilla,
+  ArbitroPartido,
+  Jugador,
+} = require('../models');
 const sequelize = require('../config/sequelize');
 const { uploadFile } = require('../utils/subirImagen');
 const moment = require('moment');
 const partidoEstadosMapping = require('../constants/estadoPartido');
-const { Op } = require("sequelize");
+const { Op } = require('sequelize');
 const { broadcastPositionsUpdate } = require('../utils/websocket');
-const estadosMapping = require('../constants/campeonatoEstados')
+const estadosMapping = require('../constants/campeonatoEstados');
 
 exports.createPartido = async (data) => {
-  const transaction = await sequelize.transaction(); 
+  const transaction = await sequelize.transaction();
   try {
-    const { campeonato_id, equipo_local_id, equipo_visitante_id, fecha, lugar_id, arbitros } = data;
+    const {
+      campeonato_id,
+      equipo_local_id,
+      equipo_visitante_id,
+      fecha,
+      lugar_id,
+      arbitros,
+    } = data;
 
     // 🔍 Obtener el ID del campeonato activo (estado != 3)
     const campeonatoActivo = await Campeonato.findOne({
       where: { estado: { [Op.ne]: estadosMapping.campeonatoFinalizado } }, // Diferente de 3
       attributes: ['id'],
-      raw: true
+      raw: true,
     });
 
     if (!campeonatoActivo) {
-      throw new Error("❌ No hay un campeonato activo disponible.");
+      throw new Error('❌ No hay un campeonato activo disponible.');
     }
 
     // Validar si ya existe un partido entre estos dos equipos en este campeonato
@@ -29,42 +47,56 @@ exports.createPartido = async (data) => {
         campeonato_id: campeonatoActivo.id,
         [Op.or]: [
           { equipo_local_id, equipo_visitante_id },
-          { equipo_local_id: equipo_visitante_id, equipo_visitante_id: equipo_local_id } // Invertidos
-        ]
+          {
+            equipo_local_id: equipo_visitante_id,
+            equipo_visitante_id: equipo_local_id,
+          }, // Invertidos
+        ],
       },
-      raw: true
+      raw: true,
     });
 
     if (partidoExistente) {
-      throw new Error("🚨 Ya existe un partido entre estos equipos en este campeonato.");
+      throw new Error(
+        '🚨 Ya existe un partido entre estos equipos en este campeonato.',
+      );
     }
 
     // 🔄 Convertir la fecha al formato correcto
     const formattedFecha = moment(fecha).format('YYYY-MM-DD HH:mm:ss');
 
     // 🔹 Insertar el partido
-    const result = await Partido.create({
-      campeonato_id: campeonatoActivo.id, // Asegurarse de usar el campeonato activo
-      equipo_local_id,
-      equipo_visitante_id,
-      fecha: sequelize.fn('CONVERT', sequelize.literal('DATETIME'), formattedFecha),
-      lugar_id,
-      estado: partidoEstadosMapping.Confirmado
-    }, { transaction });
+    const result = await Partido.create(
+      {
+        campeonato_id: campeonatoActivo.id, // Asegurarse de usar el campeonato activo
+        equipo_local_id,
+        equipo_visitante_id,
+        fecha: sequelize.fn(
+          'CONVERT',
+          sequelize.literal('DATETIME'),
+          formattedFecha,
+        ),
+        lugar_id,
+        estado: partidoEstadosMapping.Confirmado,
+      },
+      { transaction },
+    );
 
     console.log('✅ Partido creado exitosamente:', result);
 
     // 🔹 Insertar los árbitros asociados al partido
     for (const arbitro_id of arbitros) {
-      await ArbitroPartido.create({
-        arbitro_id,
-        partido_id: result.id 
-      }, { transaction });
+      await ArbitroPartido.create(
+        {
+          arbitro_id,
+          partido_id: result.id,
+        },
+        { transaction },
+      );
     }
 
     await transaction.commit();
     return result;
-
   } catch (error) {
     console.error('❌ Error al crear el partido:', error);
     await transaction.rollback();
@@ -72,9 +104,10 @@ exports.createPartido = async (data) => {
   }
 };
 
-exports.getPartidosByCategoriaId = async (categoriaId,campeonatoId) => {
+exports.getPartidosByCategoriaId = async (categoriaId, campeonatoId) => {
   try {
-    const resultPartidos = await sequelize.query(`
+    const resultPartidos = await sequelize.query(
+      `
       SELECT 
         P.id, 
         P.campeonato_id, 
@@ -104,10 +137,12 @@ exports.getPartidosByCategoriaId = async (categoriaId,campeonatoId) => {
         C.id = :categoriaId AND p.campeonato_id = :campeonatoId 
       ORDER BY 
         P.fecha ASC;
-    `, {
-      replacements: { categoriaId , campeonatoId }, 
-      type: sequelize.QueryTypes.SELECT 
-    });
+    `,
+      {
+        replacements: { categoriaId, campeonatoId },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
     return resultPartidos;
   } catch (error) {
@@ -116,9 +151,10 @@ exports.getPartidosByCategoriaId = async (categoriaId,campeonatoId) => {
   }
 };
 
-exports.getPartidosByEquipoId= async (EquipoId,campeonatoId) => {
+exports.getPartidosByEquipoId = async (EquipoId, campeonatoId) => {
   try {
-    const resultPartidos = await sequelize.query(`
+    const resultPartidos = await sequelize.query(
+      `
       SELECT 
         p.id AS partido_id,
         p.fecha,
@@ -144,10 +180,12 @@ exports.getPartidosByEquipoId= async (EquipoId,campeonatoId) => {
       WHERE 
         (p.equipo_local_id = :EquipoId OR p.equipo_visitante_id = :EquipoId)
         AND c.id = :campeonatoId;
-    `, {
-      replacements: { EquipoId , campeonatoId }, 
-      type: sequelize.QueryTypes.SELECT 
-    });
+    `,
+      {
+        replacements: { EquipoId, campeonatoId },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
     return resultPartidos;
   } catch (error) {
@@ -156,9 +194,10 @@ exports.getPartidosByEquipoId= async (EquipoId,campeonatoId) => {
   }
 };
 
-exports.getUpcomingMatchesByCategoria = async (categoriaId ,CampeonatoId) => {
+exports.getUpcomingMatchesByCategoria = async (categoriaId, CampeonatoId) => {
   try {
-    const resultPartidos = await sequelize.query(`
+    const resultPartidos = await sequelize.query(
+      `
      SELECT TOP 3 
         P.id, 
         P.fecha, 
@@ -181,10 +220,12 @@ exports.getUpcomingMatchesByCategoria = async (categoriaId ,CampeonatoId) => {
         P.fecha >= GETDATE() AND 
         P.campeonato_id = :CampeonatoId
       ORDER BY P.fecha ASC;
-    `, {
-      replacements: { categoriaId ,CampeonatoId },  
-      type: sequelize.QueryTypes.SELECT
-    });
+    `,
+      {
+        replacements: { categoriaId, CampeonatoId },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
     return resultPartidos;
   } catch (error) {
@@ -193,9 +234,10 @@ exports.getUpcomingMatchesByCategoria = async (categoriaId ,CampeonatoId) => {
   }
 };
 
-exports.getPastMatchesByCategoria = async (categoriaId,CampeonatoId ) => {
+exports.getPastMatchesByCategoria = async (categoriaId, CampeonatoId) => {
   try {
-    const resultPartidos = await sequelize.query(`
+    const resultPartidos = await sequelize.query(
+      `
       SELECT TOP 3 
         P.id, 
         P.fecha, 
@@ -217,10 +259,12 @@ exports.getPastMatchesByCategoria = async (categoriaId,CampeonatoId ) => {
         (P.estado = 'J' OR P.fecha < GETDATE()) AND 
         P.campeonato_id = :CampeonatoId
       ORDER BY P.fecha DESC;
-    `, {
-      replacements: { categoriaId ,CampeonatoId },  
-      type: sequelize.QueryTypes.SELECT
-    });
+    `,
+      {
+        replacements: { categoriaId, CampeonatoId },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
     return resultPartidos;
   } catch (error) {
@@ -229,9 +273,10 @@ exports.getPastMatchesByCategoria = async (categoriaId,CampeonatoId ) => {
   }
 };
 
-exports.getAllMatchesExceptUpcoming = async (categoriaId,CampeonatoId) => {
+exports.getAllMatchesExceptUpcoming = async (categoriaId, CampeonatoId) => {
   try {
-    const resultPartidos = await sequelize.query(`
+    const resultPartidos = await sequelize.query(
+      `
        SELECT 
           P.id, 
           P.fecha, 
@@ -267,10 +312,12 @@ exports.getAllMatchesExceptUpcoming = async (categoriaId,CampeonatoId) => {
           )
         ORDER BY P.fecha ASC;
 
-    `, {
-      replacements: { categoriaId,CampeonatoId},  
-      type: sequelize.QueryTypes.SELECT 
-    });
+    `,
+      {
+        replacements: { categoriaId, CampeonatoId },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
     return resultPartidos;
   } catch (error) {
@@ -279,9 +326,10 @@ exports.getAllMatchesExceptUpcoming = async (categoriaId,CampeonatoId) => {
   }
 };
 
-exports.getAllMatchesExceptPrevious = async (categoriaId,CampeonatoId) => {
+exports.getAllMatchesExceptPrevious = async (categoriaId, CampeonatoId) => {
   try {
-    const resultPartidos = await sequelize.query(`
+    const resultPartidos = await sequelize.query(
+      `
       SELECT 
         P.id, 
         P.fecha, 
@@ -314,10 +362,12 @@ exports.getAllMatchesExceptPrevious = async (categoriaId,CampeonatoId) => {
           ORDER BY P2.fecha DESC
         )
       ORDER BY P.fecha DESC;
-    `, {
-      replacements: { categoriaId,CampeonatoId},  
-      type: sequelize.QueryTypes.SELECT 
-    });
+    `,
+      {
+        replacements: { categoriaId, CampeonatoId },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
     return resultPartidos;
   } catch (error) {
@@ -333,112 +383,66 @@ exports.getPartidoById = async (id) => {
       { model: Equipo, as: 'equipolocal', attributes: ['nombre'] },
       { model: Equipo, as: 'equipovisitante', attributes: ['nombre'] },
       { model: Lugar, as: 'lugar', attributes: ['nombre'] },
-      { model: Campeonato, as: 'campeonato', attributes: ['nombre'] }
-    ]
+      { model: Campeonato, as: 'campeonato', attributes: ['nombre'] },
+    ],
   });
 };
 
 exports.updatePartido = async (id, data) => {
-  const { campeonato_id, equipo_local_id, equipo_visitante_id, fecha, lugar_id, resultado } = data;
+  const {
+    campeonato_id,
+    equipo_local_id,
+    equipo_visitante_id,
+    fecha,
+    lugar_id,
+    resultado,
+  } = data;
 
   return await Partido.update(
-    { campeonato_id, equipo_local_id, equipo_visitante_id, fecha, lugar_id, resultado },
-    { where: { id } }
+    {
+      campeonato_id,
+      equipo_local_id,
+      equipo_visitante_id,
+      fecha,
+      lugar_id,
+      resultado,
+    },
+    { where: { id } },
   );
 };
 
 exports.deletePartido = async (id) => {
-  return await Partido.update(
-    { resultado: 'ELIMINADO' },
-    { where: { id } }
-  );
+  return await Partido.update({ resultado: 'ELIMINADO' }, { where: { id } });
 };
 
 exports.submitTarjetas = async (partidoId, tarjetas, transaction) => {
   try {
     for (const tarjeta of tarjetas) {
       if (!tarjeta.equipoId || !tarjeta.tipoTarjeta) {
-        throw new Error('Equipo ID y tipo de tarjeta son obligatorios para cada tarjeta.');
+        throw new Error(
+          'Equipo ID y tipo de tarjeta son obligatorios para cada tarjeta.',
+        );
       }
 
-      await Tarjeta.create({
-        partido_id: partidoId,
-        equipo_id: tarjeta.equipoId,
-        jugador_id: tarjeta.jugadorId,
-        tipo_tarjeta: tarjeta.tipoTarjeta,
-      }, { transaction });
+      await Tarjeta.create(
+        {
+          partido_id: partidoId,
+          equipo_id: tarjeta.equipoId,
+          jugador_id: tarjeta.jugadorId,
+          tipo_tarjeta: tarjeta.tipoTarjeta,
+        },
+        { transaction },
+      );
     }
   } catch (error) {
     throw new Error('Error al registrar las tarjetas: ' + error.message);
   }
 };
 
-
-exports.submitResultados = async ({ partido_id, resultadoLocal, resultadoVisitante, walkover, tarjetas, imagenPlanilla }) => {
-  const transaction = await sequelize.transaction();
-
-  try {
-
-    console.log('Datos recibidos:', {
-      partido_id,
-      resultadoLocal,
-      resultadoVisitante,
-      walkover,
-      tarjetas,
-      imagenPlanilla
-    });
-
-    const walkoverValue = walkover === '' ? null : walkover;
-    const local = await ResultadoLocal.create({
-      partido_id,
-      set1: resultadoLocal.set1 ?? 0, 
-      set2: resultadoLocal.set2 ?? 0,
-      set3: resultadoLocal.set3 ?? 0,
-      resultado: resultadoLocal.resultado || null,
-      walkover: walkoverValue
-    }, { transaction });
-
-    const visitante = await ResultadoVisitante.create({
-      partido_id,
-      set1: resultadoVisitante.set1 ?? 0, 
-      set2: resultadoVisitante.set2 ?? 0,
-      set3: resultadoVisitante.set3 ?? 0,
-      resultado: resultadoVisitante.resultado || null,
-      walkover: walkoverValue
-    }, { transaction });
-
-    await exports.submitTarjetas(partido_id, tarjetas, transaction);
-
-    if (imagenPlanilla) {
-      const fileName = `planilla_${partido_id}_${Date.now()}`;
-      const { downloadURL } = await uploadFile(imagenPlanilla, fileName, null, 'FilesPlanillas');
-      
-      await ImagePlanilla.create({
-        partido_id,
-        partido_image: downloadURL
-      }, { transaction });
-    }
-
-    await Partido.update(
-      { estado: partidoEstadosMapping.Finalizado },
-      { where: { id: partido_id }, transaction }
-    );
-
-    await transaction.commit();
-
-    console.log('Resultados registrados correctamente. Enviando actualización por WebSocket...');
-    broadcastPositionsUpdate();
-    return { local, visitante };
-  } catch (error) {
-    console.error('Error durante la transacción:', error);
-    await transaction.rollback();
-    throw new Error('Error al registrar los resultados: ' + error.message);
-  }
-};
-
 exports.getPartidoCompletoById = async (partidoId) => {
   try {
-    const result = await sequelize.query(`
+    const result = await sequelize.query(
+      `
       SELECT 
         P.id AS partido_id,
         P.fecha,
@@ -459,10 +463,12 @@ exports.getPartidoCompletoById = async (partidoId) => {
       JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
       JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
       WHERE P.id = :partidoId;
-    `, {
-      replacements: { partidoId },
-      type: sequelize.QueryTypes.SELECT
-    });
+    `,
+      {
+        replacements: { partidoId },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
     return result[0]; // Devuelve el primer resultado, ya que estamos buscando por ID
   } catch (error) {
@@ -473,7 +479,8 @@ exports.getPartidoCompletoById = async (partidoId) => {
 
 exports.getJugadoresByEquipoAndCampeonato = async (equipoId, campeonatoId) => {
   try {
-    const jugadores = await sequelize.query(`
+    const jugadores = await sequelize.query(
+      `
       SELECT 
       J.id AS jugador_id,
       P.nombre AS jugador_nombre,
@@ -488,21 +495,29 @@ exports.getJugadoresByEquipoAndCampeonato = async (equipoId, campeonatoId) => {
           JE.equipo_id = :equipoId AND 
           JE.campeonato_id = :campeonatoId AND 
           P.eliminado = 'N';
-    `, {
-      replacements: { equipoId, campeonatoId },
-      type: sequelize.QueryTypes.SELECT
-    });
+    `,
+      {
+        replacements: { equipoId, campeonatoId },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
     return jugadores;
   } catch (error) {
-    console.error('Error al obtener los jugadores del equipo en el campeonato:', error);
-    throw new Error('Error al obtener los jugadores del equipo en el campeonato');
+    console.error(
+      'Error al obtener los jugadores del equipo en el campeonato:',
+      error,
+    );
+    throw new Error(
+      'Error al obtener los jugadores del equipo en el campeonato',
+    );
   }
 };
 
 exports.getArbitrosByPartidoId = async (partidoId) => {
   try {
-    const arbitros = await sequelize.query(`
+    const arbitros = await sequelize.query(
+      `
       SELECT 
         A.id AS arbitro_id,
         A.activo AS arbitro_activo,
@@ -515,18 +530,19 @@ exports.getArbitrosByPartidoId = async (partidoId) => {
       JOIN Persona P ON A.id = P.id
 	    LEFT JOIN ImagenPersona IMP ON IMP.persona_id = P.id
       WHERE AP.partido_id = :partidoId;
-    `, {
-      replacements: { partidoId },
-      type: sequelize.QueryTypes.SELECT
-    });
+    `,
+      {
+        replacements: { partidoId },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
     return arbitros;
   } catch (error) {
     console.error('Error al obtener los árbitros del partido:', error);
     throw new Error('Error al obtener los árbitros del partido');
-
   }
-}
+};
 
 exports.getPartidosByLugarYFecha = async (lugarId, fecha) => {
   try {
@@ -548,7 +564,8 @@ exports.getPartidosByLugarYFecha = async (lugarId, fecha) => {
     const fechaFin = `${fechaFormateada} 23:59:59`;
 
     // Ejecutar la consulta RAW
-    const partidos = await sequelize.query(`
+    const partidos = await sequelize.query(
+      `
       SELECT 
         P.id AS partido_id,
         P.campeonato_id,
@@ -577,10 +594,12 @@ exports.getPartidosByLugarYFecha = async (lugarId, fecha) => {
       WHERE P.lugar_id = :lugarId 
         AND P.fecha BETWEEN :fechaInicio AND :fechaFin
       ORDER BY CAST(FORMAT(P.fecha, 'HH:mm:ss') AS TIME) ASC;  -- Ordenar por la hora
-    `, {
-      replacements: { lugarId, fechaInicio, fechaFin },
-      type: sequelize.QueryTypes.SELECT
-    });
+    `,
+      {
+        replacements: { lugarId, fechaInicio, fechaFin },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
     return partidos;
   } catch (error) {
@@ -609,7 +628,8 @@ exports.getPartidosByFecha = async (fecha) => {
     const fechaFin = `${fechaFormateada} 23:59:59`;
 
     // Ejecutar la consulta RAW sin filtrar por lugar
-    const partidos = await sequelize.query(`
+    const partidos = await sequelize.query(
+      `
       SELECT 
         P.id AS partido_id,
         P.campeonato_id,
@@ -637,10 +657,12 @@ exports.getPartidosByFecha = async (fecha) => {
       LEFT JOIN Categoria CL ON EL.categoria_id = CL.id
       WHERE P.fecha BETWEEN :fechaInicio AND :fechaFin
       ORDER BY CAST(FORMAT(P.fecha, 'HH:mm:ss') AS TIME) ASC;
-    `, {
-      replacements: { fechaInicio, fechaFin },
-      type: sequelize.QueryTypes.SELECT
-    });
+    `,
+      {
+        replacements: { fechaInicio, fechaFin },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
     return partidos;
   } catch (error) {
@@ -651,7 +673,8 @@ exports.getPartidosByFecha = async (fecha) => {
 
 exports.getEquiposInscritos = async (campeonatoId, categoriaId) => {
   try {
-    const equipos = await sequelize.query(`
+    const equipos = await sequelize.query(
+      `
       SELECT E.id, E.nombre,IC.club_imagen
       FROM EquipoCampeonato EC
       JOIN Equipo E ON EC.equipoId = E.id
@@ -660,10 +683,12 @@ exports.getEquiposInscritos = async (campeonatoId, categoriaId) => {
       WHERE EC.campeonatoId = :campeonatoId
       AND EC.categoria_id = :categoriaId
       AND EC.estado = 'Inscrito'
-    `, {
-      replacements: { campeonatoId, categoriaId },
-      type: sequelize.QueryTypes.SELECT
-    });
+    `,
+      {
+        replacements: { campeonatoId, categoriaId },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
     return equipos;
   } catch (error) {
@@ -686,10 +711,13 @@ exports.generarFixtureRoundRobin = (equipos) => {
     equipos.push({ id: null, nombre: 'Descanso', club_imagen: null });
     numEquipos++;
     tieneDescanso = true;
-    console.log("🔹 Se agregó un equipo 'Descanso' para balancear la liga.");
+    console.log('🔹 Se agregó un equipo \'Descanso\' para balancear la liga.');
   }
 
-  console.log(`📋 Equipos iniciales:`, equipos.map(e => e.nombre));
+  console.log(
+    '📋 Equipos iniciales:',
+    equipos.map((e) => e.nombre),
+  );
 
   let jornadas = numEquipos - 1;
   let equiposCopia = [...equipos];
@@ -703,7 +731,9 @@ exports.generarFixtureRoundRobin = (equipos) => {
       let equipoLocal = equiposCopia[i];
       let equipoVisitante = equiposCopia[numEquipos - 1 - i];
 
-      console.log(`🔄 Emparejando: ${equipoLocal.nombre} vs ${equipoVisitante.nombre}`);
+      console.log(
+        `🔄 Emparejando: ${equipoLocal.nombre} vs ${equipoVisitante.nombre}`,
+      );
 
       if (equipoLocal.id !== null && equipoVisitante.id !== null) {
         partidos.push({
@@ -713,10 +743,12 @@ exports.generarFixtureRoundRobin = (equipos) => {
 
           equipo_visitante_id: equipoVisitante.id,
           equipo_visitante: equipoVisitante.nombre,
-          equipo_visitante_img: equipoVisitante.club_imagen
+          equipo_visitante_img: equipoVisitante.club_imagen,
         });
       } else {
-        console.log(`⚠️ Partido omitido porque uno de los equipos es 'Descanso'`);
+        console.log(
+          '⚠️ Partido omitido porque uno de los equipos es \'Descanso\'',
+        );
       }
     }
 
@@ -726,15 +758,18 @@ exports.generarFixtureRoundRobin = (equipos) => {
     // 🔁 **Rotación Round Robin: Mantener el primer equipo fijo y rotar el resto**
     let equipoFijo = equiposCopia[0];
     equiposCopia = [
-      equipoFijo, 
-      ...equiposCopia.slice(-1), 
-      ...equiposCopia.slice(1, -1)
+      equipoFijo,
+      ...equiposCopia.slice(-1),
+      ...equiposCopia.slice(1, -1),
     ];
 
-    console.log(`🔁 Nueva rotación de equipos:`, equiposCopia.map(e => e.nombre));
+    console.log(
+      '🔁 Nueva rotación de equipos:',
+      equiposCopia.map((e) => e.nombre),
+    );
   }
 
-  console.log(`\n✅ Fixture final generado:`);
+  console.log('\n✅ Fixture final generado:');
   console.log(JSON.stringify(fixture, null, 2));
   return fixture;
 };
@@ -745,89 +780,132 @@ exports.asignarFechasHorarios = async (fixture, campeonato) => {
   let fechaActual = fechaInicio.clone();
 
   let partidosAsignados = [];
-  let horariosPorFecha = {}; 
+  let horariosPorFecha = {};
   let equiposPorFecha = {}; // Registro de equipos que juegan en cada fecha
 
   // Asegurar que el primer día sea sábado o domingo
   while (fechaActual.isoWeekday() !== 6 && fechaActual.isoWeekday() !== 7) {
-      fechaActual.add(1, 'days');
+    fechaActual.add(1, 'days');
   }
 
   for (let jornada of fixture) {
-      for (let partido of jornada) {
-          let asignado = false;
+    for (let partido of jornada) {
+      let asignado = false;
 
-          while (!asignado) {
-              let fechaPartido = fechaActual.format("YYYY-MM-DD");
+      while (!asignado) {
+        let fechaPartido = fechaActual.format('YYYY-MM-DD');
 
-              // Definir horarios disponibles según el día
-              let horariosDisponibles =
-                  fechaActual.isoWeekday() === 6
-                      ? ["12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"] // Sábado
-                      : ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"]; // Domingo
+        // Definir horarios disponibles según el día
+        let horariosDisponibles =
+          fechaActual.isoWeekday() === 6
+            ? [
+              "12:00",
+              "13:00",
+              '14:00',
+              '15:00',
+              "16:00",
+              '17:00',
+              '18:00',
+              "19:00",
+              '20:00',
+              "21:00",
+              "22:00",
+            ] // Sábado
+            : [
+              "08:00",
+              '09:00',
+              '10:00',
+              "11:00",
+              '12:00',
+              "13:00",
+              "14:00",
+              '15:00',
+              '16:00',
+              "17:00",
+              '18:00',
+              "19:00",
+              '20:00',
+              "21:00",
+              '22:00',
+            ]; // Domingo
 
-              // Registrar horarios ocupados y equipos que han jugado en la fecha
-              if (!horariosPorFecha[fechaPartido]) {
-                  horariosPorFecha[fechaPartido] = new Set();
-              }
-              if (!equiposPorFecha[fechaPartido]) {
-                  equiposPorFecha[fechaPartido] = new Set();
-              }
+        // Registrar horarios ocupados y equipos que han jugado en la fecha
+        if (!horariosPorFecha[fechaPartido]) {
+          horariosPorFecha[fechaPartido] = new Set();
+        }
+        if (!equiposPorFecha[fechaPartido]) {
+          equiposPorFecha[fechaPartido] = new Set();
+        }
 
-              // Verificar si los equipos ya jugaron en la fecha actual
-              if (equiposPorFecha[fechaPartido].has(partido.equipo_local_id) || 
-                  equiposPorFecha[fechaPartido].has(partido.equipo_visitante_id)) {
-                  
-                  // Si ya jugaron, avanzar al siguiente fin de semana
-                  do {
-                      fechaActual.add(1, "days");
-                      fechaPartido = fechaActual.format("YYYY-MM-DD");
-                  } while (fechaActual.isoWeekday() !== 6 && fechaActual.isoWeekday() !== 7);
-                  
-                  continue;
-              }
+        // Verificar si los equipos ya jugaron en la fecha actual
+        if (
+          equiposPorFecha[fechaPartido].has(partido.equipo_local_id) ||
+          equiposPorFecha[fechaPartido].has(partido.equipo_visitante_id)
+        ) {
+          // Si ya jugaron, avanzar al siguiente fin de semana
+          do {
+            fechaActual.add(1, 'days');
+            fechaPartido = fechaActual.format('YYYY-MM-DD');
+          } while (
+            fechaActual.isoWeekday() !== 6 &&
+            fechaActual.isoWeekday() !== 7
+          );
 
-              let horarioDisponible = horariosDisponibles.find(h => !horariosPorFecha[fechaPartido].has(h));
+          continue;
+        }
 
-              if (!horarioDisponible) {
-                  // Si no hay horarios disponibles, avanzar al siguiente fin de semana
-                  do {
-                      fechaActual.add(1, "days");
-                  } while (fechaActual.isoWeekday() !== 6 && fechaActual.isoWeekday() !== 7);
-                  continue;
-              }
+        let horarioDisponible = horariosDisponibles.find(
+          (h) => !horariosPorFecha[fechaPartido].has(h),
+        );
 
-              let lugarDisponible = await buscarLugarAleatorioDisponible(fechaPartido, horarioDisponible);
+        if (!horarioDisponible) {
+          // Si no hay horarios disponibles, avanzar al siguiente fin de semana
+          do {
+            fechaActual.add(1, 'days');
+          } while (
+            fechaActual.isoWeekday() !== 6 &&
+            fechaActual.isoWeekday() !== 7
+          );
+          continue;
+        }
 
-              if (lugarDisponible) {
-                  partidosAsignados.push({
-                      equipo_local_id: partido.equipo_local_id,
-                      equipo_local: partido.equipo_local,
-                      equipo_local_img: partido.equipo_local_img,
+        let lugarDisponible = await buscarLugarAleatorioDisponible(
+          fechaPartido,
+          horarioDisponible,
+        );
 
-                      equipo_visitante_id: partido.equipo_visitante_id,
-                      equipo_visitante: partido.equipo_visitante,
-                      equipo_visitante_img: partido.equipo_visitante_img,
+        if (lugarDisponible) {
+          partidosAsignados.push({
+            equipo_local_id: partido.equipo_local_id,
+            equipo_local: partido.equipo_local,
+            equipo_local_img: partido.equipo_local_img,
 
-                      fecha: `${fechaPartido} ${horarioDisponible}:00`,
-                      lugar_id: {
-                          id: lugarDisponible.id,
-                          nombre: lugarDisponible.nombre
-                      },
-                      arbitros: [] 
-                  });
+            equipo_visitante_id: partido.equipo_visitante_id,
+            equipo_visitante: partido.equipo_visitante,
+            equipo_visitante_img: partido.equipo_visitante_img,
 
-                  horariosPorFecha[fechaPartido].add(horarioDisponible);
-                  equiposPorFecha[fechaPartido].add(partido.equipo_local_id);
-                  equiposPorFecha[fechaPartido].add(partido.equipo_visitante_id);
-                  asignado = true;
-              } else {
-                  do {
-                      fechaActual.add(1, "days");
-                  } while (fechaActual.isoWeekday() !== 6 && fechaActual.isoWeekday() !== 7);
-              }
-          }
+            fecha: `${fechaPartido} ${horarioDisponible}:00`,
+            lugar_id: {
+              id: lugarDisponible.id,
+              nombre: lugarDisponible.nombre,
+            },
+            arbitros: [],
+          });
+
+          horariosPorFecha[fechaPartido].add(horarioDisponible);
+          equiposPorFecha[fechaPartido].add(partido.equipo_local_id);
+          equiposPorFecha[fechaPartido].add(partido.equipo_visitante_id);
+          asignado = true;
+        } else {
+          do {
+            fechaActual.add(1, 'days');
+          } while (
+            fechaActual.isoWeekday() !== 6 &&
+            fechaActual.isoWeekday() !== 7
+          );
+        }
       }
+    }
   }
   return partidosAsignados;
 };
@@ -842,10 +920,13 @@ exports.validarDisponibilidadFechas = (fixture, campeonato) => {
   let diasDisponibles = 0;
   let fechaActual = fechaInicio.clone();
 
-  const horariosSabado = 10; 
-  const horariosDomingo = 14; 
+  const horariosSabado = 10;
+  const horariosDomingo = 14;
 
-  while (fechaActual.isBefore(fechaFin) || fechaActual.isSame(fechaFin, 'day')) {
+  while (
+    fechaActual.isBefore(fechaFin) ||
+    fechaActual.isSame(fechaFin, 'day')
+  ) {
     if (fechaActual.isoWeekday() === 6) {
       diasDisponibles += horariosSabado;
     } else if (fechaActual.isoWeekday() === 7) {
@@ -861,18 +942,21 @@ exports.validarDisponibilidadFechas = (fixture, campeonato) => {
 
 exports.getLugaresDisponibles = async () => {
   try {
-    const lugares = await sequelize.query(`
+    const lugares = await sequelize.query(
+      `
       SELECT id, nombre 
       FROM Lugar
       WHERE eliminado IS NULL OR eliminado != 'S'
-    `, {
-      type: sequelize.QueryTypes.SELECT
-    });
+    `,
+      {
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
     return lugares;
   } catch (error) {
-    console.error("Error al obtener los complejos deportivos:", error);
-    throw new Error("No se pudieron obtener los complejos deportivos.");
+    console.error('Error al obtener los complejos deportivos:', error);
+    throw new Error('No se pudieron obtener los complejos deportivos.');
   }
 };
 
@@ -880,15 +964,20 @@ exports.asignarLugaresAPartidos = async (partidos) => {
   let partidosConLugar = [];
 
   for (let partido of partidos) {
-    let lugarDisponible = await buscarLugarAleatorioDisponible(partido.fecha.split(" ")[0], partido.fecha.split(" ")[1]);
+    let lugarDisponible = await buscarLugarAleatorioDisponible(
+      partido.fecha.split(' ')[0],
+      partido.fecha.split(' ')[1],
+    );
 
     if (!lugarDisponible) {
-      throw new Error(`No hay lugares disponibles para el partido ${partido.equipo_local_id} vs ${partido.equipo_visitante_id} en la fecha ${partido.fecha}`);
+      throw new Error(
+        `No hay lugares disponibles para el partido ${partido.equipo_local_id} vs ${partido.equipo_visitante_id} en la fecha ${partido.fecha}`,
+      );
     }
 
     partidosConLugar.push({
       ...partido,
-      lugar_id: lugarDisponible
+      lugar_id: lugarDisponible,
     });
   }
 
@@ -897,37 +986,44 @@ exports.asignarLugaresAPartidos = async (partidos) => {
 
 exports.getArbitrosDisponibles = async () => {
   try {
-    const arbitros = await sequelize.query(`
+    const arbitros = await sequelize.query(
+      `
       SELECT a.id ,p.nombre,p.apellido,imp.persona_imagen
       FROM Arbitro a
       INNER JOIN Persona p ON p.id = a.id
       LEFT JOIN ImagenPersona imp ON imp.persona_id = p.id
       WHERE activo = 1
-    `, {
-      type: sequelize.QueryTypes.SELECT
-    });
+    `,
+      {
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
     if (!arbitros || arbitros.length === 0) {
-      console.error("🚨 No hay árbitros disponibles.");
-      throw new Error("No hay árbitros disponibles para asignar a los partidos.");
+      console.error('🚨 No hay árbitros disponibles.');
+      throw new Error(
+        'No hay árbitros disponibles para asignar a los partidos.',
+      );
     }
 
     return arbitros;
   } catch (error) {
-    console.error("🚨 Error al obtener árbitros disponibles:", error);
-    throw new Error("Error al obtener los árbitros.");
+    console.error('🚨 Error al obtener árbitros disponibles:', error);
+    throw new Error('Error al obtener los árbitros.');
   }
 };
 
 exports.asignarArbitrosAPartidos = async (partidos) => {
   try {
-    console.log("🚀 Iniciando asignación de árbitros...");
-    
+    console.log('🚀 Iniciando asignación de árbitros...');
+
     let arbitros = await exports.getArbitrosDisponibles();
-    console.log("✅ Árbitros disponibles obtenidos:", arbitros);
+    console.log('✅ Árbitros disponibles obtenidos:', arbitros);
 
     if (!arbitros || arbitros.length < 2) {
-      throw new Error("No hay suficientes árbitros disponibles para asignar a los partidos.");
+      throw new Error(
+        'No hay suficientes árbitros disponibles para asignar a los partidos.',
+      );
     }
 
     let asignaciones = {}; // Objeto para rastrear asignaciones en memoria
@@ -936,9 +1032,14 @@ exports.asignarArbitrosAPartidos = async (partidos) => {
     for (let partido of partidos) {
       let fechaPartido = partido.fecha.split(' ')[0]; // Extrae la fecha
       let horaPartido = partido.fecha.split(' ')[1]; // Extrae la hora
-      let lugarId = typeof partido.lugar_id === 'object' ? partido.lugar_id.id : partido.lugar_id;
+      let lugarId =
+        typeof partido.lugar_id === 'object'
+          ? partido.lugar_id.id
+          : partido.lugar_id;
 
-      console.log(`🎯 Procesando partido ID: ${partido.id} | Fecha: ${fechaPartido} | Hora: ${horaPartido} | Lugar: ${lugarId}`);
+      console.log(
+        `🎯 Procesando partido ID: ${partido.id} | Fecha: ${fechaPartido} | Hora: ${horaPartido} | Lugar: ${lugarId}`,
+      );
 
       if (!asignaciones[fechaPartido]) {
         asignaciones[fechaPartido] = {};
@@ -950,58 +1051,74 @@ exports.asignarArbitrosAPartidos = async (partidos) => {
       let arbitrosAsignados = [];
 
       for (let i = 0; i < 2; i++) {
-        console.log(`🔍 Buscando árbitro disponible para el partido ID: ${partido.id}`);
+        console.log(
+          `🔍 Buscando árbitro disponible para el partido ID: ${partido.id}`,
+        );
 
         let arbitroDisponible = null;
         for (let arbitro of arbitros) {
-          if (arbitrosAsignados.some(a => a.id === arbitro.id)) {
+          if (arbitrosAsignados.some((a) => a.id === arbitro.id)) {
             continue; // Evita asignar el mismo árbitro dos veces en el mismo partido
           }
 
           console.log(`👀 Verificando árbitro ID: ${arbitro.id}`);
 
-          const partidosAsignados = await sequelize.query(`
+          const partidosAsignados = await sequelize.query(
+            `
               SELECT COUNT(*) AS cantidad
               FROM Arbitro_Partido ap
               INNER JOIN Partido p ON ap.partido_id = p.id
               WHERE ap.arbitro_id = :arbitro_id 
               AND CONVERT(DATE, p.fecha) = :fecha;
-          `, {
-            replacements: { 
-              arbitro_id: arbitro.id, 
-              fecha: fechaPartido 
+          `,
+            {
+              replacements: {
+                arbitro_id: arbitro.id,
+                fecha: fechaPartido,
+              },
+              type: sequelize.QueryTypes.SELECT,
             },
-            type: sequelize.QueryTypes.SELECT
-          });
+          );
 
-          const cantidadPartidos = (partidosAsignados[0]?.cantidad || 0) + (contadorArbitros[arbitro.id]?.[fechaPartido] || 0);
+          const cantidadPartidos =
+            (partidosAsignados[0]?.cantidad || 0) +
+            (contadorArbitros[arbitro.id]?.[fechaPartido] || 0);
 
-          console.log(`📝 Árbitro ${arbitro.id} tiene ${cantidadPartidos} partidos en ${fechaPartido}`);
+          console.log(
+            `📝 Árbitro ${arbitro.id} tiene ${cantidadPartidos} partidos en ${fechaPartido}`,
+          );
 
           if (cantidadPartidos >= 8) {
-            console.log(`⚠️ Árbitro ${arbitro.id} ya alcanzó el límite de 8 partidos en este día.`);
+            console.log(
+              `⚠️ Árbitro ${arbitro.id} ya alcanzó el límite de 8 partidos en este día.`,
+            );
             continue; // Saltar al siguiente árbitro
           }
 
           // Verificar si ya está asignado en el mismo día y otro lugar
-          const existe = await sequelize.query(`
+          const existe = await sequelize.query(
+            `
               SELECT TOP 1 p.id, p.fecha, p.lugar_id
               FROM Arbitro_Partido ap
               INNER JOIN Partido p ON ap.partido_id = p.id
               WHERE ap.arbitro_id = :arbitro_id 
               AND CONVERT(DATE, p.fecha) = :fecha
               AND p.lugar_id != :lugar_id;
-          `, {
-            replacements: { 
-              arbitro_id: arbitro.id, 
-              fecha: fechaPartido, 
-              lugar_id: lugarId 
+          `,
+            {
+              replacements: {
+                arbitro_id: arbitro.id,
+                fecha: fechaPartido,
+                lugar_id: lugarId,
+              },
+              type: sequelize.QueryTypes.SELECT,
             },
-            type: sequelize.QueryTypes.SELECT
-          });
+          );
 
           if (existe.length > 0) {
-            console.log(`⚠️ Árbitro ${arbitro.id} ya está asignado en otro lugar el mismo día.`);
+            console.log(
+              `⚠️ Árbitro ${arbitro.id} ya está asignado en otro lugar el mismo día.`,
+            );
             continue; // Saltar al siguiente árbitro
           }
 
@@ -1011,11 +1128,17 @@ exports.asignarArbitrosAPartidos = async (partidos) => {
         }
 
         if (!arbitroDisponible) {
-          console.error(`❌ No hay árbitros disponibles para el partido en ${fechaPartido} en el lugar ${lugarId}`);
-          throw new Error(`No hay árbitros disponibles para el partido en ${fechaPartido} en el lugar ${lugarId}`);
+          console.error(
+            `❌ No hay árbitros disponibles para el partido en ${fechaPartido} en el lugar ${lugarId}`,
+          );
+          throw new Error(
+            `No hay árbitros disponibles para el partido en ${fechaPartido} en el lugar ${lugarId}`,
+          );
         }
 
-        console.log(`✔️ Asignando árbitro ID: ${arbitroDisponible.id} al partido ID: ${partido.id}`);
+        console.log(
+          `✔️ Asignando árbitro ID: ${arbitroDisponible.id} al partido ID: ${partido.id}`,
+        );
 
         arbitrosAsignados.push(arbitroDisponible);
         asignaciones[fechaPartido][lugarId].add(arbitroDisponible.id);
@@ -1031,13 +1154,16 @@ exports.asignarArbitrosAPartidos = async (partidos) => {
       }
 
       partido.arbitros = arbitrosAsignados;
-      console.log(`✅ Partido ID: ${partido.id} tiene asignados los árbitros:`, arbitrosAsignados);
+      console.log(
+        `✅ Partido ID: ${partido.id} tiene asignados los árbitros:`,
+        arbitrosAsignados,
+      );
     }
 
-    console.log("🎉 Asignación de árbitros completada con éxito.");
+    console.log('🎉 Asignación de árbitros completada con éxito.');
     return partidos;
   } catch (error) {
-    console.error("❌ Error al asignar árbitros:", error);
+    console.error('❌ Error al asignar árbitros:', error);
     throw error;
   }
 };
@@ -1053,17 +1179,18 @@ const buscarLugarAleatorioDisponible = async (fecha, hora) => {
     {
       replacements: { fechaHora: `${fecha} ${hora}:00` },
       type: sequelize.QueryTypes.SELECT,
-    }
+    },
   );
 
   const lugaresDisponibles = await exports.getLugaresDisponibles();
 
   const lugaresFiltrados = lugaresDisponibles.filter(
-    (lugar) => !lugaresOcupados.some((ocupado) => ocupado.lugar_id === lugar.id)
+    (lugar) =>
+      !lugaresOcupados.some((ocupado) => ocupado.lugar_id === lugar.id),
   );
 
   if (lugaresFiltrados.length === 0) {
-    return null; 
+    return null;
   }
 
   return lugaresFiltrados[Math.floor(Math.random() * lugaresFiltrados.length)];
@@ -1074,29 +1201,31 @@ exports.registrarPartidos = async (partidos, campeonatoId, categoriaId) => {
 
   try {
     if (!partidos || partidos.length === 0) {
-      throw new Error("No hay partidos para registrar.");
+      throw new Error('No hay partidos para registrar.');
     }
 
     // 🔹 Obtener la fecha de fin del campeonato
     const campeonato = await Campeonato.findByPk(campeonatoId);
     if (!campeonato) {
-      throw new Error("El campeonato no existe.");
+      throw new Error('El campeonato no existe.');
     }
 
     const fechaFinCampeonato = moment(campeonato.fecha_fin_campeonato);
 
     // 🔹 Validar si hay partidos después de la fecha de fin del campeonato
     const partidosExcedenFecha = partidos.some((partido) =>
-      moment(partido.fecha.split(" ")[0]).isAfter(fechaFinCampeonato)
+      moment(partido.fecha.split(' ')[0]).isAfter(fechaFinCampeonato),
     );
 
     if (partidosExcedenFecha) {
       throw new Error(
-        "Los partidos generados exceden la fecha de fin del campeonato. Amplía el rango de fechas."
+        'Los partidos generados exceden la fecha de fin del campeonato. Amplía el rango de fechas.',
       );
     }
 
-    console.log(`📌 Verificando si hay partidos finalizados en la categoría...`);
+    console.log(
+      '📌 Verificando si hay partidos finalizados en la categoría...',
+    );
 
     // 🔹 Buscar si hay partidos finalizados en el campeonato y la categoría
     const partidosExistentes = await sequelize.query(
@@ -1113,19 +1242,21 @@ exports.registrarPartidos = async (partidos, campeonatoId, categoriaId) => {
       {
         replacements: { campeonatoId, categoriaId },
         type: sequelize.QueryTypes.SELECT,
-        transaction
-      }
+        transaction,
+      },
     );
 
-    const hayPartidosFinalizados = partidosExistentes.some(p => p.estado === partidoEstadosMapping.Finalizado);
+    const hayPartidosFinalizados = partidosExistentes.some(
+      (p) => p.estado === partidoEstadosMapping.Finalizado,
+    );
 
     if (hayPartidosFinalizados) {
       throw new Error(
-        "No se pueden registrar nuevos partidos porque hay partidos finalizados en esta categoría. Solo se pueden posponer."
+        'No se pueden registrar nuevos partidos porque hay partidos finalizados en esta categoría. Solo se pueden posponer.',
       );
     }
 
-    console.log(`📌 Eliminando partidos confirmados de la categoría...`);
+    console.log('📌 Eliminando partidos confirmados de la categoría...');
 
     const partidosAEliminar = await sequelize.query(
       `
@@ -1143,39 +1274,45 @@ exports.registrarPartidos = async (partidos, campeonatoId, categoriaId) => {
         replacements: {
           campeonatoId,
           categoriaId,
-          estadoConfirmado: partidoEstadosMapping.Confirmado
+          estadoConfirmado: partidoEstadosMapping.Confirmado,
         },
         type: sequelize.QueryTypes.SELECT,
-        transaction
-      }
+        transaction,
+      },
     );
-    
-    const idsPartidosAEliminar = partidosAEliminar.map(p => p.id);
+
+    const idsPartidosAEliminar = partidosAEliminar.map((p) => p.id);
 
     if (idsPartidosAEliminar.length > 0) {
-      console.log(`📌 Eliminando ${idsPartidosAEliminar.length} partidos confirmados de la categoría...`);
-    
+      console.log(
+        `📌 Eliminando ${idsPartidosAEliminar.length} partidos confirmados de la categoría...`,
+      );
+
       await Partido.update(
         { estado: partidoEstadosMapping.Eliminado },
         {
           where: {
-            id: idsPartidosAEliminar // ✅ Ahora sí estamos eliminando solo los partidos de la categoría correcta
+            id: idsPartidosAEliminar, // ✅ Ahora sí estamos eliminando solo los partidos de la categoría correcta
           },
-          transaction
-        }
+          transaction,
+        },
       );
     } else {
-      console.log(`📌 No hay partidos confirmados para eliminar.`);
+      console.log('📌 No hay partidos confirmados para eliminar.');
     }
 
-    console.log(`📌 Asignando árbitros a los partidos...`);
+    console.log('📌 Asignando árbitros a los partidos...');
     let partidosConArbitros = await exports.asignarArbitrosAPartidos(partidos);
 
-    console.log(`📌 Registrando ${partidos.length} nuevos partidos con árbitros asignados...`);
+    console.log(
+      `📌 Registrando ${partidos.length} nuevos partidos con árbitros asignados...`,
+    );
 
     for (const partido of partidosConArbitros) {
       console.log('revisando el formato xd', partido.fecha);
-      const fechaFormateada = moment(partido.fecha).format("YYYY-MM-DD HH:mm:ss");
+      const fechaFormateada = moment(partido.fecha).format(
+        'YYYY-MM-DD HH:mm:ss',
+      );
       const partidoRegistrado = await Partido.create(
         {
           campeonato_id: campeonatoId,
@@ -1185,7 +1322,7 @@ exports.registrarPartidos = async (partidos, campeonatoId, categoriaId) => {
           lugar_id: partido.lugar_id.id,
           estado: partidoEstadosMapping.Confirmado,
         },
-        { transaction }
+        { transaction },
       );
 
       for (const arbitro of partido.arbitros) {
@@ -1194,25 +1331,27 @@ exports.registrarPartidos = async (partidos, campeonatoId, categoriaId) => {
             arbitro_id: arbitro.id,
             partido_id: partidoRegistrado.id,
           },
-          { transaction }
+          { transaction },
         );
       }
     }
 
     await transaction.commit();
-    console.log("✅ Partidos y árbitros registrados correctamente.");
-    return { message: "Partidos registrados exitosamente con árbitros asignados." };
-
+    console.log('✅ Partidos y árbitros registrados correctamente.');
+    return {
+      message: 'Partidos registrados exitosamente con árbitros asignados.',
+    };
   } catch (error) {
-    console.error("🚨 Error al registrar partidos con árbitros:", error);
+    console.error('🚨 Error al registrar partidos con árbitros:', error);
     await transaction.rollback();
     throw error;
   }
 };
 
-exports.getPartidosByCampeonatoYFecha = async (campeonatoId,fecha) => {
+exports.getPartidosByCampeonatoYFecha = async (campeonatoId, fecha) => {
   try {
-    const resultPartidos = await sequelize.query(`
+    const resultPartidos = await sequelize.query(
+      `
      SELECT 
     P.id AS partido_id,
     P.campeonato_id,
@@ -1260,10 +1399,12 @@ exports.getPartidosByCampeonatoYFecha = async (campeonatoId,fecha) => {
         C.nombre, L.nombre, P.estado
     ORDER BY 
         P.fecha ASC;
-    `, {
-      replacements: { campeonatoId ,fecha }, 
-      type: sequelize.QueryTypes.SELECT 
-    });
+    `,
+      {
+        replacements: { campeonatoId, fecha },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
     return resultPartidos;
   } catch (error) {
@@ -1284,14 +1425,45 @@ exports.buscarNuevaFechaYHoraYLugarYArbitros = async (partido, campeonato) => {
     fechaActual.add(1, 'days');
   }
 
-  while (fechaActual.isBefore(fechaFin) || fechaActual.isSame(fechaFin, 'day')) {
-    let fechaPartido = fechaActual.format("YYYY-MM-DD");
+  while (
+    fechaActual.isBefore(fechaFin) ||
+    fechaActual.isSame(fechaFin, 'day')
+  ) {
+    let fechaPartido = fechaActual.format('YYYY-MM-DD');
 
     // 🔹 Definir horarios disponibles según el día (sábado o domingo)
     let horariosDisponibles =
       fechaActual.isoWeekday() === 6
-        ? ["12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"]
-        : ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"];
+        ? [
+          "12:00",
+          "13:00",
+          "14:00",
+          '15:00',
+          "16:00",
+          '17:00',
+          "18:00",
+          "19:00",
+          "20:00",
+          "21:00",
+          "22:00",
+        ]
+        : [
+          "08:00",
+          "09:00",
+          '10:00',
+          "11:00",
+          '12:00',
+          "13:00",
+          "14:00",
+          '15:00',
+          "16:00",
+          '17:00',
+          "18:00",
+          "19:00",
+          '20:00',
+          "21:00",
+          '22:00',
+        ];
 
     if (!horariosPorFecha[fechaPartido]) {
       horariosPorFecha[fechaPartido] = new Set();
@@ -1306,67 +1478,94 @@ exports.buscarNuevaFechaYHoraYLugarYArbitros = async (partido, campeonato) => {
         fecha: { [Op.startsWith]: fechaPartido },
         [Op.or]: [
           { equipo_local_id: partido.equipo_local_id },
-          { equipo_visitante_id: partido.equipo_visitante_id }
-        ]
-      }
+          { equipo_visitante_id: partido.equipo_visitante_id },
+        ],
+      },
     });
 
     if (partidosExistentes.length > 0) {
-      console.log(`⚠️ ${partido.equipo_local_id} o ${partido.equipo_visitante_id} ya tiene partido el ${fechaPartido}. Buscando siguiente fecha...`);
+      console.log(
+        `⚠️ ${partido.equipo_local_id} o ${partido.equipo_visitante_id} ya tiene partido el ${fechaPartido}. Buscando siguiente fecha...`,
+      );
       do {
-        fechaActual.add(1, "days");
-      } while (fechaActual.isoWeekday() !== 6 && fechaActual.isoWeekday() !== 7);
+        fechaActual.add(1, 'days');
+      } while (
+        fechaActual.isoWeekday() !== 6 &&
+        fechaActual.isoWeekday() !== 7
+      );
       continue;
     }
 
     // 🔹 Buscar el primer horario disponible en esa fecha
-    let horarioDisponible = horariosDisponibles.find(h => !horariosPorFecha[fechaPartido].has(h));
+    let horarioDisponible = horariosDisponibles.find(
+      (h) => !horariosPorFecha[fechaPartido].has(h),
+    );
 
     if (!horarioDisponible) {
-      console.log(`⚠️ No hay horarios disponibles el ${fechaPartido}. Buscando siguiente fecha...`);
+      console.log(
+        `⚠️ No hay horarios disponibles el ${fechaPartido}. Buscando siguiente fecha...`,
+      );
       do {
-        fechaActual.add(1, "days");
-      } while (fechaActual.isoWeekday() !== 6 && fechaActual.isoWeekday() !== 7);
+        fechaActual.add(1, 'days');
+      } while (
+        fechaActual.isoWeekday() !== 6 &&
+        fechaActual.isoWeekday() !== 7
+      );
       continue;
     }
 
     // 🔹 Buscar un lugar disponible en esa fecha y horario
-    let lugarDisponible = await buscarLugarAleatorioDisponible(fechaPartido, horarioDisponible);
+    let lugarDisponible = await buscarLugarAleatorioDisponible(
+      fechaPartido,
+      horarioDisponible,
+    );
 
     if (lugarDisponible) {
       // 🔹 Obtener árbitros disponibles
       const partidoTemporal = {
         fecha: `${fechaPartido} ${horarioDisponible}:00`,
-        lugar_id: lugarDisponible.id
+        lugar_id: lugarDisponible.id,
       };
-      
-      const partidosReprogramados = await exports.asignarArbitrosAPartidos([partidoTemporal]);
-      
-      if (!partidosReprogramados || partidosReprogramados.length === 0 || !partidosReprogramados[0].arbitros) {
-        throw new Error("No se encontraron árbitros disponibles para este partido reprogramado.");
-      }
-      
-      const arbitrosAsignados = partidosReprogramados[0].arbitros;
-      
 
-      console.log(`✅ Partido reprogramado: ${fechaPartido} a las ${horarioDisponible} en ${lugarDisponible.nombre}`);
+      const partidosReprogramados = await exports.asignarArbitrosAPartidos([
+        partidoTemporal,
+      ]);
+
+      if (
+        !partidosReprogramados ||
+        partidosReprogramados.length === 0 ||
+        !partidosReprogramados[0].arbitros
+      ) {
+        throw new Error(
+          'No se encontraron árbitros disponibles para este partido reprogramado.',
+        );
+      }
+
+      const arbitrosAsignados = partidosReprogramados[0].arbitros;
+
+      console.log(
+        `✅ Partido reprogramado: ${fechaPartido} a las ${horarioDisponible} en ${lugarDisponible.nombre}`,
+      );
       return {
         nuevaFechaHora: `${fechaPartido} ${horarioDisponible}:00`,
         nuevoLugar: lugarDisponible,
-        arbitrosAsignados
+        arbitrosAsignados,
       };
     }
 
     // 🔹 Si no se encontró lugar disponible, pasar al siguiente fin de semana
-    console.log(`⚠️ No hay lugar disponible en ${fechaPartido} a las ${horarioDisponible}. Buscando siguiente fecha...`);
+    console.log(
+      `⚠️ No hay lugar disponible en ${fechaPartido} a las ${horarioDisponible}. Buscando siguiente fecha...`,
+    );
     do {
-      fechaActual.add(1, "days");
+      fechaActual.add(1, 'days');
     } while (fechaActual.isoWeekday() !== 6 && fechaActual.isoWeekday() !== 7);
   }
 
-  throw new Error('No hay fechas disponibles dentro del rango del campeonato. Amplíe la fecha de fin del campeonato.');
+  throw new Error(
+    'No hay fechas disponibles dentro del rango del campeonato. Amplíe la fecha de fin del campeonato.',
+  );
 };
-
 
 exports.reprogramarPartido = async (partidoId) => {
   try {
@@ -1376,7 +1575,9 @@ exports.reprogramarPartido = async (partidoId) => {
     }
 
     if (partido.estado === partidoEstadosMapping.Finalizado) {
-      throw new Error('El partido ya ha finalizado y no puede ser reprogramado.');
+      throw new Error(
+        'El partido ya ha finalizado y no puede ser reprogramado.',
+      );
     }
 
     const campeonato = await Campeonato.findByPk(partido.campeonato_id);
@@ -1389,16 +1590,20 @@ exports.reprogramarPartido = async (partidoId) => {
 
     const datosCampeonato = {
       fecha_inicio_campeonato: fechaInicioCampeonato,
-      fecha_fin_campeonato: fechaFinCampeonato
+      fecha_fin_campeonato: fechaFinCampeonato,
     };
 
-    const resultadoSimulacion = await exports.buscarNuevaFechaYHoraYLugarYArbitros(partido, datosCampeonato);
+    const resultadoSimulacion =
+      await exports.buscarNuevaFechaYHoraYLugarYArbitros(
+        partido,
+        datosCampeonato,
+      );
 
     return {
       message: 'Simulación de reprogramación exitosa',
       nuevaFechaHora: resultadoSimulacion.nuevaFechaHora,
       nuevoLugar: resultadoSimulacion.nuevoLugar,
-      arbitrosAsignados: resultadoSimulacion.arbitrosAsignados
+      arbitrosAsignados: resultadoSimulacion.arbitrosAsignados,
     };
   } catch (error) {
     console.error('Error al reprogramar el partido:', error);
@@ -1406,12 +1611,19 @@ exports.reprogramarPartido = async (partidoId) => {
   }
 };
 
-exports.confirmarReprogramacionPartido = async (partidoId, nuevaFechaHora, nuevoLugar, arbitrosAsignados) => {
-  console.log(`🔄 Iniciando transacción para reprogramar el partido ID: ${partidoId}`);
+exports.confirmarReprogramacionPartido = async (
+  partidoId,
+  nuevaFechaHora,
+  nuevoLugar,
+  arbitrosAsignados,
+) => {
+  console.log(
+    `🔄 Iniciando transacción para reprogramar el partido ID: ${partidoId}`,
+  );
   const transaction = await sequelize.transaction();
-  
+
   try {
-    console.log(`📌 Buscando partido en la base de datos...`);
+    console.log('📌 Buscando partido en la base de datos...');
     const partido = await Partido.findByPk(partidoId, { transaction });
 
     if (!partido) {
@@ -1420,51 +1632,56 @@ exports.confirmarReprogramacionPartido = async (partidoId, nuevaFechaHora, nuevo
     }
 
     console.log(`✅ Partido encontrado: ${JSON.stringify(partido)}`);
-    console.log(`📆 Nueva fecha y hora: ${nuevaFechaHora}, 📍 Nuevo lugar: ${JSON.stringify(nuevoLugar)}`);
-    const fechaFormateada = moment(nuevaFechaHora).format("YYYY-MM-DD HH:mm:ss");
+    console.log(
+      `📆 Nueva fecha y hora: ${nuevaFechaHora}, 📍 Nuevo lugar: ${JSON.stringify(nuevoLugar)}`,
+    );
+    const fechaFormateada = moment(nuevaFechaHora).format(
+      'YYYY-MM-DD HH:mm:ss',
+    );
     partido.fecha = sequelize.literal(`'${fechaFormateada}'`);
     partido.lugar_id = nuevoLugar.id;
-    console.log(`🔄 Guardando cambios en el partido...`);
+    console.log('🔄 Guardando cambios en el partido...');
     await partido.save({ transaction });
 
-    console.log(`🗑 Eliminando árbitros anteriores...`);
+    console.log('🗑 Eliminando árbitros anteriores...');
     await ArbitroPartido.destroy({
       where: { partido_id: partidoId },
-      transaction
+      transaction,
     });
 
-    console.log(`✅ Árbitros anteriores eliminados.`);
+    console.log('✅ Árbitros anteriores eliminados.');
 
-    console.log(`🆕 Asignando nuevos árbitros...`);
+    console.log('🆕 Asignando nuevos árbitros...');
     for (const arbitro of arbitrosAsignados) {
-      console.log(`👤 Asignando árbitro ID: ${arbitro.id} (${arbitro.nombre} ${arbitro.apellido})`);
+      console.log(
+        `👤 Asignando árbitro ID: ${arbitro.id} (${arbitro.nombre} ${arbitro.apellido})`,
+      );
       await ArbitroPartido.create(
         {
           partido_id: partidoId,
-          arbitro_id: arbitro.id
+          arbitro_id: arbitro.id,
         },
-        { transaction }
+        { transaction },
       );
     }
 
-    console.log(`✅ Todos los árbitros asignados correctamente.`);
+    console.log('✅ Todos los árbitros asignados correctamente.');
 
-    console.log(`✅ Confirmando transacción...`);
+    console.log('✅ Confirmando transacción...');
     await transaction.commit();
 
-    console.log(`🎉 Partido reprogramado exitosamente.`);
+    console.log('🎉 Partido reprogramado exitosamente.');
 
     return {
       message: 'Partido reprogramado exitosamente',
       partido,
-      arbitrosAsignados
+      arbitrosAsignados,
     };
-
   } catch (error) {
     console.error(`🚨 Error durante la reprogramación: ${error.message}`);
 
     if (transaction) {
-      console.log(`⏪ Realizando rollback de la transacción...`);
+      console.log('⏪ Realizando rollback de la transacción...');
       await transaction.rollback();
     }
 
@@ -1485,6 +1702,7 @@ exports.obtenerResultadosPartido = async (partidoId) => {
     const query = `
        SELECT 
         p.id AS partido_id,
+        t.equipo_id AS equipo_tarjeta_id,
         el.nombre AS equipo_local,
         ev.nombre AS equipo_visitante,
         p.fecha,
@@ -1505,7 +1723,7 @@ exports.obtenerResultadosPartido = async (partidoId) => {
 
     const resultados = await sequelize.query(query, {
       replacements: { partidoId: partidoIdNumerico },
-      type: sequelize.QueryTypes.SELECT
+      type: sequelize.QueryTypes.SELECT,
     });
 
     if (resultados.length === 0) {
@@ -1518,31 +1736,40 @@ exports.obtenerResultadosPartido = async (partidoId) => {
       equipo_local: resultados[0].equipo_local,
       equipo_visitante: resultados[0].equipo_visitante,
       fecha: resultados[0].fecha,
-      resultadoLocal: resultados[0].local_set1 !== null ? {
-        set1: resultados[0].local_set1,
-        set2: resultados[0].local_set2,
-        set3: resultados[0].local_set3,
-        resultado: resultados[0].local_resultado,
-        walkover: resultados[0].local_walkover
-      } : null,
-      resultadoVisitante: resultados[0].visitante_set1 !== null ? {
-        set1: resultados[0].visitante_set1,
-        set2: resultados[0].visitante_set2,
-        set3: resultados[0].visitante_set3,
-        resultado: resultados[0].visitante_resultado,
-        walkover: resultados[0].visitante_walkover
-      } : null,
+      resultadoLocal:
+        resultados[0].local_set1 !== null
+          ? {
+            set1: resultados[0].local_set1,
+            set2: resultados[0].local_set2,
+            set3: resultados[0].local_set3,
+            resultado: resultados[0].local_resultado,
+            walkover: resultados[0].local_walkover,
+          }
+          : null,
+      resultadoVisitante:
+        resultados[0].visitante_set1 !== null
+          ? {
+            set1: resultados[0].visitante_set1,
+            set2: resultados[0].visitante_set2,
+            set3: resultados[0].visitante_set3,
+            resultado: resultados[0].visitante_resultado,
+            walkover: resultados[0].visitante_walkover,
+          }
+          : null,
       tarjetas: resultados
-        .filter(r => r.tarjeta_id !== null)
-        .map(r => ({
+        .filter((r) => r.tarjeta_id !== null)
+        .map((r) => ({
+          equipoId: r.equipo_tarjeta_id,
           equipo: r.equipo_tarjeta,
           jugador_tarjeta_id: r.jugador_tarjeta_id,
-          jugador: r.jugador_nombre ? `${r.jugador_nombre} ${r.jugador_apellido}` : 'Sin jugador asignado',
-          tipo_tarjeta: r.tipo_tarjeta
-        }))
+          jugador: r.jugador_nombre
+            ? `${r.jugador_nombre} ${r.jugador_apellido}`
+            : 'Sin jugador asignado',
+          tipo_tarjeta: r.tipo_tarjeta,
+        })),
     };
 
-    console.log("✅ Datos obtenidos correctamente:", partidoInfo);
+    console.log('✅ Datos obtenidos correctamente:', partidoInfo);
     return partidoInfo;
   } catch (error) {
     console.error('🚨 Error al obtener los resultados del partido:', error);
@@ -1577,7 +1804,7 @@ exports.obtenerGanadorPartido = async (partidoId) => {
 
     const resultados = await sequelize.query(query, {
       replacements: { partidoId: partidoIdNumerico },
-      type: sequelize.QueryTypes.SELECT
+      type: sequelize.QueryTypes.SELECT,
     });
 
     if (resultados.length === 0) {
@@ -1587,17 +1814,20 @@ exports.obtenerGanadorPartido = async (partidoId) => {
     const resultado = resultados[0];
 
     // 🔹 Verificar si hay walkover
-    if (resultado.walkover_local !== null && resultado.walkover_visitante !== null) {
+    if (
+      resultado.walkover_local !== null &&
+      resultado.walkover_visitante !== null
+    ) {
       let tipoWalkover = resultado.walkover_local; // Ambas tablas contienen el mismo valor de walkover
 
       let resultadoFinal = {
         partido_id: partidoId,
         equipo_local: resultado.equipo_local,
         equipo_visitante: resultado.equipo_visitante,
-        walkover: tipoWalkover.trim() // Puede ser 'L', 'V' o 'both'
+        walkover: tipoWalkover.trim(), // Puede ser 'L', 'V' o 'both'
       };
 
-      console.log("✅ Walkover detectado:", resultadoFinal);
+      console.log('✅ Walkover detectado:', resultadoFinal);
       return resultadoFinal;
     }
 
@@ -1634,10 +1864,13 @@ exports.obtenerGanadorPartido = async (partidoId) => {
       equipo_local: resultado.equipo_local,
       equipo_visitante: resultado.equipo_visitante,
       marcador: `${setsGanadosLocal}-${setsGanadosVisitante}`, // Ejemplo: "2-1"
-      ganador: setsGanadosLocal > setsGanadosVisitante ? resultado.equipo_local : resultado.equipo_visitante
+      ganador:
+        setsGanadosLocal > setsGanadosVisitante
+          ? resultado.equipo_local
+          : resultado.equipo_visitante,
     };
 
-    console.log("✅ Resultado calculado:", resultadoFinal);
+    console.log('✅ Resultado calculado:', resultadoFinal);
     return resultadoFinal;
   } catch (error) {
     console.error('🚨 Error al obtener el resultado del partido:', error);
@@ -1652,30 +1885,34 @@ exports.obtenerFechasDisponiblesPorLugar = async (lugar_id) => {
     // Obtener el campeonato activo
     const campeonato = await Campeonato.findOne({
       where: { estado: { [Op.ne]: estadosMapping.campeonatoFinalizado } },
-      attributes: ['id', 'fecha_inicio_campeonato', 'fecha_fin_campeonato']
+      attributes: ['id', 'fecha_inicio_campeonato', 'fecha_fin_campeonato'],
     });
 
     if (!campeonato) {
-      throw new Error("❌ No se encontró un campeonato activo.");
+      throw new Error('❌ No se encontró un campeonato activo.');
     }
 
     const fechaInicio = moment(campeonato.fecha_inicio_campeonato);
     const fechaFin = moment(campeonato.fecha_fin_campeonato);
 
     if (!fechaInicio.isValid() || !fechaFin.isValid()) {
-      throw new Error("❌ Fechas del campeonato no válidas.");
+      throw new Error('❌ Fechas del campeonato no válidas.');
     }
 
-    console.log(`📅 Rango del campeonato: ${fechaInicio.format('YYYY-MM-DD')} - ${fechaFin.format('YYYY-MM-DD')}`);
+    console.log(
+      `📅 Rango del campeonato: ${fechaInicio.format('YYYY-MM-DD')} - ${fechaFin.format('YYYY-MM-DD')}`,
+    );
 
     // Obtener las fechas ocupadas
     const partidosOcupados = await Partido.findAll({
       attributes: ['fecha'],
       where: { campeonato_id: campeonato.id, lugar_id },
-      raw: true
+      raw: true,
     });
 
-    let fechasOcupadas = new Set(partidosOcupados.map(p => moment(p.fecha).format('YYYY-MM-DD')));
+    let fechasOcupadas = new Set(
+      partidosOcupados.map((p) => moment(p.fecha).format('YYYY-MM-DD')),
+    );
 
     // Generar todas las fechas disponibles
     let fechasDisponibles = [];
@@ -1684,144 +1921,422 @@ exports.obtenerFechasDisponiblesPorLugar = async (lugar_id) => {
     while (fechaIterador.isSameOrBefore(fechaFin)) {
       const fechaStr = fechaIterador.format('YYYY-MM-DD');
 
-      if ((fechaIterador.isoWeekday() === 6 || fechaIterador.isoWeekday() === 7) && !fechasOcupadas.has(fechaStr)) {
+      if (
+        (fechaIterador.isoWeekday() === 6 ||
+          fechaIterador.isoWeekday() === 7) &&
+        !fechasOcupadas.has(fechaStr)
+      ) {
         fechasDisponibles.push(fechaStr);
       }
 
       fechaIterador.add(1, 'day');
     }
 
-    console.log("✅ Fechas disponibles:", fechasDisponibles);
+    console.log('✅ Fechas disponibles:', fechasDisponibles);
     return fechasDisponibles;
-
   } catch (error) {
-    console.error("❌ Error al obtener fechas disponibles:", error);
+    console.error('❌ Error al obtener fechas disponibles:', error);
     throw error;
   }
 };
 
 exports.obtenerHorariosDisponiblesPorFechaYLugar = async (lugar_id, fecha) => {
   try {
-    console.log(`🔍 Buscando horarios disponibles para el lugar ID: ${lugar_id} en la fecha: ${fecha}`);
+    console.log(
+      `🔍 Buscando horarios disponibles para el lugar ID: ${lugar_id} en la fecha: ${fecha}`,
+    );
 
     // Verificar si la fecha es sábado o domingo
     const fechaMoment = moment(fecha, 'YYYY-MM-DD');
     if (fechaMoment.isoWeekday() !== 6 && fechaMoment.isoWeekday() !== 7) {
-      throw new Error("❌ Solo se pueden consultar horarios para sábados y domingos.");
+      throw new Error(
+        '❌ Solo se pueden consultar horarios para sábados y domingos.',
+      );
     }
 
     // Definir los horarios disponibles según el día
     let horariosDisponibles =
       fechaMoment.isoWeekday() === 6
-        ? ["12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"]
-        : ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"];
+        ? [
+          '12:00',
+          "13:00",
+          '14:00',
+          "15:00",
+          '16:00',
+          "17:00",
+          "18:00",
+          "19:00",
+          "20:00",
+          "21:00",
+          '22:00',
+        ]
+        : [
+          '08:00',
+          "09:00",
+          "10:00",
+          '11:00',
+          "12:00",
+          '13:00',
+          "14:00",
+          '15:00',
+          "16:00",
+          '17:00',
+          "18:00",
+          '19:00',
+          "20:00",
+          "21:00",
+          '22:00',
+        ];
 
     // Obtener horarios ocupados en la fecha
     const partidosEnFecha = await Partido.findAll({
       attributes: ['fecha'],
       where: {
         lugar_id,
-        fecha: { [Op.startsWith]: fecha }
+        fecha: { [Op.startsWith]: fecha },
       },
-      raw: true
+      raw: true,
     });
 
     // Extraer horarios ocupados
-    let horariosOcupados = new Set(partidosEnFecha.map(p => moment(p.fecha).format('HH:mm')));
+    let horariosOcupados = new Set(
+      partidosEnFecha.map((p) => moment(p.fecha).format('HH:mm')),
+    );
 
     // Filtrar horarios disponibles
-    let horariosLibres = horariosDisponibles.filter(h => !horariosOcupados.has(h));
+    let horariosLibres = horariosDisponibles.filter(
+      (h) => !horariosOcupados.has(h),
+    );
 
-    console.log("✅ Horarios disponibles:", horariosLibres);
+    console.log('✅ Horarios disponibles:', horariosLibres);
     return horariosLibres;
-
   } catch (error) {
-    console.error("❌ Error al obtener horarios disponibles:", error);
+    console.error('❌ Error al obtener horarios disponibles:', error);
     throw error;
   }
 };
 
-exports.getArbitrosDisponiblesPorFechaYLugar = async (fecha, hora, lugar_id) => {
+exports.getArbitrosDisponiblesPorFechaYLugar = async (
+  fecha,
+  hora,
+  lugar_id,
+) => {
   try {
-    console.log(`🔍 Buscando árbitros disponibles para la fecha: ${fecha}, hora: ${hora} y el lugar ID: ${lugar_id}`);
+    console.log(
+      `🔍 Buscando árbitros disponibles para la fecha: ${fecha}, hora: ${hora} y el lugar ID: ${lugar_id}`,
+    );
 
     // Obtener todos los árbitros activos
-    const arbitrosDisponibles = await sequelize.query(`
+    const arbitrosDisponibles = await sequelize.query(
+      `
       SELECT a.id, p.nombre, p.apellido, imp.persona_imagen
       FROM Arbitro a
       INNER JOIN Persona p ON p.id = a.id
       LEFT JOIN ImagenPersona imp ON imp.persona_id = p.id
       WHERE activo = 1
-    `, {
-      type: sequelize.QueryTypes.SELECT
-    });
+    `,
+      {
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
     if (!arbitrosDisponibles || arbitrosDisponibles.length === 0) {
-      console.error("🚨 No hay árbitros disponibles.");
-      throw new Error("No hay árbitros disponibles para asignar a los partidos.");
+      console.error('🚨 No hay árbitros disponibles.');
+      throw new Error(
+        'No hay árbitros disponibles para asignar a los partidos.',
+      );
     }
 
     // 🛑 1. Excluir árbitros si ya tienen un partido en el MISMO LUGAR y a la MISMA HORA
-    const arbitrosOcupadosMismoLugarHora = await sequelize.query(`
+    const arbitrosOcupadosMismoLugarHora = await sequelize.query(
+      `
       SELECT DISTINCT ap.arbitro_id
       FROM Arbitro_Partido ap
       INNER JOIN Partido p ON ap.partido_id = p.id
       WHERE p.fecha = CONCAT(:fecha, ' ', :hora) 
       AND p.lugar_id = :lugar_id
-    `, {
-      replacements: { fecha, hora, lugar_id },
-      type: sequelize.QueryTypes.SELECT
-    });
+    `,
+      {
+        replacements: { fecha, hora, lugar_id },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
-    const arbitrosOcupadosMismoLugarHoraSet = new Set(arbitrosOcupadosMismoLugarHora.map(a => a.arbitro_id));
+    const arbitrosOcupadosMismoLugarHoraSet = new Set(
+      arbitrosOcupadosMismoLugarHora.map((a) => a.arbitro_id),
+    );
 
     // 🛑 2. Excluir árbitros si ya tienen un partido en OTRO LUGAR a la MISMA FECHA Y HORA
-    const arbitrosOcupadosOtroLugarMismaHora = await sequelize.query(`
+    const arbitrosOcupadosOtroLugarMismaHora = await sequelize.query(
+      `
       SELECT DISTINCT ap.arbitro_id
       FROM Arbitro_Partido ap
       INNER JOIN Partido p ON ap.partido_id = p.id
       WHERE p.fecha = CONCAT(:fecha, ' ', :hora)
       AND p.lugar_id != :lugar_id
-    `, {
-      replacements: { fecha, hora, lugar_id }, 
-      type: sequelize.QueryTypes.SELECT
-    });
+    `,
+      {
+        replacements: { fecha, hora, lugar_id },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
-    const arbitrosOcupadosOtroLugarMismaHoraSet = new Set(arbitrosOcupadosOtroLugarMismaHora.map(a => a.arbitro_id));
+    const arbitrosOcupadosOtroLugarMismaHoraSet = new Set(
+      arbitrosOcupadosOtroLugarMismaHora.map((a) => a.arbitro_id),
+    );
 
     // 🛑 3. Excluir árbitros si ya tienen 8 partidos en la MISMA FECHA y el MISMO LUGAR
-    const arbitrosConCantidadPartidos = await sequelize.query(`
+    const arbitrosConCantidadPartidos = await sequelize.query(
+      `
       SELECT ap.arbitro_id, COUNT(p.id) AS cantidad
       FROM Arbitro_Partido ap
       INNER JOIN Partido p ON ap.partido_id = p.id
       WHERE CONVERT(DATE, p.fecha) = :fecha 
       AND p.lugar_id = :lugar_id
       GROUP BY ap.arbitro_id
-    `, {
-      replacements: { fecha, lugar_id },
-      type: sequelize.QueryTypes.SELECT
-    });
+    `,
+      {
+        replacements: { fecha, lugar_id },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
 
     const arbitrosCon8Partidos = new Set(
-      arbitrosConCantidadPartidos.filter(a => a.cantidad >= 8).map(a => a.arbitro_id)
+      arbitrosConCantidadPartidos
+        .filter((a) => a.cantidad >= 8)
+        .map((a) => a.arbitro_id),
     );
 
-    console.log("🚨 Árbitros ocupados en este lugar y hora:", [...arbitrosOcupadosMismoLugarHoraSet]);
-    console.log("🚨 Árbitros con partidos en otro lugar a la misma fecha y hora:", [...arbitrosOcupadosOtroLugarMismaHoraSet]);
-    console.log("🚨 Árbitros con 8 partidos asignados en este lugar:", [...arbitrosCon8Partidos]);
+    console.log('🚨 Árbitros ocupados en este lugar y hora:', [
+      ...arbitrosOcupadosMismoLugarHoraSet,
+    ]);
+    console.log(
+      '🚨 Árbitros con partidos en otro lugar a la misma fecha y hora:',
+      [...arbitrosOcupadosOtroLugarMismaHoraSet],
+    );
+    console.log('🚨 Árbitros con 8 partidos asignados en este lugar:', [
+      ...arbitrosCon8Partidos,
+    ]);
 
     // 🏆 Filtrar árbitros disponibles correctamente
-    const arbitrosFiltrados = arbitrosDisponibles.filter(a => 
-      !arbitrosOcupadosMismoLugarHoraSet.has(a.id) &&  // Si ya tiene un partido en el mismo lugar y hora
-      !arbitrosOcupadosOtroLugarMismaHoraSet.has(a.id) && // Si ya tiene un partido en otro lugar en la misma fecha y hora
-      !arbitrosCon8Partidos.has(a.id) // Si ya tiene 8 partidos en el mismo día y lugar
+    const arbitrosFiltrados = arbitrosDisponibles.filter(
+      (a) =>
+        !arbitrosOcupadosMismoLugarHoraSet.has(a.id) && // Si ya tiene un partido en el mismo lugar y hora
+        !arbitrosOcupadosOtroLugarMismaHoraSet.has(a.id) && // Si ya tiene un partido en otro lugar en la misma fecha y hora
+        !arbitrosCon8Partidos.has(a.id), // Si ya tiene 8 partidos en el mismo día y lugar
     );
 
-    console.log("✅ Árbitros disponibles después de validaciones:", arbitrosFiltrados);
+    console.log(
+      '✅ Árbitros disponibles después de validaciones:',
+      arbitrosFiltrados,
+    );
     return arbitrosFiltrados;
-
   } catch (error) {
-    console.error("❌ Error al obtener árbitros disponibles:", error);
-    throw new Error("Error al obtener los árbitros.");
+    console.error('❌ Error al obtener árbitros disponibles:', error);
+    throw new Error('Error al obtener los árbitros.');
+  }
+};
+
+exports.updateResultadoSets = async ({
+  partido_id,
+  resultadoLocal,
+  resultadoVisitante,
+  walkover = null,
+}) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const walkoverValue = walkover === '' ? null : walkover;
+
+    // Buscar si ya existen resultados
+    const local = await ResultadoLocal.findOne({ where: { partido_id } });
+    const visitante = await ResultadoVisitante.findOne({
+      where: { partido_id },
+    });
+
+    if (!local) {
+      await ResultadoLocal.create(
+        {
+          partido_id,
+          set1: resultadoLocal.set1 ?? 0,
+          set2: resultadoLocal.set2 ?? 0,
+          set3: resultadoLocal.set3 ?? 0,
+          resultado: resultadoLocal.resultado || null,
+          walkover: walkoverValue,
+        },
+        { transaction },
+      );
+    } else {
+      await local.update(
+        {
+          set1: resultadoLocal.set1 ?? local.set1,
+          set2: resultadoLocal.set2 ?? local.set2,
+          set3: resultadoLocal.set3 ?? local.set3,
+          resultado: resultadoLocal.resultado || local.resultado,
+          walkover: walkoverValue,
+        },
+        { transaction },
+      );
+    }
+
+    if (!visitante) {
+      await ResultadoVisitante.create(
+        {
+          partido_id,
+          set1: resultadoVisitante.set1 ?? 0,
+          set2: resultadoVisitante.set2 ?? 0,
+          set3: resultadoVisitante.set3 ?? 0,
+          resultado: resultadoVisitante.resultado || null,
+          walkover: walkoverValue,
+        },
+        { transaction },
+      );
+    } else {
+      await visitante.update(
+        {
+          set1: resultadoVisitante.set1 ?? visitante.set1,
+          set2: resultadoVisitante.set2 ?? visitante.set2,
+          set3: resultadoVisitante.set3 ?? visitante.set3,
+          resultado: resultadoVisitante.resultado || visitante.resultado,
+          walkover: walkoverValue,
+        },
+        { transaction },
+      );
+    }
+    const partido = await Partido.findByPk(partido_id, { transaction });
+    if (partido.estado === partidoEstadosMapping.Confirmado) {
+      await partido.update(
+        { estado: partidoEstadosMapping.Vivo },
+        { transaction },
+      );
+    }
+
+    await transaction.commit();
+    broadcastPositionsUpdate(); // Si quieres actualizar en tiempo real
+    return { message: 'Sets actualizados correctamente' };
+  } catch (error) {
+    await transaction.rollback();
+    throw new Error(
+      'Error al actualizar resultados parciales: ' + error.message,
+    );
+  }
+};
+
+exports.syncTarjetas = async (
+  partido_id,
+  nuevasTarjetas,
+  transaction = null,
+) => {
+  const t = transaction || (await sequelize.transaction());
+
+  try {
+    const existentes = await Tarjeta.findAll({
+      where: { partido_id },
+      transaction: t,
+    });
+
+    // Convertimos a estructura simple para comparación
+    const serialize = (t) => `${t.equipoId}-${t.jugadorId}-${t.tipoTarjeta}`;
+    const nuevasSerializadas = nuevasTarjetas.map(serialize);
+    const existentesSerializadas = existentes.map(serialize);
+
+    // Eliminar tarjetas que ya no están
+    for (const tarjetaBD of existentes) {
+      if (!nuevasSerializadas.includes(serialize(tarjetaBD))) {
+        await tarjetaBD.destroy({ transaction: t });
+      }
+    }
+
+    // Agregar tarjetas nuevas
+    for (const tarjeta of nuevasTarjetas) {
+      if (!existentesSerializadas.includes(serialize(tarjeta))) {
+        await Tarjeta.create(
+          {
+            partido_id,
+            equipo_id: tarjeta.equipoId,
+            jugador_id: tarjeta.jugadorId,
+            tipo_tarjeta: tarjeta.tipoTarjeta,
+          },
+          { transaction: t },
+        );
+      }
+    }
+
+    if (!transaction) await t.commit();
+    return { message: 'Tarjetas sincronizadas correctamente' };
+  } catch (error) {
+    if (!transaction) await t.rollback();
+    throw new Error('Error al sincronizar tarjetas: ' + error.message);
+  }
+};
+
+exports.submitResultados = async ({
+  partido_id,
+  resultadoLocal,
+  resultadoVisitante,
+  walkover,
+  tarjetas,
+  imagenPlanilla,
+}) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    console.log('Datos recibidos:', {
+      partido_id,
+      resultadoLocal,
+      resultadoVisitante,
+      walkover,
+      tarjetas,
+      imagenPlanilla,
+    });
+
+    const walkoverValue = walkover === '' ? null : walkover;
+
+    await exports.updateResultadoSets({
+      partido_id,
+      resultadoLocal,
+      resultadoVisitante,
+      walkover,
+    });
+
+    // Actualizar tarjetas
+    await exports.syncTarjetas(partido_id, tarjetas, transaction);
+
+    // Subir imagen de planilla
+    if (imagenPlanilla) {
+      const fileName = `planilla_${partido_id}_${Date.now()}`;
+      const { downloadURL } = await uploadFile(
+        imagenPlanilla,
+        fileName,
+        null,
+        'FilesPlanillas',
+      );
+      await ImagePlanilla.create(
+        {
+          partido_id,
+          partido_image: downloadURL,
+        },
+        { transaction },
+      );
+    }
+
+    // Finalizar partido
+    await Partido.update(
+      { estado: partidoEstadosMapping.Finalizado },
+      { where: { id: partido_id }, transaction },
+    );
+
+    await transaction.commit();
+
+    console.log(
+      'Resultados finalizados correctamente. Enviando actualización por WebSocket...',
+    );
+    broadcastPositionsUpdate();
+
+    return { message: 'Partido finalizado y datos registrados correctamente' };
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error durante la finalización:', error);
+    throw new Error('Error al finalizar el partido: ' + error.message);
   }
 };

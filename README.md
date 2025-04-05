@@ -31,3 +31,16 @@ node seeders/seed-jugadores.js
 
 usuario: Admin@example.com
 contraseña: 12345
+
+# Eslint Comando
+
+npx eslint nombre del archivo --fix
+
+# ejemplo
+
+npx eslint src/pages/Partidos/RegistrarResultado.js --fix
+
+# Opcional
+
+npx prettier --write src/pages/Partidos/PartidoDetalle.js
+
