@@ -12,4 +12,17 @@ const broadcastPositionsUpdate = () => {
   });
 };
 
-module.exports = { clients, broadcastPositionsUpdate };
+const broadcastPartidoUpdate = (partido_id) => {
+  const message = JSON.stringify({
+    type: 'actualizacion_resultado', 
+    partido_id,
+  });
+  
+  clients.forEach((ws,client) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(message);
+    }
+  });
+};
+
+module.exports = { clients, broadcastPositionsUpdate, broadcastPartidoUpdate  };

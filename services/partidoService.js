@@ -16,7 +16,10 @@ const moment = require('moment');
 const partidoEstadosMapping = require('../constants/estadoPartido');
 const { Op } = require('sequelize');
 const { broadcastPositionsUpdate } = require('../utils/websocket');
+const { broadcastPartidoUpdate } = require('../utils/websocket');
 const estadosMapping = require('../constants/campeonatoEstados');
+const { ref, deleteObject } = require('firebase/storage');
+const { storage } = require('../config/firebase');
 
 exports.createPartido = async (data) => {
   const transaction = await sequelize.transaction();
@@ -447,6 +450,7 @@ exports.getPartidoCompletoById = async (partidoId) => {
         P.id AS partido_id,
         P.fecha,
         P.estado,
+        L.id AS lugar_id,
         L.nombre AS lugar_nombre,
         L.longitud AS lugar_longitud,
         L.latitud AS lugar_latitud,
@@ -1698,9 +1702,8 @@ exports.obtenerResultadosPartido = async (partidoId) => {
       throw new Error('El ID del partido debe ser un número válido.');
     }
 
-    // 🔹 Consulta SQL para obtener el partido, resultados y tarjetas
     const query = `
-       SELECT 
+      SELECT DISTINCT
         p.id AS partido_id,
         t.equipo_id AS equipo_tarjeta_id,
         el.nombre AS equipo_local,
@@ -1708,7 +1711,8 @@ exports.obtenerResultadosPartido = async (partidoId) => {
         p.fecha,
         rl.set1 AS local_set1, rl.set2 AS local_set2, rl.set3 AS local_set3, rl.resultado AS local_resultado, rl.walkover AS local_walkover,
         rv.set1 AS visitante_set1, rv.set2 AS visitante_set2, rv.set3 AS visitante_set3, rv.resultado AS visitante_resultado, rv.walkover AS visitante_walkover,
-        t.id AS tarjeta_id, t.jugador_id AS jugador_tarjeta_id,e.nombre AS equipo_tarjeta, pe.nombre AS jugador_nombre, pe.apellido AS jugador_apellido, t.tipo_tarjeta
+        t.id AS tarjeta_id, t.jugador_id AS jugador_tarjeta_id, e.nombre AS equipo_tarjeta, pe.nombre AS jugador_nombre, pe.apellido AS jugador_apellido, t.tipo_tarjeta,
+        ip.partido_image AS imagen_planilla
       FROM Partido p
       JOIN Equipo el ON p.equipo_local_id = el.id
       JOIN Equipo ev ON p.equipo_visitante_id = ev.id
@@ -1717,7 +1721,8 @@ exports.obtenerResultadosPartido = async (partidoId) => {
       LEFT JOIN Tarjeta t ON p.id = t.partido_id
       LEFT JOIN Equipo e ON t.equipo_id = e.id
       LEFT JOIN Jugador j ON t.jugador_id = j.id
-	    LEFT JOIN Persona pe ON pe.id = j.jugador_id
+      LEFT JOIN Persona pe ON pe.id = j.jugador_id
+      LEFT JOIN ImagePlanilla ip ON ip.partido_id = p.id
       WHERE p.id = :partidoId;
     `;
 
@@ -1730,31 +1735,31 @@ exports.obtenerResultadosPartido = async (partidoId) => {
       throw new Error('No se encontraron datos para el partido proporcionado.');
     }
 
-    // 🔹 Estructurar los resultados obtenidos de la consulta SQL
     const partidoInfo = {
       partido_id: resultados[0].partido_id,
       equipo_local: resultados[0].equipo_local,
       equipo_visitante: resultados[0].equipo_visitante,
       fecha: resultados[0].fecha,
+      imagenPlanilla: resultados[0].imagen_planilla || null,
       resultadoLocal:
         resultados[0].local_set1 !== null
           ? {
-            set1: resultados[0].local_set1,
-            set2: resultados[0].local_set2,
-            set3: resultados[0].local_set3,
-            resultado: resultados[0].local_resultado,
-            walkover: resultados[0].local_walkover,
-          }
+              set1: resultados[0].local_set1,
+              set2: resultados[0].local_set2,
+              set3: resultados[0].local_set3,
+              resultado: resultados[0].local_resultado,
+              walkover: resultados[0].local_walkover?.trim(),
+            }
           : null,
       resultadoVisitante:
         resultados[0].visitante_set1 !== null
           ? {
-            set1: resultados[0].visitante_set1,
-            set2: resultados[0].visitante_set2,
-            set3: resultados[0].visitante_set3,
-            resultado: resultados[0].visitante_resultado,
-            walkover: resultados[0].visitante_walkover,
-          }
+              set1: resultados[0].visitante_set1,
+              set2: resultados[0].visitante_set2,
+              set3: resultados[0].visitante_set3,
+              resultado: resultados[0].visitante_resultado,
+              walkover: resultados[0].visitante_walkover?.trim(),
+            }
           : null,
       tarjetas: resultados
         .filter((r) => r.tarjeta_id !== null)
@@ -1769,7 +1774,6 @@ exports.obtenerResultadosPartido = async (partidoId) => {
         })),
     };
 
-    console.log('✅ Datos obtenidos correctamente:', partidoInfo);
     return partidoInfo;
   } catch (error) {
     console.error('🚨 Error al obtener los resultados del partido:', error);
@@ -1835,28 +1839,24 @@ exports.obtenerGanadorPartido = async (partidoId) => {
     let setsGanadosLocal = 0;
     let setsGanadosVisitante = 0;
 
-    // Verificar Set 1
-    if (resultado.local_set1 > resultado.visitante_set1) {
-      setsGanadosLocal++;
-    } else {
-      setsGanadosVisitante++;
-    }
-
-    // Verificar Set 2
-    if (resultado.local_set2 > resultado.visitante_set2) {
-      setsGanadosLocal++;
-    } else {
-      setsGanadosVisitante++;
-    }
-
-    // Si ambos ganaron un set, verificar el Set 3
-    if (setsGanadosLocal === 1 && setsGanadosVisitante === 1) {
-      if (resultado.local_set3 > resultado.visitante_set3) {
-        setsGanadosLocal++;
-      } else {
-        setsGanadosVisitante++;
+    const sets = [
+      { local: resultado.local_set1, visitante: resultado.visitante_set1 },
+      { local: resultado.local_set2, visitante: resultado.visitante_set2 },
+      { local: resultado.local_set3, visitante: resultado.visitante_set3 },
+    ];
+    
+    for (const set of sets) {
+      if (
+        typeof set.local === "number" &&
+        typeof set.visitante === "number"
+      ) {
+        if (set.local > set.visitante) {
+          setsGanadosLocal++;
+        } else if (set.visitante > set.local) {
+          setsGanadosVisitante++;
+        }
       }
-    }
+    }    
 
     // Definir el resultado final basado en sets ganados
     let resultadoFinal = {
@@ -2204,6 +2204,26 @@ exports.updateResultadoSets = async ({
       );
     }
     const partido = await Partido.findByPk(partido_id, { transaction });
+
+    const otroPartidoVivo = await Partido.findOne({
+      where: {
+        estado: partidoEstadosMapping.Vivo,
+        id: { [Op.ne]: partido_id }, // Excluye el partido actual
+        [Op.or]: [
+          { equipo_local_id: partido.equipo_local_id },
+          { equipo_visitante_id: partido.equipo_local_id },
+          { equipo_local_id: partido.equipo_visitante_id },
+          { equipo_visitante_id: partido.equipo_visitante_id },
+        ],
+      },
+      transaction,
+    });
+
+    if (otroPartidoVivo) {
+      throw new Error(
+        'Uno de los equipos ya tiene un partido en curso. Finalice ese partido antes de continuar.'
+      );
+    }
     if (partido.estado === partidoEstadosMapping.Confirmado) {
       await partido.update(
         { estado: partidoEstadosMapping.Vivo },
@@ -2212,13 +2232,13 @@ exports.updateResultadoSets = async ({
     }
 
     await transaction.commit();
+    broadcastPartidoUpdate(partido_id);
     broadcastPositionsUpdate(); // Si quieres actualizar en tiempo real
     return { message: 'Sets actualizados correctamente' };
   } catch (error) {
+    console.error('Error al actualizar los sets:', error);
     await transaction.rollback();
-    throw new Error(
-      'Error al actualizar resultados parciales: ' + error.message,
-    );
+    throw error;
   }
 };
 
@@ -2235,8 +2255,13 @@ exports.syncTarjetas = async (
       transaction: t,
     });
 
-    // Convertimos a estructura simple para comparación
-    const serialize = (t) => `${t.equipoId}-${t.jugadorId}-${t.tipoTarjeta}`;
+    const serialize = (t) => {
+      const equipo = t.equipoId || t.equipo_id;
+      const jugador = t.jugadorId || t.jugador_id;
+      const tipo = t.tipoTarjeta || t.tipo_tarjeta;
+      return `${equipo}-${jugador}-${tipo}`;
+    };
+    
     const nuevasSerializadas = nuevasTarjetas.map(serialize);
     const existentesSerializadas = existentes.map(serialize);
 
@@ -2263,8 +2288,10 @@ exports.syncTarjetas = async (
     }
 
     if (!transaction) await t.commit();
+    if (!transaction) broadcastPartidoUpdate(partido_id);
     return { message: 'Tarjetas sincronizadas correctamente' };
   } catch (error) {
+    console.error('Error al sincronizar tarjetas:', error);
     if (!transaction) await t.rollback();
     throw new Error('Error al sincronizar tarjetas: ' + error.message);
   }
@@ -2281,7 +2308,7 @@ exports.submitResultados = async ({
   const transaction = await sequelize.transaction();
 
   try {
-    console.log('Datos recibidos:', {
+    console.log('📨 Datos recibidos:', {
       partido_id,
       resultadoLocal,
       resultadoVisitante,
@@ -2292,51 +2319,226 @@ exports.submitResultados = async ({
 
     const walkoverValue = walkover === '' ? null : walkover;
 
+    // ✅ Sets y Walkover
     await exports.updateResultadoSets({
       partido_id,
       resultadoLocal,
       resultadoVisitante,
-      walkover,
+      walkover: walkoverValue,
     });
 
-    // Actualizar tarjetas
+    // ✅ Tarjetas
     await exports.syncTarjetas(partido_id, tarjetas, transaction);
 
-    // Subir imagen de planilla
+    // ✅ Imagen de planilla (actualizar si ya existe)
     if (imagenPlanilla) {
-      const fileName = `planilla_${partido_id}_${Date.now()}`;
-      const { downloadURL } = await uploadFile(
-        imagenPlanilla,
-        fileName,
-        null,
-        'FilesPlanillas',
-      );
-      await ImagePlanilla.create(
-        {
-          partido_id,
-          partido_image: downloadURL,
-        },
-        { transaction },
-      );
+      const existing = await ImagePlanilla.findOne({
+        where: { partido_id },
+      });
+
+      let previousRef = null;
+
+      if (existing && existing.partido_image) {
+        // Si ya hay una imagen, extraer la referencia de Firebase (solo el path)
+        const url = new URL(existing.partido_image);
+        const path = decodeURIComponent(url.pathname.replace('/v0/b/', '').split('/o/')[1]);
+        previousRef = ref(storage, path);
+      }
+
+      const fileName = `planilla_${partido_id}`;
+      const { downloadURL } = await uploadFile(imagenPlanilla, fileName, previousRef, 'FilesPlanillas');
+
+      if (existing) {
+        // Actualizar registro
+        await ImagePlanilla.update(
+          { partido_image: downloadURL },
+          { where: { partido_id }, transaction }
+        );
+      } else {
+        // Crear nuevo registro
+        await ImagePlanilla.create(
+          { partido_id, partido_image: downloadURL },
+          { transaction }
+        );
+      }
     }
 
-    // Finalizar partido
+    // ✅ Marcar como finalizado
     await Partido.update(
       { estado: partidoEstadosMapping.Finalizado },
-      { where: { id: partido_id }, transaction },
+      { where: { id: partido_id }, transaction }
     );
 
     await transaction.commit();
 
-    console.log(
-      'Resultados finalizados correctamente. Enviando actualización por WebSocket...',
-    );
+    broadcastPartidoUpdate(partido_id);
     broadcastPositionsUpdate();
 
     return { message: 'Partido finalizado y datos registrados correctamente' };
   } catch (error) {
     await transaction.rollback();
-    console.error('Error durante la finalización:', error);
+    console.error('❌ Error durante la finalización:', error.message);
     throw new Error('Error al finalizar el partido: ' + error.message);
   }
 };
+
+exports.obtenerMarcadoresVivos = async (campeonatoId, categoriaId) => {
+  try {
+    const query = `
+      SELECT 
+        p.id AS partido_id,
+        p.equipo_local_id,
+        p.equipo_visitante_id,
+        rl.set1 AS local_set1, rl.set2 AS local_set2, rl.set3 AS local_set3,
+        rv.set1 AS visitante_set1, rv.set2 AS visitante_set2, rv.set3 AS visitante_set3
+      FROM Partido p
+      LEFT JOIN ResultadoLocal rl ON p.id = rl.partido_id
+      LEFT JOIN ResultadoVisitante rv ON p.id = rv.partido_id
+      JOIN EquipoCampeonato ecl ON ecl.equipoid = p.equipo_local_id AND ecl.campeonatoId = p.campeonato_id
+      JOIN EquipoCampeonato ecv ON ecv.equipoid = p.equipo_visitante_id AND ecv.campeonatoId = p.campeonato_id
+      WHERE p.estado = 'V'
+        AND p.campeonato_id = :campeonatoId
+        AND ecl.categoria_id = :categoriaId
+        AND ecv.categoria_id = :categoriaId
+    `;
+
+    const partidos = await sequelize.query(query, {
+      replacements: { campeonatoId, categoriaId },
+      type: sequelize.QueryTypes.SELECT,
+    });
+
+    const resultados = [];
+
+    for (const partido of partidos) {
+      let setsLocal = 0;
+      let setsVisitante = 0;
+
+      if (partido.local_set1 > partido.visitante_set1) setsLocal++;
+      else if (partido.visitante_set1 > partido.local_set1) setsVisitante++;
+
+      if (partido.local_set2 > partido.visitante_set2) setsLocal++;
+      else if (partido.visitante_set2 > partido.local_set2) setsVisitante++;
+
+      if (setsLocal === 1 && setsVisitante === 1) {
+        if (partido.local_set3 > partido.visitante_set3) setsLocal++;
+        else if (partido.visitante_set3 > partido.local_set3) setsVisitante++;
+      }
+
+      let estadoLocal = 'empate';
+      let estadoVisitante = 'empate';
+
+      if (setsLocal > setsVisitante) {
+        estadoLocal = 'ganando';
+        estadoVisitante = 'perdiendo';
+      } else if (setsLocal < setsVisitante) {
+        estadoLocal = 'perdiendo';
+        estadoVisitante = 'ganando';
+      }
+
+      resultados.push(
+        {
+          partido_id: partido.partido_id,
+          equipo_id: partido.equipo_local_id,
+          marcador: `${setsLocal}-${setsVisitante}`,
+          estado: estadoLocal,
+        },
+        {
+          partido_id: partido.partido_id,
+          equipo_id: partido.equipo_visitante_id,
+          marcador: `${setsVisitante}-${setsLocal}`,
+          estado: estadoVisitante,
+        }
+      );
+    }
+
+    return resultados;
+  } catch (error) {
+    console.error("❌ Error al obtener marcadores en vivo:", error);
+    throw new Error("Error al obtener marcadores en vivo");
+  }
+};
+
+exports.updatePartidoReal = async ({
+  partido_id,
+  fecha,
+  lugar_id,
+  arbitros,
+}) => {
+  console.log("🚀 Datos recibidos para actualizar el partido:", {
+    partido_id,
+    fecha,
+    lugar_id,
+    arbitros,
+  });
+
+  let transaction;
+
+  try {
+    transaction = await sequelize.transaction();
+    console.log("🧾 Transacción iniciada");
+
+    // 🔁 1. Actualizar partido
+    console.log("✏️ Actualizando partido...");
+
+    const formattedFecha = moment(fecha).format('YYYY-MM-DD HH:mm:ss');
+    const updateResult = await Partido.update(
+      { fecha: sequelize.fn(
+        'CONVERT',
+        sequelize.literal('DATETIME'),
+        formattedFecha,
+      ) , lugar_id },
+      { where: { id: partido_id }, transaction }
+    );
+    console.log("✅ Partido actualizado:", updateResult);
+
+    // 🔁 2. Eliminar árbitros anteriores
+    console.log("🗑️ Eliminando árbitros anteriores...");
+    await sequelize.query(
+      `DELETE FROM Arbitro_Partido WHERE partido_id = :partido_id`,
+      {
+        replacements: { partido_id },
+        type: sequelize.QueryTypes.DELETE,
+        transaction,
+      }
+    );
+    console.log("✅ Árbitros eliminados");
+
+    // 🔁 3. Insertar nuevos árbitros
+    console.log("➕ Insertando árbitros nuevos...");
+    for (const arbitro_id of arbitros) {
+      console.log(`🔹 Insertando árbitro ${arbitro_id}`);
+      await sequelize.query(
+        `INSERT INTO Arbitro_Partido (partido_id, arbitro_id)
+         VALUES (:partido_id, :arbitro_id)`,
+        {
+          replacements: { partido_id, arbitro_id },
+          type: sequelize.QueryTypes.INSERT,
+          transaction,
+        }
+      );
+    }
+
+    console.log("✅ Árbitros insertados correctamente");
+
+    await transaction.commit();
+    console.log("💾 Transacción commit completado");
+    return { message: "Partido actualizado correctamente" };
+
+  } catch (error) {
+    if (transaction) {
+      console.log("🔁 Intentando rollback por error...");
+      try {
+        await transaction.rollback();
+        console.log("↩️ Rollback exitoso");
+      } catch (rollbackError) {
+        console.error("❌ Falló el rollback:", rollbackError);
+      }
+    }
+
+    console.error("❌ Error en updatePartidoReal:", error);
+    throw new Error("Error al actualizar el partido");
+  }
+};
+
+
+

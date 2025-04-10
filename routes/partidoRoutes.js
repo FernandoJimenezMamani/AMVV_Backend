@@ -19,22 +19,20 @@ router.get('/get_jugadores/:equipoId/campeonato/:campeonatoId', partidoControlle
 router.get('/get_arbitros/:partidoId', partidoController.getArbitrosByPartidoId);
 router.get('/partidos_pdf/filtrar', partidoController.getPartidosByLugarYFecha);
 router.get('/partidos_pdf/filtrar_fecha', partidoController.getPartidosByFecha);
-
 router.get('/generar-fixture/:campeonatoId/:categoriaId', partidoController.generarFixture);
 router.get('/generar-fixture-con-fechas/:campeonatoId/:categoriaId', partidoController.generarFixtureConFechas);
 router.get('/generar-fixture-completo/:campeonatoId/:categoriaId', partidoController.generarFixtureCompleto);
 router.post('/registrar-partidos/:campeonatoId/:categoriaId', partidoController.registrarPartidos);
-
 router.get('/campeonatoPartidosPDF/:campeonatoId', partidoController.getPartidosByCampeonato);
-
 router.get('/reprogramar-partido/:partidoId', partidoController.reprogramarPartidoController);
 router.post('/confirmar-reprogramacion', partidoController.confirmarReprogramacionPartidoController);
 router.get('/resultados/:partidoId', partidoController.obtenerResultadosPartidoController);
 router.get('/ganador/:partidoId', partidoController.obtenerGanadorPartido);
-
 router.get('/fechas-disponibles/:lugar_id', partidoController.getFechasDisponiblesPorLugar);
 router.get('/horarios-disponibles/:lugar_id/:fecha', partidoController.getHorariosDisponiblesPorFechaYLugar);
 router.get('/arbitros-disponibles/:fecha/:hora/:lugar_id', partidoController.getArbitrosDisponiblesPorFechaYLugar);
 router.post('/updateParcialResultados', partidoController.updateParcialResultados);
+router.get('/marcadores-vivos/:campeonatoId/:categoriaId', partidoController.getMarcadoresVivos);
+router.post('/update', partidoController.updatePartidoReal);
 
 module.exports = router;

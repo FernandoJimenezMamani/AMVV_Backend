@@ -6,8 +6,10 @@ async function uploadFile(file, customFileName = null, previousFileRef = null, f
   try {
     // Procesar el archivo con sharp
     let fileBuffer = await sharp(file.buffer)
-      .resize({ width: 200, height: 200, fit: 'cover' })
-      .toBuffer();
+    .resize({ width: 800, withoutEnlargement: true })
+    .jpeg()
+    .toBuffer();
+
  
     // Usar el nombre personalizado si se proporciona, de lo contrario, usar el original
     const fileName = customFileName ? `${customFileName}-${Date.now()}.jpeg` : `${file.originalname}-${Date.now()}`;

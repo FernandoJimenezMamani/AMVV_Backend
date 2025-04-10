@@ -1,5 +1,5 @@
 const partidoService = require("../services/partidoService");
-const { Campeonato } = require("../models");
+const { Campeonato , Partido , ImagePlanilla} = require("../models");
 const fs = require("fs");
 const path = require("path");
 const generatePDF = require("../utils/generatePDF");
@@ -209,12 +209,18 @@ exports.submitResultados = async (req, res) => {
     req.body;
   const imagenPlanilla = req.file;
 
+  const imagenExistente = await ImagePlanilla.findOne({
+    where: { partido_id },
+  });
+
+  const imagenYaCargada = !!imagenExistente;
+
   // Validar los campos requeridos
   if (
     !partido_id ||
     !resultadoLocal ||
     !resultadoVisitante ||
-    !imagenPlanilla
+    (!imagenPlanilla && !imagenYaCargada) 
   ) {
     return res.status(400).json({
       message: "Todos los campos requeridos deben ser proporcionados",
@@ -249,6 +255,7 @@ exports.submitResultados = async (req, res) => {
     });
   }
 };
+
 exports.getPartidoCompletoById = async (req, res) => {
   const { partidoId } = req.params;
 
@@ -767,9 +774,56 @@ exports.updateParcialResultados = async (req, res) => {
     return res.status(200).json({ message: "Actualización parcial exitosa" });
   } catch (error) {
     console.error("Error al actualizar resultados parciales:", error);
-    return res.status(500).json({
-      message: "Error al actualizar resultados parciales",
-      error: error.message,
+    return res.status(400).json({
+      message: error.message || "Error al actualizar resultados parciales",
+    });       
+  }
+};
+
+exports.getMarcadoresVivos = async (req, res) => {
+  const { campeonatoId, categoriaId } = req.params;
+
+  try {
+    const marcadores = await partidoService.obtenerMarcadoresVivos(campeonatoId, categoriaId);
+    res.json(marcadores);
+  } catch (error) {
+    console.error("❌ Error en getMarcadoresVivos:", error);
+    res.status(500).json({ error: "Error al obtener los marcadores en vivo" });
+  }
+};
+
+exports.updatePartidoReal = async (req, res) => {
+  try {
+    const {
+      partido_id,
+      fecha,
+      lugar_id,
+      arbitros,
+    } = req.body;
+
+    console.log("🚀 Datos recibidos para actualizar el partido:", req.body);
+
+    if (
+      !partido_id ||
+      !fecha ||
+      !lugar_id ||
+      !Array.isArray(arbitros)
+    ) {
+      return res.status(400).json({
+        message: "Todos los campos requeridos deben ser proporcionados",
+      });
+    }
+
+    const result = await partidoService.updatePartidoReal({
+      partido_id,
+      fecha,
+      lugar_id,
+      arbitros,
     });
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("❌ Error en updatePartido:", error);
+    res.status(500).json({ message: error.message });
   }
 };

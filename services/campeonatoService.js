@@ -497,7 +497,12 @@ exports.getChampionshipPositions = async (
     END
     ), 0) AS pts,
     ic.club_imagen AS escudo,
-    ec.estado  AS estado
+    ec.estado  AS estado,
+    CASE 
+      WHEN MAX(CASE WHEN pv.equipo_id IS NOT NULL THEN 1 ELSE 0 END) = 1 THEN 1
+      ELSE 0
+    END AS en_vivo,
+	  MAX(pv.partido_id) AS partido_vivo_id
     FROM 
         EquipoCampeonato ec
     INNER JOIN 
@@ -513,6 +518,21 @@ exports.getChampionshipPositions = async (
         Club c ON e.club_id = c.id
     LEFT JOIN
         ImagenClub ic ON c.id = ic.club_id
+        LEFT JOIN (
+        SELECT 
+          id AS partido_id,
+          equipo_local_id AS equipo_id,
+          campeonato_id 
+        FROM Partido 
+        WHERE estado = 'V'
+        UNION
+        SELECT 
+          id AS partido_id,
+          equipo_visitante_id AS equipo_id,
+          campeonato_id 
+        FROM Partido 
+        WHERE estado = 'V'
+      ) pv ON pv.equipo_id = e.id AND pv.campeonato_id = ec.campeonatoId
     WHERE 
         ec.campeonatoId = :campeonato_id  
         ${estadoFiltro} AND 
