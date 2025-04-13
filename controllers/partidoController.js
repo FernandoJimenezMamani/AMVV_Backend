@@ -827,3 +827,14 @@ exports.updatePartidoReal = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+exports.verificarFixtureCompleto = async (req, res) => {
+  const { campeonatoId, categoriaId } = req.params;
+
+  try {
+    const resultado = await partidoService.verificarFixtureCompleto(campeonatoId, categoriaId);
+    res.status(200).json(resultado);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

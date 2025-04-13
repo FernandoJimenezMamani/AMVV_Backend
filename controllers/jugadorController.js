@@ -1,4 +1,6 @@
 const jugadorService = require('../services/jugadorService');
+const generateCarnetPDF = require('../utils/generateCarnetPDF');
+const fs = require('fs');
 
 exports.getAllJugadores = async (req, res) => {
   try {
@@ -292,5 +294,54 @@ exports.removeJugadorEquipoController = async (req, res) => {
   } catch (error) {
     console.log(error)
     return res.status(400).json({ error: error.message });   
+  }
+};
+
+exports.obtenerClubYCategoriaJugador = async (req, res) => {
+  const { personaId } = req.params;
+
+  try {
+    const datos = await jugadorService.getClubYCategoriaJugador(personaId);
+    res.status(200).json(datos);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+exports.generarCarnetJugador = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const jugador = await jugadorService.getJugadorById(id);
+    if (!jugador) {
+      return res.status(404).json({ error: 'Jugador no encontrado' });
+    }
+
+    if (!jugador.persona_imagen) {
+      return res.status(400).json({ error: 'El jugador no tiene una foto registrada. No se puede generar el carnet.' });
+    }    
+
+    const { clubNombre, categoriaNombre ,equipoNombre } = await jugadorService.getClubYCategoriaJugador(id);
+
+    const pdfPath = await generateCarnetPDF({
+      nombre: jugador.nombre,
+      apellido: jugador.apellido,
+      fecha_nacimiento: jugador.fecha_nacimiento,
+      ci: jugador.ci,
+      imagenURL: jugador.persona_imagen,
+      clubNombre,
+      categoriaNombre,
+      equipoNombre,
+      id: jugador.jugador_id,
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename=Carnet_${id}.pdf`);
+
+    const fileStream = fs.createReadStream(pdfPath);
+    fileStream.pipe(res);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error generando carnet' });
   }
 };

@@ -9,6 +9,7 @@ const {
   ImagePlanilla,
   ArbitroPartido,
   Jugador,
+  EquipoCampeonato
 } = require('../models');
 const sequelize = require('../config/sequelize');
 const { uploadFile } = require('../utils/subirImagen');
@@ -2471,6 +2472,9 @@ exports.updatePartidoReal = async ({
     arbitros,
   });
 
+  await validarConflictoEquipos(partido_id, fecha);
+  await validarRestriccionesArbitros(arbitros, fecha, lugar_id);
+
   let transaction;
 
   try {
@@ -2540,5 +2544,129 @@ exports.updatePartidoReal = async ({
   }
 };
 
+// Validar si alguno de los equipos ya tiene un partido ese día
+const validarConflictoEquipos = async (partido_id, fecha) => {
+  const fechaSolo = fecha.split(' ')[0];
 
+  const datos = await sequelize.query(
+    `SELECT equipo_local_id, equipo_visitante_id FROM Partido WHERE id = :partido_id`,
+    {
+      replacements: { partido_id },
+      type: sequelize.QueryTypes.SELECT
+    }
+  );
 
+  if (!datos.length) throw new Error('No se encontró el partido.');
+
+  const { equipo_local_id, equipo_visitante_id } = datos[0];
+
+  const partidos = await sequelize.query(
+    `SELECT * FROM Partido 
+     WHERE CONVERT(DATE, fecha) = :fecha
+     AND id != :partido_id
+     AND (equipo_local_id = :equipo_local_id OR equipo_visitante_id = :equipo_local_id
+          OR equipo_local_id = :equipo_visitante_id OR equipo_visitante_id = :equipo_visitante_id)`,
+    {
+      replacements: { fecha: fechaSolo, equipo_local_id, equipo_visitante_id, partido_id },
+      type: sequelize.QueryTypes.SELECT
+    }
+  );
+
+  if (partidos.length > 0) {
+    throw new Error('Uno de los equipos ya tiene un partido ese día.');
+  }
+};
+
+const validarRestriccionesArbitros = async (arbitros, fecha, lugar_id) => {
+  const fechaSolo = moment(fecha).format('YYYY-MM-DD');
+
+  for (const arbitro_id of arbitros) {
+    // Obtener nombre del árbitro
+    const persona = await sequelize.query(
+      `SELECT nombre, apellido FROM Persona WHERE id = :arbitro_id`,
+      {
+        replacements: { arbitro_id },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+    const nombreCompleto = persona.length > 0 ? `${persona[0].nombre} ${persona[0].apellido}` : `ID ${arbitro_id}`;
+
+    // Validar cantidad de partidos en el mismo lugar
+    const cantidad = await sequelize.query(
+      `SELECT COUNT(*) AS total FROM Arbitro_Partido AP
+       JOIN Partido P ON P.id = AP.partido_id
+       WHERE AP.arbitro_id = :arbitro_id
+       AND CONVERT(DATE, P.fecha) = :fecha
+       AND P.lugar_id = :lugar_id`,
+      {
+        replacements: { arbitro_id, fecha: fechaSolo, lugar_id },
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+
+    if (cantidad[0].total >= 8) {
+      throw new Error(`El árbitro ${nombreCompleto} ya tiene 8 partidos en este lugar ese día.`);
+    }
+
+    // Validar si ya está asignado en otro lugar
+    const enOtroLugar = await sequelize.query(
+      `SELECT * FROM Arbitro_Partido AP
+       JOIN Partido P ON P.id = AP.partido_id
+       WHERE AP.arbitro_id = :arbitro_id
+       AND CONVERT(DATE, P.fecha) = :fecha
+       AND P.lugar_id != :lugar_id`,
+      {
+        replacements: { arbitro_id, fecha: fechaSolo, lugar_id },
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+
+    if (enOtroLugar.length > 0) {
+      throw new Error(`El árbitro ${nombreCompleto} ya está asignado en otro lugar ese día.`);
+    }
+  }
+};
+
+exports.verificarFixtureCompleto = async (campeonatoId, categoriaId) => {
+  try {
+    // 1. Obtener los equipos inscritos
+    const equipos = await sequelize.query(`
+      SELECT equipoId
+      FROM EquipoCampeonato
+      WHERE campeonatoId = :campeonatoId
+      AND categoria_id = :categoriaId
+      AND estado = 'Inscrito'
+    `, {
+      replacements: { campeonatoId, categoriaId },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    const equipoIds = equipos.map(e => e.equipoId);
+    const totalEquipos = equipoIds.length;
+
+    // ⚠ Si hay menos de 2 equipos, no se puede generar fixture
+    if (totalEquipos < 2) return false;
+
+    // 2. Calcular la cantidad teórica de partidos
+    const totalTeorico = (totalEquipos * (totalEquipos - 1)) / 2;
+
+    // 3. Contar los partidos registrados entre estos equipos
+    const [partidos] = await sequelize.query(`
+      SELECT COUNT(*) AS total
+      FROM Partido
+      WHERE campeonato_id = :campeonatoId
+      AND equipo_local_id IN (:equipoIds)
+      AND equipo_visitante_id IN (:equipoIds)
+    `, {
+      replacements: { campeonatoId, equipoIds },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    const totalRegistrados = partidos.total || 0;
+    return totalRegistrados >= totalTeorico;
+
+  } catch (error) {
+    console.error("❌ Error al verificar fixture completo:", error);
+    throw new Error("Error al verificar fixture completo");
+  }
+};

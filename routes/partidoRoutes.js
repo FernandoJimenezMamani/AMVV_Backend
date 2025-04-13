@@ -34,5 +34,6 @@ router.get('/arbitros-disponibles/:fecha/:hora/:lugar_id', partidoController.get
 router.post('/updateParcialResultados', partidoController.updateParcialResultados);
 router.get('/marcadores-vivos/:campeonatoId/:categoriaId', partidoController.getMarcadoresVivos);
 router.post('/update', partidoController.updatePartidoReal);
+router.get('/verificar-fixture/:campeonatoId/:categoriaId', partidoController.verificarFixtureCompleto);
 
 module.exports = router;

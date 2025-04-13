@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 350px;
+      height: 200px;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background-color: white;
+    }
+
+    .carnet {
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      padding: 5px 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border: 1px solid #000;
+      position: relative;
+    }
+
+    /* FONDO DECORATIVO GEOMÉTRICO */
+    .decorativo {
+      position: absolute;
+      top: 0;
+      left: -20px;
+      width: 120%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(26,79,69,0.06) 0%, rgba(74,144,122,0.06) 100%);
+      transform: rotate(-2deg);
+      z-index: 0;
+    }
+
+    .cabecera {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo img {
+      width: 45px;
+      height: 40px;
+    }
+
+    .titulo-asociacion {
+      text-align: center;
+      flex: 1;
+      margin: 0 10px;
+    }
+
+    .titulo-asociacion .linea1 {
+      font-size: 8px;
+      font-weight: normal;
+      color: #1a4f45;
+      line-height: 1.1;
+    }
+
+    .titulo-asociacion .linea2 {
+      font-size: 10px;
+      font-weight: bold;
+      color: #1a4f45;
+    }
+
+    .fundado {
+      font-size: 7px;
+      color: #777;
+    }
+
+    .anio-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border: 1px solid #1a4f45;
+      padding: 2px 6px;
+      font-weight: bold;
+      font-size: 10px;
+    }
+
+    .label-anio {
+      font-size: 6px;
+      font-weight: normal;
+      color: #333;
+      margin-bottom: 1px;
+    }
+
+    .valor-anio {
+      font-size: 10px;
+    }
+
+    .cuerpo {
+      display: flex;
+      flex-direction: row;
+      gap: 10px;
+      margin-top: 2px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .columna-foto {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .foto {
+      width: 65px;
+      height: 85px;
+      object-fit: cover;
+      border: 1px solid #000;
+    }
+
+    .columna-datos {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: start;
+      gap: 2px;
+    }
+
+    .campo {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .etiqueta {
+      font-size: 7px;
+      color: #1a4f45;
+      font-weight: normal;
+    }
+
+    .valor {
+      border: 1px solid #999;
+      font-size: 9px;
+      padding: 2px 4px;
+      background: #fff;
+      color: #000;
+    }
+
+    .firmas {
+      display: flex;
+      justify-content: space-between;
+      font-size: 7px;
+      margin-top: 2px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cargo {
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="carnet">
+    <div class="decorativo"></div>
+
+    <!-- Cabecera -->
+    <div class="cabecera">
+      <div class="logo">
+        <img src="{{logo}}" />
+      </div>
+      <div class="titulo-asociacion">
+        <div class="linea1">ASOCIACIÓN MUNICIPAL DE</div>
+        <div class="linea2">VOLEIBOL - VINTO</div>
+        <div class="fundado">FUNDADO EL 14 DE MARZO DE 2010</div>
+      </div>
+      <div class="anio-box">
+        <div class="label-anio">Año</div>
+        <div class="valor-anio">{{anio}}</div>
+      </div>
+    </div>
+
+    <!-- Cuerpo con foto y datos -->
+    <div class="cuerpo">
+      <div class="columna-foto">
+        <img class="foto" src="{{foto}}" />
+      </div>
+      <div class="columna-datos">
+        <div class="campo">
+          <div class="etiqueta">Equipo:</div>
+          <div class="valor">{{equipo}}</div>
+        </div>
+        <div class="campo">
+          <div class="etiqueta">Nombre Completo:</div>
+          <div class="valor">{{nombre_completo}}</div>
+        </div>
+        <div class="campo">
+          <div class="etiqueta">Fecha de nacimiento:</div>
+          <div class="valor">{{fecha_nacimiento}}</div>
+        </div>
+        <div class="campo">
+          <div class="etiqueta">CI:</div>
+          <div class="valor">{{ci}}</div>
+        </div>
+        <div class="campo">
+          <div class="etiqueta">Categoría:</div>
+          <div class="valor">{{categoria}}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Firmas -->
+    <div class="firmas">
+      <div class="cargo">Jugador</div>
+      <div class="firma">Presidente A.M.V.V.</div>
+      <div class="firma">V°B° Vicepresidente A.M.V.V.</div>
+    </div>
+  </div>
+</body>
+</html>

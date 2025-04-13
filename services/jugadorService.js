@@ -1,8 +1,8 @@
-const { Jugador, Persona, Equipo, Categoria, PersonaRol, JugadorEquipo ,Participacion,EquipoCampeonato,Campeonato} = require('../models');
+const { Jugador, Persona, Equipo, Categoria, PersonaRol, JugadorEquipo ,Participacion,EquipoCampeonato,Campeonato,Club} = require('../models');
 const { sequelize } = require('../models');
 const campeonatoEstados = require('../constants/campeonatoEstados');
 const campeonatoEquipoEstados = require('../constants/campeonatoEquipoEstado');
-const { where } = require('sequelize');
+const { Op  } = require('sequelize');
 
 // Método para obtener todos los jugadores junto con el club al que pertenecen
 exports.getAllJugadores = async () => {
@@ -720,4 +720,84 @@ exports.removeJugadorEquipo = async (jugador_id, equipo_id) => {
   } catch (err) {
     throw new Error('Error al remover jugador del equipo: ' + err.message);
   }
+};
+
+exports.getClubYCategoriaJugador = async (personaId) => {
+  // 1. Buscar jugador activo
+  const jugador = await Jugador.findOne({
+    where: {
+      jugador_id: personaId,
+      activo: 1,
+    },
+    include: {
+      model: Club,
+      as: 'club',
+      attributes: ['id', 'nombre'],
+    },
+  });
+
+  if (!jugador) {
+    throw new Error('El jugador no está registrado como jugador activo en ningún club.');
+  }
+
+  // 2. Buscar campeonato activo (estado != 3)
+  const campeonato = await Campeonato.findOne({
+    where: {
+      estado: {
+        [Op.ne]: campeonatoEstados.campeonatoFinalizado, // o estado != 3
+      },
+    },
+    order: [['id', 'DESC']],
+  });
+
+  if (!campeonato) {
+    throw new Error('No hay campeonatos activos.');
+  }
+
+  // 3. Buscar equipo en el campeonato actual
+  const jugadorEquipo = await JugadorEquipo.findOne({
+    where: {
+      jugador_id: jugador.id,
+      campeonato_id: campeonato.id,
+    },
+    include: {
+      model: Equipo,
+      as: 'equipo',
+    },include: {
+      model: Equipo,
+      as: 'equipo',
+      attributes: ['id', 'nombre'],
+    },
+  });
+
+  if (!jugadorEquipo) {
+    throw new Error('El jugador no está inscrito en ningún equipo del campeonato actual.');
+  }
+
+  const equipo = jugadorEquipo.equipo;
+
+  // 4. Buscar categoría del equipo en el campeonato
+  const equipoCampeonato = await EquipoCampeonato.findOne({
+    where: {
+      equipoId: equipo.id,
+      campeonatoId: campeonato.id,
+      estado: 'Inscrito',
+    },
+    include: {
+      model: Categoria,
+      as: 'categoria',
+      attributes: ['id', 'nombre'],
+    },
+  });
+
+  if (!equipoCampeonato) {
+    throw new Error('El equipo del jugador no está inscrito en el campeonato actual.');
+  }
+
+  // 5. Devolver club y categoría
+  return {
+    clubNombre: jugador.club.nombre,
+    categoriaNombre: equipoCampeonato.categoria.nombre,
+    equipoNombre: jugadorEquipo.equipo.nombre,
+  };
 };
