@@ -801,3 +801,41 @@ exports.getClubYCategoriaJugador = async (personaId) => {
     equipoNombre: jugadorEquipo.equipo.nombre,
   };
 };
+
+exports.getPartidosByJugador = async (jugadorId, campeonatoId) => {
+  try {
+    const partidos = await sequelize.query(`
+      SELECT 
+        P.id, 
+        P.fecha, 
+        P.estado,
+        EL.nombre AS equipo_local_nombre,
+        EV.nombre AS equipo_visitante_nombre,
+        L.nombre AS lugar_nombre,
+        ICL.club_imagen AS equipo_local_imagen,
+        ICV.club_imagen AS equipo_visitante_imagen
+      FROM JugadorEquipo JE
+      INNER JOIN Equipo E ON JE.equipo_id = E.id
+      INNER JOIN Partido P ON (P.equipo_local_id = E.id OR P.equipo_visitante_id = E.id)
+      INNER JOIN Equipo EL ON EL.id = P.equipo_local_id
+      INNER JOIN Equipo EV ON EV.id = P.equipo_visitante_id
+      INNER JOIN Club CL ON EL.club_id = CL.id
+      INNER JOIN Club CV ON EV.club_id = CV.id
+      LEFT JOIN ImagenClub ICL ON ICL.club_id = CL.id
+      LEFT JOIN ImagenClub ICV ON ICV.club_id = CV.id
+      INNER JOIN Lugar L ON L.id = P.lugar_id
+      WHERE JE.jugador_id = :jugadorId
+        AND JE.campeonato_id = :campeonatoId
+        AND P.campeonato_id = :campeonatoId
+      ORDER BY P.fecha ASC;
+    `, {
+      replacements: { jugadorId, campeonatoId },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    return partidos;
+  } catch (error) {
+    console.error('Error al obtener partidos del jugador:', error);
+    throw error;
+  }
+};

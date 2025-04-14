@@ -78,3 +78,14 @@ exports.getCampeonatosPorArbitro = async (req, res) => {
     res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
+
+exports.obtenerPartidosArbitro = async (req, res) => {
+  const { arbitroId, campeonatoId } = req.params;
+
+  try {
+    const partidos = await arbitroService.getPartidosByArbitro(arbitroId, campeonatoId);
+    res.status(200).json(partidos);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener partidos del árbitro' });
+  }
+};

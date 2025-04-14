@@ -345,3 +345,14 @@ exports.generarCarnetJugador = async (req, res) => {
     res.status(500).json({ error: 'Error generando carnet' });
   }
 };
+
+exports.obtenerPartidosJugador = async (req, res) => {
+  const { jugadorId, campeonatoId } = req.params;
+
+  try {
+    const partidos = await jugadorService.getPartidosByJugador(jugadorId, campeonatoId);
+    res.status(200).json(partidos);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener partidos del jugador' });
+  }
+};

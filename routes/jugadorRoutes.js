@@ -20,5 +20,6 @@ router.get('/ObtenerJugadoresPreviousClubs/:PersonaId', jugadorController.getJug
 router.delete('/delete_jugador_equipo/:jugador_id/:equipo_id', jugadorController.removeJugadorEquipoController);
 router.get('/:personaId/club-categoria', jugadorController.obtenerClubYCategoriaJugador);
 router.get('/:id/carnet', jugadorController.generarCarnetJugador);
+router.get('/partidos/jugador/:jugadorId/:campeonatoId', jugadorController.obtenerPartidosJugador);
 
 module.exports = router;
