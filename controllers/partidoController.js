@@ -105,6 +105,18 @@ exports.getPastMatchesByCategoria = async (req, res) => {
   }
 };
 
+exports.getLiveMatchesByCategoria = async (req, res) => {
+  const { categoriaId, campeonatoId } = req.params;
+
+  try {
+    const partidos = await partidoService.getLiveMatchesByCategoria(categoriaId, campeonatoId);
+    res.status(200).json(partidos);
+  } catch (error) {
+    console.error('Error en getLiveMatchesByCategoria:', error);
+    res.status(500).json({ error: 'Error al obtener partidos en vivo' });
+  }
+};
+
 exports.getAllMatchesExceptUpcoming = async (req, res) => {
   const { categoria, CampeonatoId } = req.params;
 

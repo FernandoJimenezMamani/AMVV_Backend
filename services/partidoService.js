@@ -220,7 +220,7 @@ exports.getUpcomingMatchesByCategoria = async (categoriaId, CampeonatoId) => {
       WHERE 
         ECL.categoria_id = :categoriaId AND
         ECV.categoria_id = :categoriaId AND
-        P.estado != 'J' AND 
+        P.estado = 'C' AND 
         P.fecha >= GETDATE() AND 
         P.campeonato_id = :CampeonatoId
       ORDER BY P.fecha ASC;
@@ -274,6 +274,45 @@ exports.getPastMatchesByCategoria = async (categoriaId, CampeonatoId) => {
   } catch (error) {
     console.error('Error al obtener los partidos jugados:', error);
     throw new Error('Error al obtener los partidos');
+  }
+};
+
+exports.getLiveMatchesByCategoria = async (categoriaId, CampeonatoId) => {
+  try {
+    const resultPartidos = await sequelize.query(
+      `
+      SELECT 
+        P.id, 
+        P.fecha, 
+        EL.nombre AS equipo_local_nombre, 
+        EV.nombre AS equipo_visitante_nombre, 
+        ICL.club_imagen AS equipo_local_imagen, 
+        ICV.club_imagen AS equipo_visitante_imagen,
+        P.estado 
+      FROM Partido P
+      JOIN Equipo EL ON P.equipo_local_id = EL.id
+      JOIN Equipo EV ON P.equipo_visitante_id = EV.id
+      JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
+      JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
+      JOIN EquipoCampeonato ECL ON ECL.equipoId = EL.id AND ECL.campeonatoId = P.campeonato_id
+      JOIN EquipoCampeonato ECV ON ECV.equipoId = EV.id AND ECV.campeonatoId = P.campeonato_id
+      WHERE 
+        ECL.categoria_id = :categoriaId AND
+        ECV.categoria_id = :categoriaId AND
+        P.estado = 'V' AND
+        P.campeonato_id = :CampeonatoId
+      ORDER BY P.fecha ASC;
+      `,
+      {
+        replacements: { categoriaId, CampeonatoId },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    return resultPartidos;
+  } catch (error) {
+    console.error('Error al obtener partidos en vivo:', error);
+    throw new Error('Error al obtener partidos en vivo');
   }
 };
 

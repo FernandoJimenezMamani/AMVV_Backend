@@ -35,5 +35,6 @@ router.post('/updateParcialResultados', partidoController.updateParcialResultado
 router.get('/marcadores-vivos/:campeonatoId/:categoriaId', partidoController.getMarcadoresVivos);
 router.post('/update', partidoController.updatePartidoReal);
 router.get('/verificar-fixture/:campeonatoId/:categoriaId', partidoController.verificarFixtureCompleto);
+router.get('/get_live_matches/:categoriaId/:campeonatoId', partidoController.getLiveMatchesByCategoria);
 
 module.exports = router;
