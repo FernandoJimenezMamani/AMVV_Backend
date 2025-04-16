@@ -65,3 +65,14 @@ exports.deleteLugar = async (req, res) => {
     res.status(500).json({ message: 'Error al eliminar el Lugar', error: err.message });
   }
 };
+
+exports.activateLugar = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    await lugarService.activateLugar(id);
+    res.status(200).json({ message: 'Lugar activado exitosamente' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error al activar el Lugar', error: err.message });
+  }
+};

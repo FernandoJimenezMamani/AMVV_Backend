@@ -324,8 +324,7 @@ exports.getClubActualPresidente = async (presidenteId) => {
       JOIN Club c ON pc.club_id = c.id
       LEFT JOIN ImagenClub ic ON ic.club_id = c.id 
       WHERE pc.presidente_id = :presidenteId
-      AND pc.activo = 1
-      AND pc.delegado = 'N';`,
+      AND pc.activo = 1;`,
       {
         replacements: { presidenteId },
         type: sequelize.QueryTypes.SELECT,

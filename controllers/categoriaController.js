@@ -48,7 +48,7 @@ exports.createCategoria = async (req, res) => {
     const nuevaCategoria = await categoriaService.createCategoria(nombre, genero, division, edad_minima, edad_maxima, costo_traspaso, user_id);
     res.status(201).json({ message: 'Categoría creada', categoriaId: nuevaCategoria.id });
   } catch (err) {
-    res.status(500).json({ message: 'Error al crear categoría', error: err.message });
+    res.status(500).json({ message: err.message || 'Error al crear categoría' });
   }
 };
 

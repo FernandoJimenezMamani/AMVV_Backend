@@ -48,7 +48,6 @@ exports.createLugar = async (nombre, longitud, latitud, direccion) => {
 
 exports.getAllLugares = async () => {
   return await Lugar.findAll({
-    where: { eliminado: '0' },
     attributes: ['id', 'nombre', 'longitud', 'latitud', 'eliminado','direccion']
   });
 };
@@ -75,6 +74,13 @@ exports.updateLugar = async (id, nombre, longitud, latitud, direccion) => {
 exports.deleteLugar = async (id) => {
   return await Lugar.update(
     { eliminado: '1' },
+    { where: { id } }
+  );
+};
+
+exports.activateLugar = async (id) => {
+  return await Lugar.update(
+    { eliminado: '0' },
     { where: { id } }
   );
 };

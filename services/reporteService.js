@@ -159,6 +159,21 @@ exports.getProgresoPartidosDashboard = async (categoria, genero) => {
       replacements: filtros
     });    
 
+    // Partidos en curso (estado = 'V')
+      const [partidosEnCurso] = await sequelize.query(`
+        SELECT COUNT(*) as total FROM Partido 
+        JOIN EquipoCampeonato ec ON Partido.equipo_local_id = ec.equipoid
+        JOIN Categoria c ON ec.categoria_id = c.id
+        WHERE ec.campeonatoid = :campeonatoId
+        AND Partido.estado = 'V'
+        ${categoria ? "AND c.nombre = :categoria" : ""}
+        ${genero ? "AND c.genero = :genero" : ""}
+      `, {
+        type: sequelize.QueryTypes.SELECT,
+        replacements: filtros
+      });
+
+
     // Cálculo de partidos faltantes
     const partidosFaltantes = totalPartidos.total - partidosJugados.total;
 
@@ -173,7 +188,8 @@ exports.getProgresoPartidosDashboard = async (categoria, genero) => {
       partidosJugados: partidosJugados.total,
       partidosPendientes: partidosPendientes.total,
       partidosVencidosSinRegistro: partidosVencidosSinRegistro.total,
-      partidosFaltantes: partidosFaltantes >= 0 ? partidosFaltantes : 0
+      partidosFaltantes: partidosFaltantes >= 0 ? partidosFaltantes : 0,
+      partidosEnCurso: partidosEnCurso.total,
     };
 
   } catch (error) {

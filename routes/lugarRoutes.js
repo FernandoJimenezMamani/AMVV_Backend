@@ -7,5 +7,6 @@ router.get('/select', lugarController.getAllLugares);
 router.get('/:id', lugarController.getLugarById);
 router.put('/edit/:id', lugarController.updateLugar);
 router.put('/delete/:id', lugarController.deleteLugar);
+router.put('/activate_complejo/:id', lugarController.activateLugar);
 
 module.exports = router;
