@@ -93,6 +93,26 @@ exports.deleteCategoria = async (req, res) => {
   }
 };
 
+exports.activateCategoria = async (req, res) => {
+  const { id } = req.params;
+  const { user_id } = req.body;
+
+  if (!id || !user_id) {
+    return res.status(400).json({ message: 'ID y user_id son necesarios' });
+  }
+
+  try {
+    const deleted = await categoriaService.activateCategoria(id, user_id);
+    if (deleted[0] > 0) {
+      res.status(200).json({ message: 'Categoría actvida correctamente' });
+    } else {
+      res.status(404).json({ message: 'Categoría no encontrada' });
+    }
+  } catch (err) {
+    res.status(500).json({ message: 'Error al actvida categoría', error: err.message });
+  }
+};
+
 exports.getNombresCategorias = async (req, res) => {
   try {
     const categorias = await categoriaService.getNombresCategorias();

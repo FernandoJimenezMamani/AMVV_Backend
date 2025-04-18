@@ -9,5 +9,6 @@ router.post('/post_categoria', categoriaController.createCategoria);
 router.put('/update_categoria/:id', categoriaController.updateCategoria);
 router.put('/delete_categoria/:id', categoriaController.deleteCategoria);
 router.get('/nombres', categoriaController.getNombresCategorias);
+router.put('/activate_categoria/:id', categoriaController.activateCategoria);
 
 module.exports = router;

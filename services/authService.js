@@ -14,7 +14,7 @@ exports.login = async (correo, contraseña, selectedRoleId = null) => {
         {
           model: Persona,
           as: 'persona',
-          attributes: ['nombre', 'apellido'],
+          attributes: ['nombre', 'apellido','eliminado'],
           include: [
             {
               model: Rol,
@@ -28,6 +28,10 @@ exports.login = async (correo, contraseña, selectedRoleId = null) => {
     });
 
     if (!usuario) throw new Error('Correo o contraseña incorrectos');
+
+    if (usuario.persona.eliminado === 'S') {
+      throw new Error('Este usuario ha sido desactivado y no puede iniciar sesión.');
+    }
 
     const ahora = new Date(Date.now() - 4 * 60 * 60 * 1000); // Resta 4 horas
 

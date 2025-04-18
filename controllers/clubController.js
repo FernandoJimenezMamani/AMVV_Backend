@@ -98,6 +98,19 @@ exports.deleteClub = async (req, res) => {
   }
 };
 
+exports.activateClub = async (req, res) => {
+  const { id } = req.params;
+  const { user_id } = req.body;
+
+  try {
+    const deleted = await clubService.activateClub(id, user_id);
+    if (!deleted[0]) return res.status(404).json({ message: 'Club no encontrado' });
+    res.status(200).json({ message: 'Club eliminado lógicamente correctamente' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error al eliminar club', error: err.message });
+  }
+};
+
 exports.obtenerClubesDisponiblesParaJugador = async (req, res) => {
   try {
     const { jugador_id } = req.body;

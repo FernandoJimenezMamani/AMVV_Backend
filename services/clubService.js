@@ -20,8 +20,6 @@ exports.getClubs = async () => {
         ImagenClub
       ON
         Club.id = ImagenClub.club_id
-      WHERE
-        Club.eliminado = 'N'
   `, { type: sequelize.QueryTypes.SELECT });
   return clubs;
 };
@@ -200,6 +198,14 @@ exports.updateClub = async (id, nombre, descripcion, user_id) => {
 exports.deleteClub = async (id, user_id) => {
   const deleted = await Club.update(
     { eliminado: 'S', fecha_actualizacion: Sequelize.fn('GETDATE'), user_id },
+    { where: { id } }
+  );
+  return deleted;
+};
+
+exports.activateClub = async (id, user_id) => {
+  const deleted = await Club.update(
+    { eliminado: 'N', fecha_actualizacion: Sequelize.fn('GETDATE'), user_id },
     { where: { id } }
   );
   return deleted;
