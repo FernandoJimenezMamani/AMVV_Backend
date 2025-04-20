@@ -28,15 +28,6 @@ exports.getPersonaById = async (req, res) => {
   }
 };
 
-// Configuración de nodemailer
-const transporter = nodemailer.createTransport({
-  service: 'gmail', // O cualquier servicio que estés utilizando (Gmail, Outlook, etc.)
-  auth: {
-    user: 'ferjimenezm933@gmail.com', // Cambia por el correo que utilizarás para enviar los emails
-    pass: 'rssd pwxw cpuh jpwc', // Cambia por la contraseña de tu correo
-  }
-});
-
 exports.createPersona = async (req, res) => {
   try {
     console.log(req.body);
@@ -85,25 +76,9 @@ exports.createPersona = async (req, res) => {
       return res.status(400).json({ message: 'El correo ya está registrado' });
     }
 
-    // Generar y hashear contraseña
-    const generatedPassword = generatePassword();
-    const hashedPasswordPromise = bcrypt.hash(generatedPassword, saltRounds);
-
-    // Subir imagen (si existe) en paralelo
-    const uploadPromise = imagen
-      ? uploadFile(imagen, `${nombre}_${apellido}_image`, null, 'FilesPersonas')
-      : Promise.resolve(null);
-
-    // Ejecutar hash y subida de imagen en paralelo
-    const [hashedPassword, uploadResult] = await Promise.all([hashedPasswordPromise, uploadPromise]);
-
-    const downloadURL = uploadResult ? uploadResult.downloadURL : null;
-
-    // Crear la nueva persona con sus roles y clubes
     const nuevaPersona = await personaService.createPersonaWithRoles(
       { nombre, apellido, fecha_nacimiento, ci, direccion, genero, correo },
-      downloadURL,
-      hashedPassword,
+      imagen,
       rolesArray,
       { club_jugador_id, club_presidente_id, club_delegado_id }
     );
@@ -111,25 +86,6 @@ exports.createPersona = async (req, res) => {
     if (!nuevaPersona) {
       throw new Error('Error al crear la persona');
     }
-
-    // Configuración de correo
-    const mailOptions = {
-      from: 'tu-correo@gmail.com',
-      to: correo,
-      subject: 'Bienvenido! Aquí está tu contraseña',
-      text: `Hola ${nombre},\n\nTu cuenta ha sido creada exitosamente. Aquí está tu contraseña: ${generatedPassword}\nPor favor, cámbiala después de iniciar sesión.\n\nSaludos,\nEl equipo`
-    };
-
-    // Enviar el correo en segundo plano
-    setImmediate(() => {
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error('Error enviando el correo:', error);
-        } else {
-          console.log('Correo enviado:', info.response);
-        }
-      });
-    });
 
     // Respuesta exitosa
     res.status(201).json({
@@ -151,18 +107,6 @@ exports.createPersona = async (req, res) => {
     });
   }
 };
-
-// Función para generar una contraseña aleatoria de 6 dígitos
-function generatePassword() {
-  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const aux = '12345';  //contrasenia temporal
-  let password = '';
-  for (let i = 0; i < 6; i++) {
-    const randomIndex = Math.floor(Math.random() * charset.length);
-    password += charset[randomIndex];
-  }
-  return aux;
-}
 
 exports.updatePersonaWithRoles = async (req, res) => {
   console.log("Datos recibidos:", req.body);

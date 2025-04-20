@@ -1,4 +1,4 @@
-const { Club, ImagenClub, Sequelize } = require('../models');
+const { Club, ImagenClub, Sequelize,Jugador } = require('../models');
 const { uploadFile } = require('../utils/subirImagen');
 const { storage } = require('../config/firebase');
 const { ref, deleteObject } = require('firebase/storage');
@@ -238,6 +238,10 @@ exports.updateClubImage = async (id, imagen) => {
 
 exports.getClubesAvailableForJugador = async (jugador_id) => {
   try {
+
+    const jugadorCompleto = await Jugador.findOne({ where: { jugador_id: jugador_id , activo : 1} });
+    const idJugador = jugadorCompleto.id;
+    console.log('ID del jugador:', idJugador);
     const clubes = await sequelize.query(
       `SELECT DISTINCT
           c.id AS club_id,
@@ -256,7 +260,7 @@ exports.getClubesAvailableForJugador = async (jugador_id) => {
           JOIN 
               Persona pp ON pp.id = pc.presidente_id
           LEFT JOIN 
-              Jugador j ON j.club_id = c.id AND j.id = :jugador_id
+              Jugador j ON j.club_id = c.id AND j.jugador_id = :jugador_id AND j.activo = 1
           OUTER APPLY 
               (SELECT TOP 1 t.*
               FROM Traspaso t
@@ -298,7 +302,7 @@ exports.getClubesPendingConfirmation = async (jugador_id ,campeonatoId) => {
         t.estado_club_receptor AS estado_club_receptor,
         t.estado_jugador AS estado_jugador,
         t.estado_deuda AS estado_deuda,
-        t.fecha_solicitud,
+        CONVERT(VARCHAR(10), t.fecha_solicitud, 120) AS fecha_solicitud,
         t.id AS traspaso_id
         FROM Traspaso t
         LEFT JOIN Club cd ON t.club_destino_id = cd.id

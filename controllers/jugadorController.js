@@ -252,15 +252,15 @@ exports.getJugadoresAbleToExchange = async (req, res) => {
 
 exports.getJugadoresPendingExchange = async (req, res) => {
   try {
-      const { club_presidente, idTraspasoPresidente ,campeonatoId} = req.body;
+      const {  idTraspasoPresidente ,campeonatoId} = req.body;
 
       console.log('datos recibidos traspaso' ,req.body )
 
-      if (!club_presidente || !idTraspasoPresidente || !campeonatoId) {
-          return res.status(400).json({ error: 'Los parámetros club_presidente e idTraspasoPresidente son requeridos' });
+      if ( !idTraspasoPresidente || !campeonatoId) {
+          return res.status(400).json({ error: 'Los parámetros club_presidente  e idTraspasoPresidente son requeridos' });
       }
 
-      const jugadores = await jugadorService.getJugadoresPendingExchange(club_presidente, idTraspasoPresidente, campeonatoId);
+      const jugadores = await jugadorService.getJugadoresPendingExchange( idTraspasoPresidente, campeonatoId);
 
       return res.status(200).json(jugadores);
   } catch (error) {
@@ -354,5 +354,25 @@ exports.obtenerPartidosJugador = async (req, res) => {
     res.status(200).json(partidos);
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener partidos del jugador' });
+  }
+};
+
+exports.getClubActualJugador = async (req, res) => {
+  try {
+    const { jugadorId } = req.params;
+    if (!jugadorId) {
+      return res.status(400).json({ message: 'ID del jugador requerido' });
+    }
+
+    const clubActual = await jugadorService.getClubActualJugador(jugadorId);
+    
+    if (!clubActual) {
+      return res.status(404).json({ message: 'El jugador no tiene un club activo actualmente' });
+    }
+
+    res.status(200).json(clubActual);
+  } catch (error) {
+    console.error('Error al obtener el club actual del presidente:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
   }
 };

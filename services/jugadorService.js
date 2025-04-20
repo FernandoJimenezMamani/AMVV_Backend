@@ -51,7 +51,7 @@ exports.getJugadorById = async (id) => {
         Persona.id,
         Persona.nombre,
         Persona.apellido,
-        Persona.fecha_nacimiento,
+        CONVERT(VARCHAR(10), Persona.fecha_nacimiento, 120) AS fecha_nacimiento,
         Persona.ci,
         Persona.genero,
         Persona.direccion,
@@ -602,7 +602,7 @@ exports.getJugadoresAbleToExchange = async (club_presidente , idTraspasoPresiden
   }
 };
 
-exports.getJugadoresPendingExchange = async (club_presidente , idTraspasoPresidente,campeonatoId) => {
+exports.getJugadoresPendingExchange = async ( idTraspasoPresidente,campeonatoId) => {
   try {
     const jugadores = await sequelize.query(
       `SELECT 
@@ -611,7 +611,7 @@ exports.getJugadoresPendingExchange = async (club_presidente , idTraspasoPreside
         p.nombre AS nombre_persona,
         p.apellido AS apellido_persona,
         p.ci AS ci_persona,
-        p.fecha_nacimiento AS fecha_nacimiento_persona,
+        CONVERT(VARCHAR(10), p.fecha_nacimiento, 120) AS fecha_nacimiento_persona,
         p.genero AS persona_genero,
         c.id AS club_id,
         c.nombre AS nombre_club,
@@ -624,7 +624,7 @@ exports.getJugadoresPendingExchange = async (club_presidente , idTraspasoPreside
         t.estado_deuda,
         t.eliminado,
 		    t.id AS id_traspaso,
-        t.fecha_solicitud
+        CONVERT(VARCHAR(10), t.fecha_solicitud, 120) AS fecha_solicitud
         FROM 
           Jugador j
         JOIN 
@@ -637,14 +637,13 @@ exports.getJugadoresPendingExchange = async (club_presidente , idTraspasoPreside
         LEFT JOIN 
           ImagenPersona im ON p.id = im.persona_id
         LEFT JOIN Traspaso t ON t.jugador_id = j.id 
-          WHERE p.eliminado = 'N' AND t.presidente_club_id_destino = :idTraspasoPresidente AND t.eliminado = 'N' AND t.campeonato_id = :campeonatoId
+          WHERE p.eliminado = 'N' AND t.presidente_club_id_destino = :idTraspasoPresidente AND t.eliminado = 'N' AND t.campeonato_id = :campeonatoId AND t.tipo_solicitud = 'Presidente'
       `,
       {
-        replacements:{club_presidente,idTraspasoPresidente,campeonatoId},
+        replacements:{idTraspasoPresidente,campeonatoId},
         type: sequelize.QueryTypes.SELECT
       }
     );
-
     return jugadores;
   } catch (error) {
     console.error('Error al obtener los jugadores con sus clubes:', error);
@@ -836,6 +835,35 @@ exports.getPartidosByJugador = async (jugadorId, campeonatoId) => {
     return partidos;
   } catch (error) {
     console.error('Error al obtener partidos del jugador:', error);
+    throw error;
+  }
+};
+
+exports.getClubActualJugador = async (jugadorId) => {
+  try {
+    const clubActual = await sequelize.query(
+      `SELECT 
+          c.id AS club_id,
+          c.nombre AS club_nombre,
+          c.descripcion AS club_descripcion,
+          c.presidente_asignado,
+          c.fecha_registro,
+          c.fecha_actualizacion,
+		  ic.club_imagen
+      FROM Jugador j
+      JOIN Club c ON j.club_id = c.id
+      LEFT JOIN ImagenClub ic ON ic.club_id = c.id 
+      WHERE j.jugador_id = :jugadorId
+      AND j.activo = 1;`,
+      {
+        replacements: { jugadorId },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    return clubActual.length > 0 ? clubActual[0] : null;
+  } catch (error) {
+    console.error('Error al obtener el club actual del presidente:', error);
     throw error;
   }
 };

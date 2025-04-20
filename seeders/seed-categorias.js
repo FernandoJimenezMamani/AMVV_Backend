@@ -41,10 +41,10 @@ const seedCategorias = async () => {
     console.log('Insertando categorías en la tabla Categoria...');
     // Mapeo de jerarquías de categorías de ascenso
     const jerarquiaAscenso = {
-      "3ras Ascenso": 1,
-      "2das Ascenso": 2,
-      "1ras Ascenso": 3,
-      "1ras de Honor": 4
+      "3ras Ascenso": 4,
+      "2das Ascenso": 3,
+      "1ras Ascenso": 2,
+      "1ras de Honor": 1
     };
 
     for (const categoria of categorias) {

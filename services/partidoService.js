@@ -131,14 +131,14 @@ exports.getPartidosByCategoriaId = async (categoriaId, campeonatoId) => {
         Partido P
       JOIN Equipo EL ON P.equipo_local_id = EL.id
       JOIN Equipo EV ON P.equipo_visitante_id = EV.id
-      JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
-      JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
+       LEFT JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
+       LEFT JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
       JOIN EquipoCampeonato ECL ON ECL.equipoId = EL.id AND ECL.campeonatoId = P.campeonato_id
       JOIN EquipoCampeonato ECV ON ECV.equipoId = EV.id AND ECV.campeonatoId = P.campeonato_id
       JOIN Categoria C ON ECL.categoria_id = C.id
       JOIN Lugar L ON P.lugar_id = L.id
       WHERE 
-        C.id = :categoriaId AND p.campeonato_id = :campeonatoId 
+        C.id = :categoriaId AND p.campeonato_id = :campeonatoId  AND p.estado != 'E'
       ORDER BY 
         P.fecha ASC;
     `,
@@ -213,8 +213,8 @@ exports.getUpcomingMatchesByCategoria = async (categoriaId, CampeonatoId) => {
       FROM Partido P
       JOIN Equipo EL ON P.equipo_local_id = EL.id
       JOIN Equipo EV ON P.equipo_visitante_id = EV.id
-      JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
-      JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
+      LEFT JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
+      LEFT JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
       JOIN EquipoCampeonato ECL ON ECL.equipoId = EL.id AND ECL.campeonatoId = P.campeonato_id
       JOIN EquipoCampeonato ECV ON ECV.equipoId = EV.id AND ECV.campeonatoId = P.campeonato_id
       WHERE 
@@ -253,8 +253,8 @@ exports.getPastMatchesByCategoria = async (categoriaId, CampeonatoId) => {
       FROM Partido P
       JOIN Equipo EL ON P.equipo_local_id = EL.id
       JOIN Equipo EV ON P.equipo_visitante_id = EV.id
-      JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
-      JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
+      LEFT JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
+      LEFT JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
       JOIN EquipoCampeonato ECL ON ECL.equipoId = EL.id AND ECL.campeonatoId = P.campeonato_id
       JOIN EquipoCampeonato ECV ON ECV.equipoId = EV.id AND ECV.campeonatoId = P.campeonato_id
       WHERE 
@@ -292,8 +292,8 @@ exports.getLiveMatchesByCategoria = async (categoriaId, CampeonatoId) => {
       FROM Partido P
       JOIN Equipo EL ON P.equipo_local_id = EL.id
       JOIN Equipo EV ON P.equipo_visitante_id = EV.id
-      JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
-      JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
+      LEFT JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
+      LEFT JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
       JOIN EquipoCampeonato ECL ON ECL.equipoId = EL.id AND ECL.campeonatoId = P.campeonato_id
       JOIN EquipoCampeonato ECV ON ECV.equipoId = EV.id AND ECV.campeonatoId = P.campeonato_id
       WHERE 
@@ -331,8 +331,8 @@ exports.getAllMatchesExceptUpcoming = async (categoriaId, CampeonatoId) => {
         FROM Partido P
         JOIN Equipo EL ON P.equipo_local_id = EL.id
         JOIN Equipo EV ON P.equipo_visitante_id = EV.id
-        JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
-        JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
+        LEFT JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
+        LEFT JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
         JOIN EquipoCampeonato ECL ON ECL.equipoId = EL.id AND ECL.campeonatoId = P.campeonato_id
         JOIN EquipoCampeonato ECV ON ECV.equipoId = EV.id AND ECV.campeonatoId = P.campeonato_id
         WHERE 
@@ -384,8 +384,8 @@ exports.getAllMatchesExceptPrevious = async (categoriaId, CampeonatoId) => {
       FROM Partido P
       JOIN Equipo EL ON P.equipo_local_id = EL.id
       JOIN Equipo EV ON P.equipo_visitante_id = EV.id
-      JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
-      JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
+      LEFT JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
+      LEFT  JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
       JOIN EquipoCampeonato ECL ON ECL.equipoId = EL.id AND ECL.campeonatoId = P.campeonato_id
       JOIN EquipoCampeonato ECV ON ECV.equipoId = EV.id AND ECV.campeonatoId = P.campeonato_id
       WHERE 
@@ -504,8 +504,8 @@ exports.getPartidoCompletoById = async (partidoId) => {
       JOIN Lugar L ON P.lugar_id = L.id
       JOIN Equipo EL ON P.equipo_local_id = EL.id
       JOIN Equipo EV ON P.equipo_visitante_id = EV.id
-      JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
-      JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
+      LEFT JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
+      LEFT JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
       WHERE P.id = :partidoId;
     `,
       {
@@ -1069,7 +1069,7 @@ exports.asignarArbitrosAPartidos = async (partidos) => {
         'No hay suficientes árbitros disponibles para asignar a los partidos.',
       );
     }
-
+    let lugaresAsignadosPorArbitro = {}; // <--- NUEVO: para rastrear lugar asignado por fecha
     let asignaciones = {}; // Objeto para rastrear asignaciones en memoria
     let contadorArbitros = {}; // Para contar partidos asignados en esta ejecución
 
@@ -1101,6 +1101,16 @@ exports.asignarArbitrosAPartidos = async (partidos) => {
 
         let arbitroDisponible = null;
         for (let arbitro of arbitros) {
+          // Validar si ya fue asignado en otro lugar el mismo día (en esta ejecución)
+          if (
+            lugaresAsignadosPorArbitro[arbitro.id] &&
+            lugaresAsignadosPorArbitro[arbitro.id][fechaPartido] &&
+            lugaresAsignadosPorArbitro[arbitro.id][fechaPartido] !== lugarId
+          ) {
+            console.log(`⚠️ Árbitro ${arbitro.id} ya fue asignado en otro lugar el mismo día.`);
+            continue;
+          }
+
           if (arbitrosAsignados.some((a) => a.id === arbitro.id)) {
             continue; // Evita asignar el mismo árbitro dos veces en el mismo partido
           }
@@ -1185,6 +1195,12 @@ exports.asignarArbitrosAPartidos = async (partidos) => {
         );
 
         arbitrosAsignados.push(arbitroDisponible);
+        // Guardar lugar asignado en esta ejecución
+        if (!lugaresAsignadosPorArbitro[arbitroDisponible.id]) {
+          lugaresAsignadosPorArbitro[arbitroDisponible.id] = {};
+        }
+        lugaresAsignadosPorArbitro[arbitroDisponible.id][fechaPartido] = lugarId;
+
         asignaciones[fechaPartido][lugarId].add(arbitroDisponible.id);
 
         // Aumentar el contador de partidos asignados en este día

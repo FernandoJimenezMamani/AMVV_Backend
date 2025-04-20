@@ -7,6 +7,10 @@ const { ref, deleteObject } = require('firebase/storage');
 const { storage } = require('../config/firebase');
 const roleNames = require('../constants/roles')
 const { Op, where } = require('sequelize');
+const { sendEmail } = require('./emailService');
+const { generatePassword } = require('../utils/passwordHelper'); 
+const { sendBienvenidaUsuarioEmail } = require('./sendEmailTraspaso');
+
 
 exports.getAllPersonas = async () => {
   const personas = await sequelize.query(`
@@ -95,7 +99,7 @@ exports.getPersonaById = async (id) => {
         Persona.id,
         Persona.nombre,
         Persona.apellido,
-        Persona.fecha_nacimiento,
+        CONVERT(VARCHAR(10), Persona.fecha_nacimiento, 120) AS fecha_nacimiento,
         Persona.ci,
         Persona.genero,
         Persona.direccion,
@@ -182,15 +186,28 @@ exports.checkDuplicateRoles = async (roles) => {
   }
 };
 
-exports.createPersonaWithRoles = async (data, imagen, hashedPassword, roles, clubes) => {
+exports.createPersonaWithRoles = async (data, imagen, roles, clubes) => {
+  console.time('🟢 TOTAL TIEMPO TOTAL DEL SERVICIO');
+
   const { nombre, apellido, fecha_nacimiento, ci, direccion, genero, correo } = data;
   const { club_jugador_id, club_presidente_id, club_delegado_id } = clubes;
-  console.log(roles, 'este destes')
-  
+
+  console.time('⏳ Generación de contraseña');
+  const generatedPassword = generatePassword();
+  const hashedPassword = await bcrypt.hash(generatedPassword, saltRounds);
+  console.timeEnd('⏳ Generación de contraseña');
+
+  console.time('⏳ Subida de imagen');
+  const uploadResult = imagen
+    ? await uploadFile(imagen, `${nombre}_${apellido}_image`, null, 'FilesPersonas')
+    : null;
+  const downloadURL = uploadResult ? uploadResult.downloadURL : null;
+  console.timeEnd('⏳ Subida de imagen');
+
   const transaction = await Persona.sequelize.transaction();
-  
+
   try {
-    // Crear la nueva persona
+    console.time('⏳ Creación de Persona + Usuario');
     const nuevaPersona = await Persona.create({
       nombre,
       apellido,
@@ -203,115 +220,91 @@ exports.createPersonaWithRoles = async (data, imagen, hashedPassword, roles, clu
       eliminado: 'N'
     }, { transaction });
 
-    // Crear usuario vinculado a la persona
     const nuevoUsuario = await Usuario.create({
       id: nuevaPersona.id,
       contraseña: hashedPassword,
       correo
     }, { transaction });
 
-    // Asignar el user_id a la persona recién creada
     nuevaPersona.user_id = nuevoUsuario.id;
     await nuevaPersona.save({ transaction });
+    console.timeEnd('⏳ Creación de Persona + Usuario');
 
+    console.time('⏳ Asignación de roles');
     for (const rol of roles) {
+      const rolId = await getRolId(rol);
+
+      await PersonaRol.create({
+        persona_id: nuevaPersona.id,
+        rol_id: rolId,
+        eliminado: 0
+      }, { transaction });
+
       switch (rol) {
         case roleNames.Jugador:
-          await PersonaRol.create({
-            persona_id: nuevaPersona.id,
-            rol_id: await  getRolId(roleNames.Jugador),
-            eliminado: 0
-          }, { transaction });
-    
           await Jugador.create({
             jugador_id: nuevaPersona.id,
             club_id: club_jugador_id,
             activo: 1
           }, { transaction });
-        break;
-    
+          break;
+
         case roleNames.PresidenteClub:
-          await PersonaRol.create({
-            persona_id: nuevaPersona.id,
-            rol_id: await  getRolId(roleNames.PresidenteClub),
-            eliminado: 0
-          }, { transaction });
-    
           await PresidenteClub.create({
             presidente_id: nuevaPersona.id,
             club_id: club_presidente_id,
             activo: 1,
             delegado: 'N'
           }, { transaction });
-    
+
           await Club.update(
             { presidente_asignado: 'S' },
             { where: { id: club_presidente_id }, transaction }
           );
-        break;
+          break;
 
         case roleNames.DelegadoClub:
-            await PersonaRol.create({
-              persona_id: nuevaPersona.id,
-              rol_id: await getRolId(roleNames.DelegadoClub),
-              eliminado: 0
-            }, { transaction });
-      
-            await PresidenteClub.create({
-              presidente_id: nuevaPersona.id,
-              club_id: club_delegado_id,
-              activo: 1,
-              delegado: 'S'        
-            }, { transaction });
-        break;
-    
-        case roleNames.Arbitro:
-          await PersonaRol.create({
-            persona_id: nuevaPersona.id,
-            rol_id: await  getRolId(roleNames.Arbitro),
-            eliminado: 0
+          await PresidenteClub.create({
+            presidente_id: nuevaPersona.id,
+            club_id: club_delegado_id,
+            activo: 1,
+            delegado: 'S'
           }, { transaction });
-    
+          break;
+
+        case roleNames.Arbitro:
           await Arbitro.create({
             id: nuevaPersona.id,
             activo: 1
           }, { transaction });
-        break;
+          break;
 
-        case roleNames.PresidenteArbitro:
-            await PersonaRol.create({
-              persona_id: nuevaPersona.id,
-              rol_id: await  getRolId(roleNames.PresidenteArbitro),
-              eliminado: 0
-            }, { transaction });
-        break;
-
-        case roleNames.Tesorero:
-            await PersonaRol.create({
-              persona_id: nuevaPersona.id,
-              rol_id: await  getRolId(roleNames.Tesorero),
-              eliminado: 0
-            }, { transaction });
-        break;
-        default:
-          console.warn(`Rol desconocido: ${rol}`);
+        // Otros casos...
       }
     }
-    
-    // Subir y guardar imagen de la persona (si existe)
+    console.timeEnd('⏳ Asignación de roles');
+
+    console.time('⏳ Guardar imagen en DB');
     if (imagen) {
       await ImagenPersona.create({
         persona_id: nuevaPersona.id,
-        persona_imagen: imagen
+        persona_imagen: downloadURL
       }, { transaction });
     }
+    console.timeEnd('⏳ Guardar imagen en DB');
 
-    // Confirmar la transacción
     await transaction.commit();
+
+    console.timeEnd('🟢 TOTAL TIEMPO TOTAL DEL SERVICIO');
+
+    setImmediate(() => {
+      sendBienvenidaUsuarioEmail(correo, nombre, generatedPassword)
+        .catch(err => console.error(`❌ Error al enviar correo de bienvenida:`, err.message));
+    });
+
     return nuevaPersona;
 
   } catch (error) {
-    // Si ocurre algún error, revertir todos los cambios
     await transaction.rollback();
     console.error('Error durante la creación de persona con roles:', error);
     throw error;

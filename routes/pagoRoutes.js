@@ -10,4 +10,6 @@ router.get('/getTraspasosDebt', pagoController.getTraspasoDebt);
 router.get('/getTraspasoDebtById/:id', pagoController.getTraspasoDebtById);
 router.get('/resumen-campeonato', pagoController.getResumenCampeonato);
 router.get('/historial-inscripcion/:campeonatoId', pagoController.getPagosInscripcionPorCampeonato);
+router.get('/historial-traspasos/:campeonatoId', pagoController.obtenerPagosTraspasoPorCampeonato);
+
 module.exports = router;

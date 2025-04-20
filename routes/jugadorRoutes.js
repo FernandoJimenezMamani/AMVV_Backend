@@ -21,5 +21,5 @@ router.delete('/delete_jugador_equipo/:jugador_id/:equipo_id', jugadorController
 router.get('/:personaId/club-categoria', jugadorController.obtenerClubYCategoriaJugador);
 router.get('/:id/carnet', jugadorController.generarCarnetJugador);
 router.get('/partidos/jugador/:jugadorId/:campeonatoId', jugadorController.obtenerPartidosJugador);
-
+router.get('/clubActual/:jugadorId', jugadorController.getClubActualJugador);
 module.exports = router;

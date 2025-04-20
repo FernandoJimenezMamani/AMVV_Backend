@@ -132,7 +132,7 @@ exports.getClubesPendingConfirmation = async (req, res) => {
   try {
       const { jugador_id ,campeonatoId} = req.body;
 
-      console.log('datos recibidos traspaso' ,req.body )
+      console.log('datos recibidos traspaso xs' ,req.body )
 
       if (!jugador_id || !campeonatoId) {
           return res.status(400).json({ error: 'Los parámetros club_presidente e idTraspasoPresidente son requeridos' });

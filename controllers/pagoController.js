@@ -245,3 +245,16 @@ exports.getPagosInscripcionPorCampeonato = async (req, res) => {
     res.status(500).json({ error: 'Error al obtener pagos de inscripción' });
   }
 };
+
+exports.obtenerPagosTraspasoPorCampeonato = async (req, res) => {
+  try {
+    const { campeonatoId } = req.params;
+
+    const pagos = await pagoService.getPagosTraspasoPorCampeonato(campeonatoId);
+
+    res.status(200).json(pagos);
+  } catch (error) {
+    console.error('Error en el controlador de pagos por traspaso:', error);
+    res.status(500).json({ message: 'Error al obtener historial de pagos por traspaso' });
+  }
+};

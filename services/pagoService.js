@@ -1,4 +1,4 @@
-const { Pago,Campeonato,Equipo, PagoTraspaso, PagoInscripcion ,EquipoCampeonato,JugadorEquipo , Jugador ,Usuario, Traspaso} = require('../models'); // Asegúrate de importar los modelos
+const { Pago,Campeonato,Equipo, PagoTraspaso, PagoInscripcion ,EquipoCampeonato,JugadorEquipo , Jugador ,Usuario, Traspaso,Club} = require('../models'); // Asegúrate de importar los modelos
 const sequelize = require('../config/sequelize'); 
 const pagoTipos = require('../constants/pagoTipos')
 const campeonatoEstado = require('../constants/campeonatoEquipoEstado');
@@ -34,7 +34,7 @@ exports.obtenerEquiposPorCampeonatoById = async (id) => {
       JOIN PresidenteClub pc ON pc.club_id = cl.id
       JOIN Persona p ON p.id = pc.presidente_id
       JOIN Usuario u ON u.id = p.id
-      JOIN ImagenClub ic ON ic.club_id = cl.id
+      LEFT JOIN ImagenClub ic ON ic.club_id = cl.id
       JOIN Categoria cat ON cat.id = ec.categoria_id
       WHERE 
         c.estado != 3 
@@ -49,6 +49,39 @@ exports.obtenerEquiposPorCampeonatoById = async (id) => {
     return equipo;
   } catch (error) {
     console.error("Error al obtener equipos del campeonato:", error);
+    throw error;
+  }
+};
+
+const getMontoTraspasoPorTraspasoId = async (traspasoId) => {
+  try {
+    const query = `
+      WITH CampeonatosOrdenados AS (
+        SELECT id, ROW_NUMBER() OVER (ORDER BY fecha_registro DESC) AS orden
+        FROM Campeonato
+      ),
+      CampeonatoAnterior AS (
+        SELECT id AS campeonatoAnteriorId FROM CampeonatosOrdenados WHERE orden = 2
+      )
+      SELECT cat.costo_traspaso
+      FROM Traspaso t
+      INNER JOIN Jugador j ON j.id = t.jugador_id
+      INNER JOIN JugadorEquipo je ON je.jugador_id = j.id
+      INNER JOIN EquipoCampeonato ec ON ec.equipoId = je.equipo_id
+      INNER JOIN Categoria cat ON cat.id = ec.categoria_id
+      INNER JOIN CampeonatoAnterior ca ON ec.campeonatoId = ca.campeonatoAnteriorId
+      WHERE t.id = :traspasoId
+    `;
+
+    const result = await sequelize.query(query, {
+      replacements: { traspasoId },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    // Si no hay resultados, retornar monto por defecto
+    return result.length > 0 ? result[0].costo_traspaso : 100;
+  } catch (error) {
+    console.error("Error al obtener el monto de traspaso:", error);
     throw error;
   }
 };
@@ -78,7 +111,6 @@ exports.obtenerTraspasosPorCampeonatoById = async (id) => {
           c.id AS campeonato_id,
           c.nombre AS nombre_campeonato,
           t.estado_deuda,
-          cat.costo_traspaso,
           ico.club_imagen AS club_origen_imagen,
           icd.club_imagen AS club_destino_imagen,
           impj.persona_imagen
@@ -88,7 +120,7 @@ exports.obtenerTraspasosPorCampeonatoById = async (id) => {
       LEFT JOIN Club clubDestino ON t.club_destino_id = clubDestino.id
       LEFT JOIN ImagenClub icd ON icd.club_id = clubDestino.id
       LEFT JOIN Jugador j ON t.jugador_id = j.id
-      LEFT JOIN JugadorEquipo je ON je.jugador_id = j.id AND je.activo = 1
+      LEFT JOIN JugadorEquipo je ON je.jugador_id = j.id
       LEFT JOIN Equipo e ON e.id = je.equipo_id
       LEFT JOIN EquipoCampeonato ec ON ec.equipoId = e.id AND ec.campeonatoId = t.campeonato_id
       LEFT JOIN Categoria cat ON cat.id = ec.categoria_id
@@ -112,6 +144,12 @@ exports.obtenerTraspasosPorCampeonatoById = async (id) => {
         type: sequelize.QueryTypes.SELECT
       }
     );
+
+    if (traspasos.length > 0) {
+      const montoReal = await getMontoTraspasoPorTraspasoId(id);
+      console.log(montoReal, 'monto real traspaso');
+      traspasos[0].costo_traspaso = montoReal;
+    }
 
     return traspasos;
   } catch (error) {
@@ -179,28 +217,33 @@ exports.createPagoInscripcion = async (data) => {
     console.log('Pago de inscripción creado exitosamente:', pago);
 
     // Enviar correo de confirmación de inscripción
-    try {
-      const emailHtml = loadEmailTemplate('pagoInscripcion', {
-        PRESIDENTE_NOMBRE: nombrePresidente,
-        EQUIPO_NOMBRE: equipo.equipo_nombre,
-        CAMPEONATO_NOMBRE: equipo.campeonato_nombre,
-        MONTO: monto,
-        FECHA: fecha,
-        REFERENCIA: referencia
-      });
+    setImmediate(() => {
+      try {
+        const emailHtml = loadEmailTemplate('pagoInscripcion', {
+          PRESIDENTE_NOMBRE: nombrePresidente,
+          EQUIPO_NOMBRE: equipo.equipo_nombre,
+          CAMPEONATO_NOMBRE: equipo.campeonato_nombre,
+          MONTO: monto,
+          FECHA: fecha,
+          REFERENCIA: referencia
+        });
 
-      await sendEmail(
-        correoPresidente,
-        'Pago de Inscripción Confirmado',
-        `Estimado ${nombrePresidente}, su pago de inscripción ha sido registrado.`,
-        emailHtml
-      );
+        sendEmail(
+          correoPresidente,
+          'Pago de Inscripción Confirmado',
+          `Estimado ${nombrePresidente}, su pago de inscripción ha sido registrado.`,
+          emailHtml
+        ).then(() => {
+          console.log("✅ Correo enviado correctamente a:", correoPresidente);
+        }).catch((emailError) => {
+          console.error("⚠️ Error al enviar el correo:", emailError);
+        });
 
-      console.log("✅ Correo enviado correctamente a:", correoPresidente);
-    } catch (emailError) {
-      console.error("⚠️ Error al enviar el correo:", emailError);
-    }
-
+      } catch (templateError) {
+        console.error("⚠️ Error al cargar la plantilla:", templateError);
+      }
+    });
+    
     return pago;
   } catch (error) {
     await transaction.rollback();
@@ -320,51 +363,48 @@ exports.createPagoTraspaso = async (data) => {
     }
 
     // Enviar correos dentro de la transacción
-    await Promise.all([
-      sendTraspasoEmail(
-        { 
-          club_origen_nombre,
-          nombre_presi_club_origen,
-          apellido_presi_club_origen,
-          club_destino_nombre,
-          nombre_presi_club_dest,
-          apellido_presi_club_dest,
-          jugador_nombre,
-          jugador_apellido,
-          jugador_ci,
-          jugador_fecha_nacimiento,
-          nombre_campeonato
-        },
-        correoPresidenteDestino.correo
-      ),
+    setImmediate(() => {
+      sendTraspasoEmail({
+        club_origen_nombre,
+        nombre_presi_club_origen,
+        apellido_presi_club_origen,
+        club_destino_nombre,
+        nombre_presi_club_dest,
+        apellido_presi_club_dest,
+        jugador_nombre,
+        jugador_apellido,
+        jugador_ci,
+        jugador_fecha_nacimiento,
+        nombre_campeonato
+      }, correoPresidenteDestino.correo).catch(err =>
+        console.error('❌ Error enviando correo al presidente destino:', err.message)
+      );
 
-      sendJugadorEmail(
-        {
-          jugador_nombre,
-          jugador_apellido,
-          club_destino_nombre,
-          nombre_presi_club_dest,
-          apellido_presi_club_dest,
-          nombre_campeonato,
-          fecha_aprobacion: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
-        },
-        correoJugador.correo
-      ),
+      sendJugadorEmail({
+        jugador_nombre,
+        jugador_apellido,
+        club_destino_nombre,
+        nombre_presi_club_dest,
+        apellido_presi_club_dest,
+        nombre_campeonato,
+        fecha_aprobacion: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+      }, correoJugador.correo).catch(err =>
+        console.error('❌ Error enviando correo al jugador:', err.message)
+      );
 
-      sendPresidenteEmail(
-        {
-          nombre_presi_club_origen,
-          apellido_presi_club_origen,
-          club_origen_nombre,
-          jugador_nombre,
-          jugador_apellido,
-          jugador_ci,
-          jugador_fecha_nacimiento,
-          fecha_aprobacion: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
-        },
-        correoPresidenteOrigen.correo
-      )
-    ]);
+      sendPresidenteEmail({
+        nombre_presi_club_origen,
+        apellido_presi_club_origen,
+        club_origen_nombre,
+        jugador_nombre,
+        jugador_apellido,
+        jugador_ci,
+        jugador_fecha_nacimiento,
+        fecha_aprobacion: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+      }, correoPresidenteOrigen.correo).catch(err =>
+        console.error('❌ Error enviando correo al presidente origen:', err.message)
+      );
+    });
 
     // Confirmar la transacción si todo salió bien
     await transaction.commit();
@@ -526,7 +566,7 @@ exports.createPago = async (data) => {
 exports.obtenerEquiposPorCampeonato = async () => {
   try {
     const equipos = await sequelize.query(
-      `SELECT 
+      `SELECT DISTINCT
         e.id AS equipo_id,
         e.nombre AS equipo_nombre,
         cat.nombre AS Categoria,
@@ -541,10 +581,10 @@ exports.obtenerEquiposPorCampeonato = async () => {
         EquipoCampeonato ec
       JOIN Equipo e ON ec.equipoId = e.id
       JOIN Campeonato c ON ec.campeonatoId = c.id
-      JOIN Club cl ON cl.id = e.club_id
-      JOIN ImagenClub ic ON ic.club_id = cl.id
+      JOIN Club cl ON cl.id = e.club_id AND CL.presidente_asignado = 'S'
+      LEFT JOIN ImagenClub ic ON ic.club_id = cl.id
       JOIN Categoria cat ON cat.id = ec.categoria_id
-      JOIN PresidenteClub pc ON pc.club_id = cl.id
+      JOIN PresidenteClub pc ON pc.club_id = cl.id 
       WHERE 
         c.estado != 3 
         AND ec.estado = 'Deuda'
@@ -592,7 +632,7 @@ exports.obtenerTraspasosPorCampeonato = async () => {
       LEFT JOIN Club clubDestino ON t.club_destino_id = clubDestino.id
       LEFT JOIN ImagenClub icd ON icd.club_id = clubDestino.id
       LEFT JOIN Jugador j ON t.jugador_id = j.id
-      LEFT JOIN JugadorEquipo je ON je.jugador_id = j.id AND je.activo = 1
+      LEFT JOIN JugadorEquipo je ON je.jugador_id = j.id 
       LEFT JOIN Equipo e ON e.id = je.equipo_id
       LEFT JOIN EquipoCampeonato ec ON ec.equipoId = e.id AND ec.campeonatoId = t.campeonato_id
       LEFT JOIN Categoria cat ON cat.id = ec.categoria_id
@@ -634,12 +674,20 @@ exports.obtenerResumenCampeonato = async () => {
     }
 
     // Obtener equipos con estado "DeudaInscripcion"
-    const equiposConDeuda = await EquipoCampeonato.findAll({
-      where: {
+    const equiposConDeuda = await sequelize.query(`
+      SELECT ec.*
+      FROM EquipoCampeonato ec
+      JOIN Equipo e ON e.id = ec.equipoId
+      JOIN Club c ON c.id = e.club_id
+      WHERE ec.campeonatoId = :campeonatoId
+        AND ec.estado = :estado
+        AND c.presidente_asignado = 'S'
+    `, {
+      replacements: {
         campeonatoId: campeonato.id,
         estado: campeonatoEstado.DeudaInscripcion
       },
-      include: [{ model: Equipo, as: 'equipo' }]
+      type: sequelize.QueryTypes.SELECT
     });
 
     // Obtener traspasos con las condiciones requeridas
@@ -708,3 +756,84 @@ exports.getPagosInscripcionPorCampeonato = async (campeonatoId) => {
     throw new Error('No se pudo obtener el historial de pagos');
   }
 };
+
+exports.getPagosTraspasoPorCampeonato = async (campeonatoId) => {
+  try {
+    const query = `
+      SELECT 
+        t.id AS traspaso_id,
+        clubOrigen.id AS club_origen_id,
+        clubOrigen.nombre AS club_origen_nombre,
+        clubDestino.id AS club_destino_id,
+        clubDestino.nombre AS club_destino_nombre,
+        j.id AS jugador_id,
+        j.jugador_id AS jugador_persona_id,
+        p.nombre AS jugador_nombre,
+        p.apellido AS jugador_apellido,
+        p.ci AS jugador_ci,
+        p.genero AS jugador_genero,
+        p.fecha_nacimiento AS jugador_fecha_nacimiento,
+        ppcd.id AS id_persona_presi_det,
+        ppcd.nombre AS nombre_presi_club_dest,
+        ppcd.apellido AS apellido_presi_club_dest,
+        ppco.id AS id_persona_presi_origen,
+        ppco.nombre AS nombre_presi_club_origen,
+        ppco.apellido AS apellido_presi_club_origen,
+        c.id AS campeonato_id,
+        c.nombre AS nombre_campeonato,
+        t.estado_deuda,
+        cat.costo_traspaso,
+        ico.club_imagen AS club_origen_imagen,
+        icd.club_imagen AS club_destino_imagen,
+        impj.persona_imagen,
+        pgo.id AS pago_id,
+        pgo.monto AS pago_monto,
+        pgo.fecha AS pago_fecha,
+        pgo.referencia AS pago_referencia
+      FROM PagoTraspaso pt
+      JOIN Pago pgo ON pt.id = pgo.id
+      JOIN Traspaso t ON pt.traspaso_id = t.id
+      LEFT JOIN Club clubOrigen ON t.club_origen_id = clubOrigen.id
+      LEFT JOIN ImagenClub ico ON ico.club_id = clubOrigen.id
+      LEFT JOIN Club clubDestino ON t.club_destino_id = clubDestino.id
+      LEFT JOIN ImagenClub icd ON icd.club_id = clubDestino.id
+      LEFT JOIN Jugador j ON t.jugador_id = j.id
+      LEFT JOIN JugadorEquipo je ON je.jugador_id = j.id
+      LEFT JOIN Equipo e ON e.id = je.equipo_id
+      LEFT JOIN EquipoCampeonato ec ON ec.equipoId = e.id AND ec.campeonatoId = t.campeonato_id
+      LEFT JOIN Categoria cat ON cat.id = ec.categoria_id
+      LEFT JOIN Persona p ON j.jugador_id = p.id
+      LEFT JOIN ImagenPersona impj ON impj.persona_id = p.id
+      LEFT JOIN PresidenteClub pcd ON pcd.id = t.presidente_club_id_destino
+      LEFT JOIN Persona ppcd ON ppcd.id = pcd.presidente_id
+      LEFT JOIN PresidenteClub pco ON pco.id = t.presidente_club_id_origen
+      LEFT JOIN Persona ppco ON ppco.id = pco.presidente_id
+      LEFT JOIN Campeonato c ON c.id = t.campeonato_id
+      WHERE 
+        t.estado_club_origen = 'APROBADO'
+        AND t.estado_jugador = 'APROBADO'
+        AND t.estado_deuda = 'FINALIZADO'
+        AND t.eliminado = 'N'
+        AND c.id = :campeonatoId;
+    `;
+
+    const results = await sequelize.query(query, {
+      replacements: { campeonatoId },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    const resultadosConMontos = await Promise.all(results.map(async (row) => {
+      const montoReal = await getMontoTraspasoPorTraspasoId(row.traspaso_id);
+      return {
+        ...row,
+        monto_real: montoReal
+      };
+    }));
+
+    return resultadosConMontos;
+  } catch (error) {
+    console.error('Error al obtener historial de pagos por traspaso:', error);
+    throw new Error('No se pudo obtener el historial de pagos por traspaso');
+  }
+};
+

@@ -19,7 +19,7 @@ exports.getTraspasoById = async (id) => {
           p.apellido AS jugador_apellido,
           p.ci AS jugador_ci,
           p.genero AS jugador_genero,
-          p.fecha_nacimiento AS jugador_fecha_nacimiento,
+          CONVERT(VARCHAR(10), p.fecha_nacimiento, 120) AS jugador_fecha_nacimiento,
           ppcd.nombre AS nombre_presi_club_dest,
           ppcd.apellido AS apellido_presi_club_dest,
           ppco.nombre AS nombre_presi_club_origen,

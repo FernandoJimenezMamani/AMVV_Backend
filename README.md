@@ -16,6 +16,13 @@ STORAGE_BUCKET = "amvv-dbf.appspot.com"
 MESSAGING_SENDER_ID = "760689455022"
 APP_ID = "1:760689455022:web:0e81544f671bc581e4223f"
 
+EMAIL_USER = 'ferjimenezm933@gmail.com'
+EMAIL_PASS = 'rssd pwxw cpuh jpwc'
+
+SESSION_SECRET=4uN4Cl4v3D1f1c1lDeAdivinar
+NODE_ENV=development
+
+
 # COMANDO PARA EJECUTAR SEEDERS
 
 node seeders/seed-roles.js

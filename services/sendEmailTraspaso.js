@@ -117,5 +117,33 @@ exports.sendPresidenteEmail = async (solicitud, destinatario) => {
     }
 };
 
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
+  });
 
+exports.sendBienvenidaUsuarioEmail = async (destinatario, nombre, password) => {
+    try {
+      const html = loadEmailTemplate('bienvenidaUsuario', {
+        nombre,
+        password
+      });
+  
+      await transporter.sendMail({
+        from: `"Asociación de Voleibol" <${process.env.EMAIL_USER}>`,
+        to: destinatario,
+        subject: 'Bienvenido al Sistema - Tus credenciales',
+        html
+      });
+  
+      console.log(`✅ Correo de bienvenida enviado a ${destinatario}`);
+      return { success: true };
+    } catch (error) {
+      console.error(`❌ Error al enviar correo de bienvenida:`, error);
+      return { success: false, message: 'Fallo en el envío de correo', error };
+    }
+  };
 
