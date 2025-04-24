@@ -7,6 +7,7 @@ const traspasoEstados = require('../constants/estadoTraspasos')
 const { sendEmail } = require('../services/emailService');
 const { loadEmailTemplate } = require('../utils/emailTemplate');
 const { sendTraspasoEmail, sendJugadorEmail, sendPresidenteEmail } = require('../services/sendEmailTraspaso');
+const {broadcastRegistroPagoInscripcion} = require('../utils/websocket');
 
 exports.obtenerEquiposPorCampeonatoById = async (id) => {
   try {
@@ -215,7 +216,7 @@ exports.createPagoInscripcion = async (data) => {
 
     await transaction.commit();
     console.log('Pago de inscripción creado exitosamente:', pago);
-
+    broadcastRegistroPagoInscripcion(); 
     // Enviar correo de confirmación de inscripción
     setImmediate(() => {
       try {

@@ -14,5 +14,6 @@ router.put('/delete_club/:id', clubController.deleteClub);
 router.post('/clubes-disponibles-by-jugador', clubController.obtenerClubesDisponiblesParaJugador);
 router.post('/clubes_pending_confirm', clubController.getClubesPendingConfirmation);
 router.put('/activate_club/:id', clubController.activateClub);
+router.get('/delegados/:id', clubController.getDelegados);
 
 module.exports = router;

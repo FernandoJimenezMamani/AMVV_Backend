@@ -297,7 +297,13 @@ exports.getJugadoresByClubIdAndCategory = async (club_id, id_equipo) => {
       j.club_id = :club_id
       AND j.activo = 1 
       AND p.eliminado = 'N'
-      AND je.id IS NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM JugadorEquipo je2
+        WHERE je2.jugador_id = j.id
+          AND je2.campeonato_id = :campeonato_id
+      )
+
       AND (
           :genero_categoria = 'Mixto'
           OR p.genero = :genero_categoria

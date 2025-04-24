@@ -59,6 +59,11 @@ exports.createPersona = async (req, res) => {
       return res.status(400).json({ message: 'Todos los campos requeridos deben ser proporcionados' });
     }
 
+    const ciRegex = /^[0-9]{6,9}$/;
+    if (!ciRegex.test(ci)) {
+      return res.status(400).json({ message: 'El CI debe contener solo números y tener entre 6 y 9 dígitos.' });
+    }
+
     // Validar club para jugador o presidente
     if (rolesArray.includes(roleNames.Jugador) && !club_jugador_id) {
       return res.status(400).json({ message: 'Debe seleccionar un club para el rol de jugador' });
@@ -94,6 +99,16 @@ exports.createPersona = async (req, res) => {
     });
   } catch (err) {
     console.error('Error al crear la persona:', err);
+
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      if (err.fields && err.fields.ci) {
+        return res.status(409).json({ mensaje: 'Ya existe una persona con ese CI.' });
+      }
+      if (err.fields && err.fields.correo) {
+        return res.status(409).json({ mensaje: 'Ya existe un usuario con ese correo.' });
+      }
+      return res.status(409).json({ mensaje: 'Ya existe un valor único duplicado.' });
+    }
 
     // Manejo de errores específicos
     if (err.message.includes('Ya existe un usuario con el rol')) {

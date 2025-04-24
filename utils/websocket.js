@@ -36,6 +36,16 @@ const broadcastCampeonatoEstadoUpdate = (cambios) => {
   });
 };
 
+const broadcastRegistroPagoInscripcion = () => {
+  clients.forEach((ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: "pago_registro_inscripcion"
+      }));
+    }
+  });
+};
+
 const sendToClient = (clientId, message) => {
   const client = clients.get(clientId);
   if (client && client.readyState === WebSocket.OPEN) {
@@ -73,6 +83,6 @@ const setupWebSocket = (server) => {
   });
 };
 
-module.exports = { clients, broadcastPositionsUpdate, broadcastPartidoUpdate ,broadcastCampeonatoEstadoUpdate,
+module.exports = { clients, broadcastPositionsUpdate, broadcastPartidoUpdate ,broadcastCampeonatoEstadoUpdate,broadcastRegistroPagoInscripcion,
   sendToClient,
   setupWebSocket, };

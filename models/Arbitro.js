@@ -13,7 +13,7 @@ const Arbitro = sequelize.define('Arbitro', {
   },
   activo: {
     type: DataTypes.TINYINT, 
-    allowNull: true,
+    allowNull: false,
   },
 }, {
   tableName: 'Arbitro',

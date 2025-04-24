@@ -39,9 +39,9 @@ exports.createEquipo = async (req, res) => {
   try {
     const equipo = await equipoService.createEquipo({ nombre, club_id, categoria_id, user_id });
     res.status(201).json({ message: 'Equipo creado', equipoId: equipo.id });
-  } catch (err) {
-    console.error('Error:', err.message);
-    res.status(500).json({ message: 'Error al crear equipo', error: err.message });
+  } catch (error) {
+    console.error("❌ Error al registrar el equipo:", error.message);
+    res.status(400).json({ error: error.message || 'Error al registrar el equipo' });
   }
 };
 
@@ -55,15 +55,12 @@ exports.updateEquipo = async (req, res) => {
 
   try {
     const result = await equipoService.updateEquipo(id, { nombre, club_id, categoria_id, user_id });
-    if (result[0] > 0) {
-      res.status(200).json({ message: 'Equipo actualizado correctamente' });
-    } else {
-      res.status(404).json({ message: 'Equipo no encontrado' });
-    }
+    res.status(200).json(result); // Ya contiene el mensaje
+
   } catch (err) {
     console.error('Error:', err.message);
-    res.status(500).json({ message: 'Error al actualizar equipo', error: err.message });
-  }
+    res.status(400).json({ error: err.message || 'Error al actualizar equipo' });
+  }  
 };
 
 exports.deleteEquipo = async (req, res) => {

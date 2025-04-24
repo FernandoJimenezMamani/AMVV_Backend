@@ -35,7 +35,7 @@ const Jugador = sequelize.define('Jugador', {
 });
 
 
-Jugador.belongsTo(Persona, {foreignKey: 'id',as: 'persona'});
+Jugador.belongsTo(Persona, {foreignKey: 'jugador_id',as: 'persona'});
 Persona.hasMany(Jugador, { foreignKey: 'jugador_id',as: 'jugador'});
 
 

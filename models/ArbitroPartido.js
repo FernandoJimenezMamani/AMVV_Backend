@@ -2,6 +2,7 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/sequelize');
 const Persona = require('./Persona');
 const Partido = require('./Partido');
+const Arbitro = require('./Arbitro');
 
   const ArbitroPartido = sequelize.define('ArbitroPartido', {
     id: {
@@ -13,7 +14,7 @@ const Partido = require('./Partido');
       type: DataTypes.INTEGER,
       allowNull: true,
       references: {
-        model: 'Persona', 
+        model: 'Arbitro', 
         key: 'id',
       }
     },

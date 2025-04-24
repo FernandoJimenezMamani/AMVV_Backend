@@ -177,8 +177,8 @@ exports.getPartidosByEquipoId = async (EquipoId, campeonatoId) => {
       JOIN Campeonato c ON p.campeonato_id = c.id
       JOIN Equipo el ON p.equipo_local_id = el.id
       JOIN Equipo ev ON p.equipo_visitante_id = ev.id
-      JOIN ImagenClub ICL ON el.club_id = ICL.club_id
-      JOIN ImagenClub ICV ON ev.club_id = ICV.club_id
+      LEFT JOIN ImagenClub ICL ON el.club_id = ICL.club_id
+      LEFT JOIN ImagenClub ICV ON ev.club_id = ICV.club_id
       JOIN Lugar L ON p.lugar_id = L.id
       JOIN EquipoCampeonato ECL ON ECL.equipoId = el.id AND ECL.campeonatoId = c.id
       WHERE 
@@ -499,13 +499,15 @@ exports.getPartidoCompletoById = async (partidoId) => {
         ICL.club_imagen AS equipo_local_imagen,
         EV.id AS equipo_visitante_id,
         EV.nombre AS equipo_visitante_nombre,
-        ICV.club_imagen AS equipo_visitante_imagen
+        ICV.club_imagen AS equipo_visitante_imagen,
+		    IMP.partido_image
       FROM Partido P
       JOIN Lugar L ON P.lugar_id = L.id
       JOIN Equipo EL ON P.equipo_local_id = EL.id
       JOIN Equipo EV ON P.equipo_visitante_id = EV.id
       LEFT JOIN ImagenClub ICL ON EL.club_id = ICL.club_id
       LEFT JOIN ImagenClub ICV ON EV.club_id = ICV.club_id
+      LEFT JOIN ImagePlanilla IMP ON IMP.partido_id = P.id
       WHERE P.id = :partidoId;
     `,
       {
@@ -1433,9 +1435,9 @@ exports.getPartidosByCampeonatoYFecha = async (campeonatoId, fecha) => {
         Equipo EL ON P.equipo_local_id = EL.id
     JOIN 
         Equipo EV ON P.equipo_visitante_id = EV.id
-    JOIN 
+    LEFT JOIN 
         ImagenClub ICL ON EL.club_id = ICL.club_id
-    JOIN 
+    LEFT JOIN 
         ImagenClub ICV ON EV.club_id = ICV.club_id
     JOIN 
         Lugar L ON P.lugar_id = L.id
@@ -2199,72 +2201,160 @@ exports.updateResultadoSets = async ({
   resultadoVisitante,
   walkover = null,
 }) => {
+  console.log("hHaciendo la prueba nomas",partido_id, resultadoLocal, resultadoVisitante, walkover);
   const transaction = await sequelize.transaction();
+
+  // Obtener resultados ya registrados
+  const local = await ResultadoLocal.findOne({ where: { partido_id } });
+  const visitante = await ResultadoVisitante.findOne({ where: { partido_id } });
+
+  const isSetRegistrado = (setL, setV) => {
+    return (
+      setL !== null &&
+      setL !== undefined &&
+      setL !== '' &&
+      setV !== null &&
+      setV !== undefined &&
+      setV !== ''
+    );
+  };
+
+  const validarOrdenDeRegistro = () => {
+    const setsBDLocal = [local?.set1, local?.set2, local?.set3];
+    const setsBDVisitante = [visitante?.set1, visitante?.set2, visitante?.set3];
+  
+    console.log("📥 setsBDLocal:", setsBDLocal);
+    console.log("📥 setsBDVisitante:", setsBDVisitante);
+  
+    const set1Nuevo = resultadoLocal.set1 !== '' && resultadoLocal.set1 != null ||
+                      resultadoVisitante.set1 !== '' && resultadoVisitante.set1 != null;
+    const set1YaRegistrado = isSetRegistrado(setsBDLocal[0], setsBDVisitante[0]);
+  
+    const set2Nuevo = resultadoLocal.set2 !== '' && resultadoLocal.set2 != null ||
+                      resultadoVisitante.set2 !== '' && resultadoVisitante.set2 != null;
+    const set2YaRegistrado = isSetRegistrado(setsBDLocal[1], setsBDVisitante[1]);
+  
+    const set3Nuevo = resultadoLocal.set3 !== '' && resultadoLocal.set3 != null ||
+                      resultadoVisitante.set3 !== '' && resultadoVisitante.set3 != null;
+  
+    console.log("🔍 Set 1 nuevo:", set1Nuevo);
+    console.log("🔍 Set 1 ya registrado:", set1YaRegistrado);
+    console.log("🔍 Set 2 nuevo:", set2Nuevo);
+    console.log("🔍 Set 2 ya registrado:", set2YaRegistrado);
+    console.log("🔍 Set 3 nuevo:", set3Nuevo);
+  
+    if (set2Nuevo && !(set1Nuevo || set1YaRegistrado)) {
+      throw new Error("No se puede registrar el Set 2 sin haber registrado primero el Set 1.");
+    }
+  
+    if (set3Nuevo && !(set2Nuevo || set2YaRegistrado)) {
+      throw new Error("No se puede registrar el Set 3 sin haber registrado primero el Set 2.");
+    }
+  };
+  
+
+  const validarSet = (a, b, maximo) => {
+    a = parseInt(a);
+    b = parseInt(b);
+    if (isNaN(a) || isNaN(b)) return true;
+    const diferencia = Math.abs(a - b);
+    const mayor = Math.max(a, b);
+    if (mayor < maximo) return false;
+    return diferencia >= 2;
+  };
+
+  const validarResultados = () => {
+    const sets = [
+      [resultadoLocal.set1, resultadoVisitante.set1, 25, "Set 1"],
+      [resultadoLocal.set2, resultadoVisitante.set2, 25, "Set 2"],
+      [resultadoLocal.set3, resultadoVisitante.set3, 15, "Set 3"],
+    ];
+    for (const [a, b, max, nombre] of sets) {
+      const ambosCero = (!a || a === 0) && (!b || b === 0);
+      if (ambosCero) continue;
+      if (!validarSet(a, b, max)) {
+        throw new Error(`${nombre} inválido: el ganador debe tener mínimo ${max} puntos y una diferencia de al menos 2 puntos. Resultado actual: ${a}-${b}`);
+      }
+    }
+  };
 
   try {
     const walkoverValue = walkover === '' ? null : walkover;
-
-    // Buscar si ya existen resultados
-    const local = await ResultadoLocal.findOne({ where: { partido_id } });
-    const visitante = await ResultadoVisitante.findOne({
-      where: { partido_id },
-    });
 
     if (!local) {
       await ResultadoLocal.create(
         {
           partido_id,
-          set1: resultadoLocal.set1 ?? 0,
-          set2: resultadoLocal.set2 ?? 0,
-          set3: resultadoLocal.set3 ?? 0,
-          resultado: resultadoLocal.resultado || null,
+          set1: resultadoLocal.set1 !== "" && resultadoLocal.set1 !== undefined ? resultadoLocal.set1 : null,
+          set2: resultadoLocal.set2 !== "" && resultadoLocal.set2 !== undefined ? resultadoLocal.set2 : null,
+          set3: resultadoLocal.set3 !== "" && resultadoLocal.set3 !== undefined ? resultadoLocal.set3 : null,
           walkover: walkoverValue,
         },
         { transaction },
-      );
+      );      
     } else {
       await local.update(
         {
-          set1: resultadoLocal.set1 ?? local.set1,
-          set2: resultadoLocal.set2 ?? local.set2,
-          set3: resultadoLocal.set3 ?? local.set3,
-          resultado: resultadoLocal.resultado || local.resultado,
+          set1: resultadoLocal.set1 !== '' && resultadoLocal.set1 !== undefined ? resultadoLocal.set1 : null,
+          set2: resultadoLocal.set2 !== '' && resultadoLocal.set2 !== undefined ? resultadoLocal.set2 : null,
+          set3: resultadoLocal.set3 !== '' && resultadoLocal.set3 !== undefined ? resultadoLocal.set3 : null,
           walkover: walkoverValue,
         },
-        { transaction },
+        { transaction }
       );
+          
     }
 
     if (!visitante) {
       await ResultadoVisitante.create(
         {
           partido_id,
-          set1: resultadoVisitante.set1 ?? 0,
-          set2: resultadoVisitante.set2 ?? 0,
-          set3: resultadoVisitante.set3 ?? 0,
-          resultado: resultadoVisitante.resultado || null,
+          set1: resultadoVisitante.set1 !== "" && resultadoVisitante.set1 !== undefined ? resultadoVisitante.set1 : null,
+          set2: resultadoVisitante.set2 !== "" && resultadoVisitante.set2 !== undefined ? resultadoVisitante.set2 : null,
+          set3: resultadoVisitante.set3 !== "" && resultadoVisitante.set3 !== undefined ? resultadoVisitante.set3 : null,
           walkover: walkoverValue,
         },
         { transaction },
-      );
+      );      
     } else {
       await visitante.update(
         {
-          set1: resultadoVisitante.set1 ?? visitante.set1,
-          set2: resultadoVisitante.set2 ?? visitante.set2,
-          set3: resultadoVisitante.set3 ?? visitante.set3,
-          resultado: resultadoVisitante.resultado || visitante.resultado,
+          set1: resultadoVisitante.set1 !== '' && resultadoVisitante.set1 !== undefined ? resultadoVisitante.set1 : null,
+          set2: resultadoVisitante.set2 !== '' && resultadoVisitante.set2 !== undefined ? resultadoVisitante.set2 : null,
+          set3: resultadoVisitante.set3 !== '' && resultadoVisitante.set3 !== undefined ? resultadoVisitante.set3 : null,
           walkover: walkoverValue,
         },
-        { transaction },
+        { transaction }
       );
+      
     }
+
+    validarOrdenDeRegistro();
+    validarResultados();
+
+    const setsLocal = [resultadoLocal.set1 , resultadoLocal.set2 , resultadoLocal.set3 ];
+    const setsVisitante = [resultadoVisitante.set1 , resultadoVisitante.set2 , resultadoVisitante.set3 ];
+
+    let ganadosLocal = 0;
+    let ganadosVisitante = 0;
+
+    for (let i = 0; i < 3; i++) {
+      if (setsLocal[i] > setsVisitante[i]) ganadosLocal++;
+      else if (setsVisitante[i] > setsLocal[i]) ganadosVisitante++;
+    }
+
+    const localActual = await ResultadoLocal.findOne({ where: { partido_id }, transaction });
+    const visitanteActual = await ResultadoVisitante.findOne({ where: { partido_id }, transaction });
+
+    await localActual.update({ resultado: ganadosLocal > ganadosVisitante ? 'G' : 'P' }, { transaction });
+    await visitanteActual.update({ resultado: ganadosVisitante > ganadosLocal ? 'G' : 'P' }, { transaction });
+
     const partido = await Partido.findByPk(partido_id, { transaction });
 
     const otroPartidoVivo = await Partido.findOne({
       where: {
         estado: partidoEstadosMapping.Vivo,
-        id: { [Op.ne]: partido_id }, // Excluye el partido actual
+        id: { [Op.ne]: partido_id },
         [Op.or]: [
           { equipo_local_id: partido.equipo_local_id },
           { equipo_visitante_id: partido.equipo_local_id },
@@ -2276,10 +2366,9 @@ exports.updateResultadoSets = async ({
     });
 
     if (otroPartidoVivo) {
-      throw new Error(
-        'Uno de los equipos ya tiene un partido en curso. Finalice ese partido antes de continuar.'
-      );
+      throw new Error('Uno de los equipos ya tiene un partido en curso. Finalice ese partido antes de continuar.');
     }
+
     if (partido.estado === partidoEstadosMapping.Confirmado) {
       await partido.update(
         { estado: partidoEstadosMapping.Vivo },
@@ -2289,7 +2378,8 @@ exports.updateResultadoSets = async ({
 
     await transaction.commit();
     broadcastPartidoUpdate(partido_id);
-    broadcastPositionsUpdate(); // Si quieres actualizar en tiempo real
+    broadcastPositionsUpdate();
+
     return { message: 'Sets actualizados correctamente' };
   } catch (error) {
     console.error('Error al actualizar los sets:', error);
@@ -2364,16 +2454,27 @@ exports.submitResultados = async ({
   const transaction = await sequelize.transaction();
 
   try {
-    console.log('📨 Datos recibidos:', {
-      partido_id,
-      resultadoLocal,
-      resultadoVisitante,
-      walkover,
-      tarjetas,
-      imagenPlanilla,
-    });
-
     const walkoverValue = walkover === '' ? null : walkover;
+    if (!walkoverValue) {
+      const setsL = [resultadoLocal.set1, resultadoLocal.set2, resultadoLocal.set3].map(Number);
+      const setsV = [resultadoVisitante.set1, resultadoVisitante.set2, resultadoVisitante.set3].map(Number);
+    
+      let ganadosLocal = 0;
+      let ganadosVisitante = 0;
+    
+      for (let i = 0; i < 3; i++) {
+        if (setsL[i] > setsV[i]) ganadosLocal++;
+        else if (setsV[i] > setsL[i]) ganadosVisitante++;
+      }
+    
+      if (ganadosLocal === ganadosVisitante) {
+        throw new Error("El partido no puede finalizar sin un equipo ganador.");
+      }
+    
+      if (ganadosLocal < 2 && ganadosVisitante < 2) {
+        throw new Error("Uno de los equipos debe haber ganado al menos dos sets para finalizar el partido.");
+      }
+    }
 
     // ✅ Sets y Walkover
     await exports.updateResultadoSets({

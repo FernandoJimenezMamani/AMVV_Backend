@@ -18,11 +18,11 @@ const ResultadoLocal = sequelize.define('ResultadoLocal', {
   },
   set1: {
     type: DataTypes.TINYINT,
-    allowNull: false,
+    allowNull: true,
   },
   set2: {
     type: DataTypes.TINYINT,
-    allowNull: false,
+    allowNull: true,
   },
   set3: {
     type: DataTypes.TINYINT,

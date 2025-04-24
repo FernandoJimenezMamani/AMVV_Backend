@@ -10,6 +10,7 @@ const Categoria = sequelize.define('Categoria', {
   nombre: {
     type: DataTypes.STRING(50),
     allowNull: true,
+    unique: true
   },
   genero: {
     type: DataTypes.STRING(20),
@@ -58,11 +59,11 @@ const Categoria = sequelize.define('Categoria', {
     allowNull: true,
   },
   nivel_jerarquico: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.TINYINT,
     allowNull: true,
   },
   cant_equipos_max: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.TINYINT,
     allowNull: true,
   },
 }, {

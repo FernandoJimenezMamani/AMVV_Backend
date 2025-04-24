@@ -146,3 +146,14 @@ exports.getClubesPendingConfirmation = async (req, res) => {
       return res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
+
+exports.getDelegados = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const delegados = await clubService.getDelegadosDelClub(id);
+    res.status(200).json(delegados);
+  } catch (error) {
+    res.status(500).json({ error: 'No se pudieron obtener los delegados' });
+  }
+};
+

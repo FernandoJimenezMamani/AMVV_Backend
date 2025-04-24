@@ -12,6 +12,7 @@ Campeonato.init({
   nombre: {
     type: DataTypes.STRING(255),
     allowNull: true,
+    unique: true
   },
   fecha_inicio_campeonato: {
     type: DataTypes.DATE,

@@ -261,14 +261,13 @@ exports.submitResultados = async (req, res) => {
       resultados,
     });
   } catch (error) {
-    res.status(500).json({
-      message: "Error al registrar los resultados",
-      error: error.message,
-    });
+    return res.status(400).json({
+      message: error.message || "Error al registrar el resultado",
+    }); 
   }
 };
 
-exports.getPartidoCompletoById = async (req, res) => {
+exports.  getPartidoCompletoById = async (req, res) => {
   const { partidoId } = req.params;
 
   try {

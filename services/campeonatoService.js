@@ -3,6 +3,7 @@ const {
   EquipoCampeonato,
   Equipo,
   Categoria,
+  Partido,
   Sequelize,
 } = require("../models");
 const sequelize = require("../config/sequelize");
@@ -540,19 +541,39 @@ exports.getChampionshipPositions = async (
 
 exports.obtenerFechasDePartidos = async (campeonatoId) => {
   const campeonato = await Campeonato.findByPk(campeonatoId);
-  if (!campeonato) {
-    throw new Error("Campeonato no encontrado");
-  }
+  if (!campeonato) throw new Error("Campeonato no encontrado");
 
   const fechas = [];
   let fechaActual = new Date(campeonato.fecha_inicio_campeonato);
   const fechaFin = new Date(campeonato.fecha_fin_campeonato);
 
   while (fechaActual <= fechaFin) {
-    if (fechaActual.getDay() === 6 || fechaActual.getDay() === 0) {
-      // Sábado (6) y Domingo (0)
-      fechas.push(fechaActual.toISOString().split("T")[0]); // Obtener solo la parte de la fecha (YYYY-MM-DD)
+    const dia = fechaActual.getDay();
+    const fechaString = fechaActual.toISOString().split("T")[0]; // 'YYYY-MM-DD'
+
+    if (dia === 6 || dia === 0) {
+      console.log("🔍 Revisando:", fechaString);
+
+      const [partidos] = await sequelize.query(`
+        SELECT TOP 1 id FROM Partido
+        WHERE campeonato_id = :campeonatoId
+        AND CAST(fecha AS DATE) = :fecha
+      `, {
+        replacements: {
+          campeonatoId,
+          fecha: fechaString
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      if (partidos) {
+        console.log("✅ Partido encontrado:", fechaString);
+        fechas.push(fechaString);
+      } else {
+        console.log("❌ Sin partidos en:", fechaString);
+      }
     }
+
     fechaActual.setDate(fechaActual.getDate() + 1);
   }
 

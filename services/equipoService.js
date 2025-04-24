@@ -46,7 +46,8 @@ exports.getEquipoById = async (id) => {
       cat.id AS categoria_id,
       cat.nombre AS categoria_nombre,
       cat.genero,
-      cat.division
+      cat.division,
+      cat.es_ascenso
     FROM 
       Equipo e
     JOIN 
@@ -78,40 +79,66 @@ exports.getEquipoById = async (id) => {
 
 exports.createEquipo = async ({ nombre, club_id, categoria_id, user_id }) => {
   // Verificar si ya existe un equipo con el mismo nombre en la misma categoría
-  const existingEquipo = await Equipo.findOne({
-    where: {
-      nombre,
-      categoria_id,
-      eliminado: 'N'
-    }
+  const campeonatoActivo = await Campeonato.findOne({
+    where: { estado: campeonatoEstados.transaccionProceso }
   });
+
+   if (!campeonatoActivo) {
+      throw new Error("No hay un campeonato activo para registrar el equipo.");
+    }
+
+   const existingEquipo = await EquipoCampeonato.findOne({
+     where: {
+       campeonatoId: campeonatoActivo.id
+     },
+     include: [
+       {
+         model: Equipo,
+         as: 'equipo',
+         where: { nombre, eliminado: 'N' }
+       }
+     ]
+   });
 
   if (existingEquipo) {
     throw new Error(`Ya existe un equipo con el nombre "${nombre}" en la misma categoría.`);
   }
 
+  const categoria = await Categoria.findByPk(categoria_id);
+  if (!categoria) {
+    throw new Error("La categoría especificada no existe.");
+  }
+
+  if (categoria.cant_equipos_max !== null) {
+    const cantidadActual = await EquipoCampeonato.count({
+      where: {
+        campeonatoId: campeonatoActivo.id,
+        categoria_id
+      }
+    });
+
+    if (cantidadActual >= categoria.cant_equipos_max) {
+      throw new Error(`La categoría "${categoria.nombre}" ya alcanzó el máximo de ${categoria.cant_equipos_max} equipos permitidos.`);
+    }
+  }
   // Crear el equipo
   const nuevoEquipo = await Equipo.create({
     nombre,
     club_id,
-    categoria_id,
     fecha_registro: Sequelize.fn('GETDATE'),
     fecha_actualizacion: Sequelize.fn('GETDATE'),
     eliminado: 'N',
     user_id
   });
 
-  // Buscar un campeonato activo (estado = 1)
-  const campeonatoActivo = await Campeonato.findOne({
-    where: { estado: campeonatoEstados.transaccionProceso }
-  });
 
   // Si hay un campeonato activo, registrar el equipo en EquipoCampeonato
   if (campeonatoActivo) {
     await EquipoCampeonato.create({
       equipoId: nuevoEquipo.id,
       campeonatoId: campeonatoActivo.id,
-      estado: campeonatoEquipoEstados.DeudaInscripcion
+      estado: campeonatoEquipoEstados.DeudaInscripcion,
+      categoria_id,
     });
   }
 
@@ -122,17 +149,89 @@ exports.createEquipo = async ({ nombre, club_id, categoria_id, user_id }) => {
 exports.updateEquipo = async (id, data) => {
   const { nombre, club_id, categoria_id, user_id } = data;
 
-  const fieldsToUpdate = {
+  // 1. Verificar que el equipo existe
+  const equipo = await Equipo.findOne({ where: { id, eliminado: 'N' } });
+  if (!equipo) throw new Error('Equipo no encontrado');
+
+  // 2. Obtener el campeonato activo
+  const campeonatoActivo = await Campeonato.findOne({
+    where: { estado: campeonatoEstados.transaccionProceso }
+  });
+
+  if (!campeonatoActivo) {
+    throw new Error("No hay un campeonato activo para actualizar el equipo.");
+  }
+
+  // 3. Obtener registro en EquipoCampeonato
+  const equipoCampeonato = await EquipoCampeonato.findOne({
+    where: {
+      equipoId: id,
+      campeonatoId: campeonatoActivo.id
+    }
+  });
+
+  if (!equipoCampeonato) {
+    throw new Error("El equipo no está registrado en el campeonato actual.");
+  }
+
+  // 4. Validar nombre duplicado en esa categoría
+  if (nombre && categoria_id) {
+    const nombreDuplicado = await EquipoCampeonato.findOne({
+      where: {
+        campeonatoId: campeonatoActivo.id
+      },
+      include: [{
+        model: Equipo,
+        as: 'equipo',
+        where: {
+          nombre,
+          eliminado: 'N',
+          id: { [Sequelize.Op.ne]: id } // excluir el mismo equipo
+        }
+      }]
+    });
+
+    if (nombreDuplicado) {
+      throw new Error(`Ya existe un equipo con el nombre "${nombre}" .`);
+    }
+  }
+
+  // 5. Validar límite de equipos si cambia la categoría
+  if (categoria_id && categoria_id !== equipoCampeonato.categoria_id) {
+    const categoria = await Categoria.findByPk(categoria_id);
+    if (!categoria) throw new Error("La categoría especificada no existe.");
+
+    if (categoria.cant_equipos_max !== null) {
+      const equiposEnCategoria = await EquipoCampeonato.count({
+        where: {
+          campeonatoId: campeonatoActivo.id,
+          categoria_id
+        }
+      });
+
+      if (equiposEnCategoria >= categoria.cant_equipos_max) {
+        throw new Error(`La categoría "${categoria.nombre}" ya alcanzó el máximo de ${categoria.cant_equipos_max} equipos permitidos.`);
+      }
+    }
+
+    // Actualizar categoría en EquipoCampeonato
+    equipoCampeonato.categoria_id = categoria_id;
+    await equipoCampeonato.save();
+  }
+
+  // 6. Actualizar datos del equipo
+  await Equipo.update({
+    ...(nombre && { nombre }),
+    ...(club_id && { club_id }),
     fecha_actualizacion: Sequelize.fn('GETDATE'),
     user_id
-  };
+  }, {
+    where: { id }
+  });
 
-  if (nombre) fieldsToUpdate.nombre = nombre;
-  if (club_id) fieldsToUpdate.club_id = club_id;
-  if (categoria_id) fieldsToUpdate.categoria_id = categoria_id;
-
-  return await Equipo.update(fieldsToUpdate, { where: { id, eliminado: 'N' } });
+  return { message: "Equipo actualizado correctamente." };
 };
+
 
 exports.deleteEquipo = async (id, user_id) => {
   return await Equipo.update(

@@ -81,45 +81,45 @@ exports.getClubTeams = async (id) => {
   try {
     const clubTeams = await sequelize.query(`
        SELECT
-  Club.id AS club_id,
-  Club.nombre AS club_nombre,
-  Club.descripcion AS club_descripcion,
-  Club.presidente_asignado,
-  Club.eliminado AS club_eliminado,
-  ImagenClub.club_imagen AS club_imagen,
-  Equipo.id AS equipo_id,
-  Equipo.nombre AS equipo_nombre,
-  Equipo.eliminado AS equipo_eliminado,
-  Categoria.id AS categoria_id,
-  Categoria.nombre AS categoria_nombre,
-  Categoria.genero AS categoria_genero,
-  Persona.id AS presidente_id,
-  Persona.genero AS presidente_genero,
-  CONCAT(Persona.nombre, ' ', Persona.apellido) AS presidente_nombre,
-  ImagenPersona.persona_imagen
-FROM
-  Club
-LEFT JOIN ImagenClub ON Club.id = ImagenClub.club_id
-LEFT JOIN Equipo ON Club.id = Equipo.club_id
+          Club.id AS club_id,
+          Club.nombre AS club_nombre,
+          Club.descripcion AS club_descripcion,
+          Club.presidente_asignado,
+          Club.eliminado AS club_eliminado,
+          ImagenClub.club_imagen AS club_imagen,
+          Equipo.id AS equipo_id,
+          Equipo.nombre AS equipo_nombre,
+          Equipo.eliminado AS equipo_eliminado,
+          Categoria.id AS categoria_id,
+          Categoria.nombre AS categoria_nombre,
+          Categoria.genero AS categoria_genero,
+          Persona.id AS presidente_id,
+          Persona.genero AS presidente_genero,
+          CONCAT(Persona.nombre, ' ', Persona.apellido) AS presidente_nombre,
+          ImagenPersona.persona_imagen
+        FROM
+          Club
+        LEFT JOIN ImagenClub ON Club.id = ImagenClub.club_id
+        LEFT JOIN Equipo ON Club.id = Equipo.club_id
 
--- Obtenemos la última participación del equipo (campeonato más reciente)
-LEFT JOIN (
-  SELECT ec1.*
-  FROM EquipoCampeonato ec1
-  INNER JOIN (
-    SELECT equipoId, MAX(campeonatoId) AS ultimo_campeonato
-    FROM EquipoCampeonato
-    GROUP BY equipoId
-  ) ec2 ON ec1.equipoId = ec2.equipoId AND ec1.campeonatoId = ec2.ultimo_campeonato
-) AS UltimoEquipoCampeonato ON UltimoEquipoCampeonato.equipoId = Equipo.id
+        -- Obtenemos la última participación del equipo (campeonato más reciente)
+        LEFT JOIN (
+          SELECT ec1.*
+          FROM EquipoCampeonato ec1
+          INNER JOIN (
+            SELECT equipoId, MAX(campeonatoId) AS ultimo_campeonato
+            FROM EquipoCampeonato
+            GROUP BY equipoId
+          ) ec2 ON ec1.equipoId = ec2.equipoId AND ec1.campeonatoId = ec2.ultimo_campeonato
+        ) AS UltimoEquipoCampeonato ON UltimoEquipoCampeonato.equipoId = Equipo.id
 
-LEFT JOIN Categoria ON UltimoEquipoCampeonato.categoria_id = Categoria.id
-LEFT JOIN PresidenteClub ON Club.id = PresidenteClub.club_id AND PresidenteClub.activo = 1 
-LEFT JOIN Persona ON PresidenteClub.presidente_id = Persona.id AND Persona.eliminado = 'N' 
-LEFT JOIN ImagenPersona ON ImagenPersona.persona_id = Persona.id
+        LEFT JOIN Categoria ON UltimoEquipoCampeonato.categoria_id = Categoria.id
+        LEFT JOIN PresidenteClub ON Club.id = PresidenteClub.club_id AND PresidenteClub.activo = 1 AND PresidenteClub.delegado = 'N'
+        LEFT JOIN Persona ON PresidenteClub.presidente_id = Persona.id AND Persona.eliminado = 'N' 
+        LEFT JOIN ImagenPersona ON ImagenPersona.persona_id = Persona.id
 
-WHERE
-  Club.id = :id AND Club.eliminado = 'N'
+        WHERE
+        Club.id = :id AND Club.eliminado = 'N'
 
     `, {
       replacements: { id }, 
@@ -128,8 +128,8 @@ WHERE
 
     return clubTeams;
   } catch (error) {
-    console.error('Error al obtener los partidos:', error);
-    throw new Error('Error al obtener los partidos');
+    console.error('Error al obtener los equipos:', error);
+    throw new Error('Error al obtener los equipos');
   }
 };
 
@@ -331,3 +331,26 @@ exports.getClubesPendingConfirmation = async (jugador_id ,campeonatoId) => {
     throw new Error('Error al obtener los jugadores con sus clubes');
   }
 };
+
+// clubService.js
+// clubService.js o delegadoService.js
+exports.getDelegadosDelClub = async (clubId) => {
+  try {
+    const delegados = await sequelize.query(`
+      SELECT presidente_id AS persona_id
+      FROM PresidenteClub
+      WHERE club_id = :clubId
+        AND activo = 1
+        AND delegado = 'S'
+    `, {
+      replacements: { clubId },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    return delegados.map(d => d.persona_id); // Solo los IDs
+  } catch (error) {
+    console.error('Error al obtener delegados del club:', error);
+    throw new Error('No se pudieron obtener los delegados');
+  }
+};
+

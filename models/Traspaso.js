@@ -111,4 +111,14 @@ Club.hasMany(Traspaso, { foreignKey: 'club_destino_id', as: 'traspasosDestino' }
 Traspaso.belongsTo(Jugador, { foreignKey: 'jugador_id', as: 'jugador' });
 Jugador.hasMany(Traspaso, { foreignKey: 'jugador_id', as: 'traspasosJugador' });
 
+Traspaso.belongsTo(PresidenteClub, { foreignKey: 'presidente_club_id_origen', as: 'presidenteOrigen' });
+PresidenteClub.hasMany(Traspaso, { foreignKey: 'presidente_club_id_origen', as: 'traspasosComoOrigen' });
+
+Traspaso.belongsTo(PresidenteClub, { foreignKey: 'presidente_club_id_destino', as: 'presidenteDestino' });
+PresidenteClub.hasMany(Traspaso, { foreignKey: 'presidente_club_id_destino', as: 'traspasosComoDestino' });
+
+Traspaso.belongsTo(Campeonato, { foreignKey: 'campeonato_id', as: 'campeonato' });
+Campeonato.hasMany(Traspaso, { foreignKey: 'campeonato_id', as: 'traspasos' });
+
+
 module.exports = Traspaso;

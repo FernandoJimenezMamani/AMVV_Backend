@@ -342,7 +342,8 @@ exports.generarCarnetJugador = async (req, res) => {
     fileStream.pipe(res);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Error generando carnet' });
+    res.status(400).json({ error: error.message || 'Error generando carnet' });
+
   }
 };
 

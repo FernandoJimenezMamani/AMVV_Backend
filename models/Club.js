@@ -10,6 +10,7 @@ const Club = sequelize.define('Club', {
   nombre: {
     type: DataTypes.STRING(255),
     allowNull: true,
+    unique: true
   },
   descripcion: {
     type: DataTypes.STRING(255),

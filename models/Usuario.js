@@ -18,9 +18,10 @@ const Usuario = sequelize.define('Usuario', {
   correo: {
     type: DataTypes.STRING(250),
     allowNull: true,
+    unique: true,
   },
   intentosFallidos: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.TINYINT,
     defaultValue: 0,
   },
   bloqueadoHasta: {

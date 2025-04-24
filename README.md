@@ -34,6 +34,7 @@ node seeders/seed-arbitro.js
 node seeders/seed-lugares.js
 node seeders/seed-jugadores.js
 node seeders/seed-presidente-club.js
+node seeders/seed-delegados-club.js
 
 # CREDENCIALES PARA SUPERADMIN
 

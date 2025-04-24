@@ -39,7 +39,7 @@ const PresidenteClub = sequelize.define('PresidenteClub', {
 });
 
 
-PresidenteClub.belongsTo(Persona, { foreignKey: 'id', as: 'persona' });  
+PresidenteClub.belongsTo(Persona, { foreignKey: 'presidente_id', as: 'persona' });  
 Persona.hasMany(PresidenteClub, { foreignKey: 'presidente_id', as: 'presidente' });  
 
 PresidenteClub.belongsTo(Club, {foreignKey: 'club_id',as: 'club'});

@@ -13,6 +13,7 @@ exports.getAllPresidentes = async () => {
     Persona.fecha_registro,
     Persona.fecha_actualizacion,
     Persona.eliminado,
+    Persona.genero,
     ImagenPersona.persona_imagen,
     Usuario.correo,
     Club.nombre AS nombre_club,
@@ -49,7 +50,7 @@ WHERE
 GROUP BY
     Persona.id, Persona.nombre, Persona.apellido, Persona.fecha_nacimiento,
     Persona.ci, Persona.direccion, Persona.fecha_registro, Persona.fecha_actualizacion,
-    Persona.eliminado, ImagenPersona.persona_imagen, Usuario.correo, Club.nombre,
+    Persona.eliminado,Persona.genero, ImagenPersona.persona_imagen, Usuario.correo, Club.nombre,
     PresidenteClub.activo;
 
   `, { type: sequelize.QueryTypes.SELECT });
@@ -68,6 +69,7 @@ exports.getAllDelegados = async () => {
         Persona.fecha_registro,
         Persona.fecha_actualizacion,
         Persona.eliminado,
+        Persona.genero,
         ImagenPersona.persona_imagen,
         Usuario.correo,
 		Club.nombre AS nombre_club,
@@ -86,8 +88,6 @@ exports.getAllDelegados = async () => {
       INNER JOIN Rol ON Rol.id= PersonaRol.rol_id AND PersonaRol.eliminado = 0 AND Rol.nombre = 'DelegadoClub'
       LEFT JOIN PresidenteClub ON PresidenteClub.presidente_id = Persona.id
 	  LEFT JOIN Club ON PresidenteClub.club_id = Club.id
-	  WHERE 
-       PresidenteClub.activo = 1 
     
   `, { type: sequelize.QueryTypes.SELECT });
   return PresidenteClub;

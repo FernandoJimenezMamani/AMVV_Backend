@@ -14,6 +14,7 @@ Equipo.init({
   nombre: {
     type: DataTypes.STRING(255),
     allowNull: true,
+    unique: true
   },
   club_id: {
     type: DataTypes.INTEGER,

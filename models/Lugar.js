@@ -10,6 +10,7 @@ const Lugar = sequelize.define('Lugar', {
   nombre: {
     type: DataTypes.STRING(80),
     allowNull: false,
+    unique: true
   },
   longitud: {
     type: DataTypes.DECIMAL(9, 6),
