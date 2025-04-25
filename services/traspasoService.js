@@ -103,7 +103,8 @@ exports.getTraspasosPorJugador = async (jugador_id,CampeonatoId) => {
           t.fecha_solicitud,
           p.nombre,
           p.apellido,
-		      t.estado_jugador
+		      t.estado_jugador,
+          t.estado_club_origen
           FROM Traspaso t
           LEFT JOIN Club clubOrigen ON t.club_origen_id = clubOrigen.id
           LEFT JOIN Club clubDestino ON t.club_destino_id = clubDestino.id
