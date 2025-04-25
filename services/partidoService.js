@@ -2257,10 +2257,20 @@ exports.updateResultadoSets = async ({
     a = parseInt(a);
     b = parseInt(b);
     if (isNaN(a) || isNaN(b)) return true;
-    const diferencia = Math.abs(a - b);
+  
     const mayor = Math.max(a, b);
-    if (mayor < maximo) return false;
-    return diferencia >= 2;
+    const menor = Math.min(a, b);
+    const diferencia = Math.abs(a - b);
+
+    if (mayor > maximo && menor < maximo && diferencia >= 2) {
+      return false; 
+    }
+
+    if (a >= maximo - 1 && b >= maximo - 1) {
+      return diferencia === 2;
+    }
+  
+    return mayor >= maximo && diferencia >= 2;
   };
 
   const validarResultados = () => {
@@ -2338,9 +2348,34 @@ exports.updateResultadoSets = async ({
     let ganadosLocal = 0;
     let ganadosVisitante = 0;
 
+    // Evalúa solo los primeros dos sets
+    let setsGanadosLocalPrimeros2 = 0;
+    let setsGanadosVisitantePrimeros2 = 0;
+
+    if (setsLocal[0] > setsVisitante[0]) setsGanadosLocalPrimeros2++;
+    else if (setsVisitante[0] > setsLocal[0]) setsGanadosVisitantePrimeros2++;
+
+    if (setsLocal[1] > setsVisitante[1]) setsGanadosLocalPrimeros2++;
+    else if (setsVisitante[1] > setsLocal[1]) setsGanadosVisitantePrimeros2++;
+
+    // Si un equipo ya ganó 2 sets en los primeros 2, no debe haber un tercer set registrado
+    if ((setsGanadosLocalPrimeros2 === 2 || setsGanadosVisitantePrimeros2 === 2)) {
+      const set3Local = parseInt(setsLocal[2]);
+      const set3Visitante = parseInt(setsVisitante[2]);
+
+      if ((set3Local && set3Local > 0) || (set3Visitante && set3Visitante > 0)) {
+        throw new Error("No se debe registrar un tercer set si un equipo ganó los dos primeros.");
+      }
+    }
+
+
     for (let i = 0; i < 3; i++) {
       if (setsLocal[i] > setsVisitante[i]) ganadosLocal++;
       else if (setsVisitante[i] > setsLocal[i]) ganadosVisitante++;
+    }
+
+    if (ganadosLocal === 3 || ganadosVisitante === 3) {
+      throw new Error("Un equipo no puede ganar los 3 sets. El resultado válido debe ser 2-0 o 2-1.");
     }
 
     const localActual = await ResultadoLocal.findOne({ where: { partido_id }, transaction });
@@ -2466,7 +2501,7 @@ exports.submitResultados = async ({
         if (setsL[i] > setsV[i]) ganadosLocal++;
         else if (setsV[i] > setsL[i]) ganadosVisitante++;
       }
-    
+
       if (ganadosLocal === ganadosVisitante) {
         throw new Error("El partido no puede finalizar sin un equipo ganador.");
       }
