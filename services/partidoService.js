@@ -338,23 +338,10 @@ exports.getAllMatchesExceptUpcoming = async (categoriaId, CampeonatoId) => {
         WHERE 
           ECL.categoria_id = :categoriaId AND
           ECV.categoria_id = :categoriaId AND
-          P.estado != 'J' AND 
+          P.estado = 'C' AND 
           P.fecha >= GETDATE() AND 
-          P.campeonato_id = :CampeonatoId AND
-          P.id NOT IN (
-            SELECT TOP 3 P2.id
-            FROM Partido P2
-            JOIN Equipo EL2 ON P2.equipo_local_id = EL2.id
-            JOIN EquipoCampeonato EC2 ON EC2.equipoId = EL2.id AND EC2.campeonatoId = P2.campeonato_id
-            WHERE 
-              EC2.categoria_id = :categoriaId AND
-              P2.estado != 'J' AND 
-              P2.fecha >= GETDATE() AND 
-              P2.campeonato_id = :CampeonatoId
-            ORDER BY P2.fecha ASC
-          )
+          P.campeonato_id = :CampeonatoId 
         ORDER BY P.fecha ASC;
-
     `,
       {
         replacements: { categoriaId, CampeonatoId },
@@ -392,18 +379,7 @@ exports.getAllMatchesExceptPrevious = async (categoriaId, CampeonatoId) => {
         ECL.categoria_id = :categoriaId AND
         ECV.categoria_id = :categoriaId AND
         (P.estado = 'J' OR P.fecha < GETDATE()) AND 
-        P.campeonato_id = :CampeonatoId AND
-        P.id NOT IN (
-          SELECT TOP 3 P2.id 
-          FROM Partido P2
-          JOIN Equipo EL2 ON P2.equipo_local_id = EL2.id
-          JOIN EquipoCampeonato EC2 ON EC2.equipoId = EL2.id AND EC2.campeonatoId = P2.campeonato_id
-          WHERE 
-            EC2.categoria_id = :categoriaId AND
-            (P2.estado = 'J' OR P2.fecha < GETDATE()) AND 
-            P2.campeonato_id = :CampeonatoId
-          ORDER BY P2.fecha DESC
-        )
+        P.campeonato_id = :CampeonatoId 
       ORDER BY P.fecha DESC;
     `,
       {
