@@ -20,6 +20,7 @@ const arbitroRoutes = require("./routes/arbitroRoutes");
 const traspasoRoutes = require("./routes/traspasoRoutes");
 const pagosRoutes = require("./routes/pagoRoutes");
 const reporteRoutes = require("./routes/reporteRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
 
@@ -59,6 +60,7 @@ app.use("/api/arbitro", arbitroRoutes);
 app.use("/api/traspaso", traspasoRoutes);
 app.use("/api/pagos", pagosRoutes);
 app.use("/api/reportes", reporteRoutes);
+app.use("/api/notification", notificationRoutes);
 
 // Ruta de prueba
 app.get("/", (req, res) => {

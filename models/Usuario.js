@@ -28,6 +28,12 @@ const Usuario = sequelize.define('Usuario', {
     type: DataTypes.DATE,
     allowNull: true,
   },
+  push_token: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    defaultValue: null,
+    comment: 'Token para notificaciones push de Expo',
+  },
 }, {
   tableName: 'Usuario',
   timestamps: false,

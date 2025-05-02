@@ -1,6 +1,7 @@
 const traspasoService = require('../services/traspasoService');
 
 const sendEmailService =require('../services/sendEmailTraspaso')
+const notificationService = require('../services/notificationService');
 
 // Obtener traspaso por ID
 exports.getTraspasoById = async (req, res) => {
@@ -96,6 +97,20 @@ exports.createTraspaso = async (req, res) => {
     
     try {
         const traspaso = await traspasoService.createTraspaso(req.body);
+
+        const traspasoCompleto = await traspasoService.getTraspasoById(traspaso.id);
+        const traspasoData = Array.isArray(traspasoCompleto) ? traspasoCompleto[0] : traspasoCompleto;
+        console.log(traspasoData.club_destino_nombre);
+        await notificationService.sendPushNotification(
+            traspaso.jugador_id, 
+            'Nueva solicitud de traspaso',
+            `Tienes una nueva solicitud de traspaso del club ${traspasoData.club_destino_nombre}`,
+            {
+              type: 'TRASPASO',
+              traspasoId: traspaso.id,
+              screen: 'TraspasoDetail' 
+            }
+          );
         res.status(201).json({ message: 'Traspaso creado con éxito', traspaso });
     } catch (error) {
         console.log(error)
