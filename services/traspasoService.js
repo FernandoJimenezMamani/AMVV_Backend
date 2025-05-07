@@ -15,6 +15,7 @@ exports.getTraspasoById = async (id) => {
           clubDestino.id AS club_destino_id,
           clubDestino.nombre AS club_destino_nombre,
           j.id AS jugador_id,
+          j.jugador_id AS usuario_jugador_id,
           p.nombre AS jugador_nombre,
           p.apellido AS jugador_apellido,
           p.ci AS jugador_ci,
@@ -32,6 +33,8 @@ exports.getTraspasoById = async (id) => {
           t.estado_deuda,
           t.presidente_club_id_origen,
           t.presidente_club_id_destino,
+          pco.presidente_id AS usuario_presidente_origen_id, 
+		      pcd.presidente_id AS usuario_presidente_destino_id,
           imp.persona_imagen AS imagen_jugador,
           ic.club_imagen AS imagen_club_origen,
           icd.club_imagen AS imagen_club_destino

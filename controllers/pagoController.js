@@ -1,5 +1,5 @@
 const pagoService = require('../services/pagoService');
-
+const notificationService = require('../services/notificationService');
 
 exports.createPagoInscripcion = async (req, res) => {
   try {
@@ -34,7 +34,21 @@ exports.createPagoInscripcion = async (req, res) => {
       userId,
       campeonatoId
     });
-
+    const equipoInfo = await pagoService.obtenerEquiposPorCampeonatoById(EquipoId);
+    const equipo = equipoInfo[0];
+    console.log(equipo.presidente_id);
+  // Notificar al presidente del club
+  await notificationService.sendPushNotification(
+    equipo.presidente_id,
+    'Pago de inscripción registrado',
+    `El pago de inscripción para el equipo ${equipo.equipo_nombre} ha sido registrado exitosamente.`,
+    {
+      type: 'PAGO_INSCRIPCION',
+      pagoId: nuevoPago.id,
+      equipoId: EquipoId,
+      screen: 'detalle_pago' // Ajusta según tu routing
+    }
+  );
     return res.status(201).json({ 
       message: 'Pago de inscripción creado exitosamente', 
       pagoId: nuevoPago.id  
@@ -113,6 +127,46 @@ exports.createPagoTraspaso = async (req, res) => {
       nombre_presi_club_dest,
       apellido_presi_club_dest
     });
+    const traspasoData = await traspasoService.getTraspasoById(traspaso_id);
+    const traspasoCompleto = Array.isArray(traspasoData) ? traspasoData[0] : traspasoData;
+    // Notificar al jugador
+    await notificationService.sendPushNotification(
+      traspasoCompleto.usuario_jugador_id,
+      'Pago de traspaso registrado',
+      `El pago de tu traspaso a ${club_destino_nombre} ha sido registrado.`,
+      {
+        type: 'PAGO_TRASPASO',
+        pagoId: nuevoPago.id,
+        traspasoId: traspaso_id,
+        screen: 'detalle_jugador'
+      }
+    );
+
+    // Notificar al presidente del club origen
+    await notificationService.sendPushNotification(
+      traspasoCompleto.usuario_presidente_origen_id,
+      'Pago de traspaso registrado',
+      `El pago del traspaso de ${jugador_nombre} ${jugador_apellido} a ${club_destino_nombre} ha sido completado.`,
+      {
+        type: 'PAGO_TRASPASO',
+        pagoId: nuevoPago.id,
+        traspasoId: traspaso_id,
+        screen: 'detalle_presidente'
+      }
+    );
+
+    // Notificar al presidente del club destino
+    await notificationService.sendPushNotification(
+      traspasoCompleto.usuario_presidente_destino_id,
+      'Pago de traspaso registrado',
+      `El pago por el traspaso de ${jugador_nombre} ${jugador_apellido} ha sido completado.`,
+      {
+        type: 'PAGO_TRASPASO',
+        pagoId: nuevoPago.id,
+        traspasoId: traspaso_id,
+        screen: 'detalle_solicitante'
+      }
+    );
 
     return res.status(201).json({ 
       message: 'Pago de traspaso creado exitosamente', 
