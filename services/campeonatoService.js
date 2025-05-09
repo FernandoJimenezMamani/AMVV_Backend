@@ -832,3 +832,21 @@ const registrarEquiposDesdeCampeonatoAnterior = async (nuevoCampeonato) => {
     throw error;
   }
 };
+
+exports.getCampeonatoActivo = async () => {
+  return await Campeonato.findOne({
+    where: {
+      eliminado: "N",
+      estado: { [Op.ne]: 3 } // Estado distinto de 3 (Finalizado)
+    },
+    attributes: [
+      "id",
+      "nombre",
+      "fecha_inicio_campeonato",
+      "fecha_fin_campeonato",
+      "fecha_inicio_transaccion",
+      "fecha_fin_transaccion",
+      "estado"
+    ]
+  });
+};

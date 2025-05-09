@@ -167,3 +167,16 @@ exports.obtenerAscensosDescensos = async (req, res) => {
     res.status(500).json({ message: "Error al obtener ascensos y descensos" });
   }
 };
+
+exports.getCampeonatoActivo = async (req, res) => {
+  try {
+    const campeonato = await campeonatoService.getCampeonatoActivo();
+    if (!campeonato) {
+      return res.status(404).json({ message: "No hay campeonato activo." });
+    }
+    res.json(campeonato);
+  } catch (error) {
+    console.error("Error al obtener campeonato activo:", error);
+    res.status(500).json({ message: "Error interno del servidor." });
+  }
+};

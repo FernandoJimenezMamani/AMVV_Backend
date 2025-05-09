@@ -108,6 +108,7 @@ exports.createTraspaso = async (req, res) => {
         );
         console.log(traspasoData.usuario_presidente_origen_id);
         // Notificar al PRESIDENTE CLUB ORIGEN (Club B)
+
         await notificationService.sendPushNotification(
             traspasoData.usuario_presidente_origen_id, 
             'Solicitud de traspaso de tu jugador',

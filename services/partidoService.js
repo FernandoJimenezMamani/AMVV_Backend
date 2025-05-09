@@ -1429,7 +1429,6 @@ exports.getPartidosByCampeonatoYFecha = async (campeonatoId, fecha) => {
         Persona PE ON PE.id = A.id
     WHERE 
         P.campeonato_id = :campeonatoId
-        AND (P.estado IS NULL OR P.estado != 'J')
         AND CONVERT(DATE, P.fecha) = :fecha
     GROUP BY 
         P.id, P.campeonato_id, P.equipo_local_id, P.equipo_visitante_id, P.fecha, 
