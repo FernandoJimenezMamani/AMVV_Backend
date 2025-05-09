@@ -34,3 +34,30 @@ exports.registerPushToken = async (req, res) => {
       });
   }
 };
+
+exports.deletePushToken = async (req, res) => {
+    try {
+      const userId = req.user.id; // El middleware auth ya proporciona esto
+  
+      console.log(`Eliminando token push para usuario ${userId}`);
+  
+      // Actualizar el token push a null en la base de datos
+      await Usuario.update(
+        { push_token: null },
+        { where: { id: userId } }
+      );
+  
+      return res.status(200).json({ 
+        success: true,
+        message: 'Token push eliminado exitosamente' 
+      });
+  
+    } catch (error) {
+      console.error('Error en deletePushToken:', error);
+      return res.status(500).json({ 
+        success: false,
+        message: 'Error interno al eliminar token push',
+        error: error.message 
+      });
+    }
+  };
