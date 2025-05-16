@@ -723,7 +723,7 @@ exports.getPagosInscripcionPorCampeonato = async (campeonatoId) => {
        SELECT 
         p.id,
         p.monto,
-        p.fecha,
+        CONVERT(VARCHAR(10),p.fecha, 120) AS fecha,
         p.referencia,
         p.estado,
         p.tipo_pago,
@@ -789,7 +789,7 @@ exports.getPagosTraspasoPorCampeonato = async (campeonatoId) => {
         impj.persona_imagen,
         pgo.id AS pago_id,
         pgo.monto AS pago_monto,
-        pgo.fecha AS pago_fecha,
+        CONVERT(VARCHAR(10),pgo.fecha, 120) AS pago_fecha,
         pgo.referencia AS pago_referencia
       FROM PagoTraspaso pt
       JOIN Pago pgo ON pt.id = pgo.id
@@ -844,7 +844,7 @@ exports.getPagosInscripcionPorClub = async (clubId, campeonatoId) => {
       SELECT 
         p.id,
         p.monto,
-        p.fecha,
+        CONVERT(VARCHAR(10), p.fecha, 120) AS fecha,
         p.referencia,
         p.estado,
         p.tipo_pago,
@@ -913,7 +913,7 @@ exports.getPagosTraspasoPorClub = async (clubId, campeonatoId) => {
         impj.persona_imagen,
         pgo.id AS pago_id,
         pgo.monto AS pago_monto,
-        pgo.fecha AS pago_fecha,
+         CONVERT(VARCHAR(10),pgo.fecha, 120) AS pago_fecha,
         pgo.referencia AS pago_referencia
       FROM PagoTraspaso pt
       JOIN Pago pgo ON pt.id = pgo.id
