@@ -390,7 +390,7 @@ exports.aprobarTraspasoJugador = async (req, res) => {
           traspasoCompleto.usuario_jugador_id,
           'Actualización de traspaso',
           `Tu club actual aprobó tu traspaso a ${traspasoCompleto.club_destino_nombre}`,
-          { type: 'TRASPASO', traspasoId: id, screen: 'detalle_jugador' }
+          { type: 'TRASPASO', traspasoId: id, screen: 'detalle_solicitante' }
         );
       } else if (traspasoCompleto.presidente_club_id_destino === presidente.id) {
         // Presidente destino aprobó - notificar al presidente origen y jugador
@@ -404,7 +404,7 @@ exports.aprobarTraspasoJugador = async (req, res) => {
           traspasoCompleto.usuario_jugador_id,
           'Actualización de traspaso',
           `El club ${traspasoCompleto.club_destino_nombre} aprobó tu traspaso`,
-          { type: 'TRASPASO', traspasoId: id, screen: 'detalle_jugador' }
+          { type: 'TRASPASO', traspasoId: id, screen: 'detalle_solicitante' }
         );
       }
 
@@ -441,7 +441,7 @@ exports.rechazarTraspasoJugador = async (req, res) => {
           traspasoCompleto.usuario_jugador_id,
           'Actualización de traspaso',
           `Tu club actual rechazó tu traspaso a ${traspasoCompleto.club_destino_nombre}`,
-          { type: 'TRASPASO', traspasoId: id, screen: 'detalle_jugador' }
+          { type: 'TRASPASO', traspasoId: id, screen: 'detalle_solicitante' }
         );
       } else if (traspasoCompleto.presidente_club_id_destino === presidente.id) {
         await notificationService.sendPushNotification(
@@ -454,7 +454,7 @@ exports.rechazarTraspasoJugador = async (req, res) => {
           traspasoCompleto.usuario_jugador_id,
           'Actualización de traspaso',
           `El club ${traspasoCompleto.club_destino_nombre} rechazó tu traspaso`,
-          { type: 'TRASPASO', traspasoId: id, screen: 'detalle_jugador' }
+          { type: 'TRASPASO', traspasoId: id, screen: 'detalle_solicitante' }
         );
       }
 

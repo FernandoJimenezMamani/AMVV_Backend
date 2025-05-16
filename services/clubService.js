@@ -240,41 +240,40 @@ exports.getClubesAvailableForJugador = async (jugador_id) => {
   try {
 
     const jugadorCompleto = await Jugador.findOne({ where: { jugador_id: jugador_id , activo : 1} });
+    console.log('📥 Jugador recibido:', jugador_id);
+console.log('📤 Resultado de búsqueda:', jugadorCompleto);
+
     const idJugador = jugadorCompleto.id;
     console.log('ID del jugador:', idJugador);
     const clubes = await sequelize.query(
       `SELECT DISTINCT
-          c.id AS club_id,
-          c.nombre AS nombre_club,
-          c.descripcion AS descripcion_club,
-          pp.id AS presidente_id,
-          pp.nombre AS presidente_nombre,
-          pp.apellido AS presidente_apellido,
-          ic.club_imagen AS imagen_club,
-          pc.id AS presidente_club_id
-          FROM 
-              Club c
-          LEFT JOIN ImagenClub ic ON ic.club_id = c.id
-          LEFT JOIN 
-              PresidenteClub pc ON pc.club_id = c.id AND pc.delegado = 'N' AND pc.activo = 1
-          JOIN 
-              Persona pp ON pp.id = pc.presidente_id
-          LEFT JOIN 
-              Jugador j ON j.club_id = c.id AND j.jugador_id = :jugador_id AND j.activo = 1
-          OUTER APPLY 
-              (SELECT TOP 1 t.*
-              FROM Traspaso t
-              WHERE t.jugador_id = :jugador_id
-              AND t.club_destino_id = c.id
-              AND t.eliminado = 'N'
-              ORDER BY t.fecha_solicitud DESC
-              ) t
-          WHERE 
-          j.id IS NULL
-          AND NOT (
-              (t.id IS NOT NULL AND t.estado_club_receptor = 'PENDIENTE' AND t.estado_club_origen = 'PENDIENTE') 
-              OR (t.id IS NOT NULL AND t.estado_club_receptor = 'APROBADO' AND t.estado_club_origen = 'APROBADO')
-          );`,
+        c.id AS club_id,
+        c.nombre AS nombre_club,
+        c.descripcion AS descripcion_club,
+        pp.id AS presidente_id,
+        pp.nombre AS presidente_nombre,
+        pp.apellido AS presidente_apellido,
+        ic.club_imagen AS imagen_club,
+        pc.id AS presidente_club_id
+    FROM 
+        Club c
+    LEFT JOIN ImagenClub ic ON ic.club_id = c.id
+    LEFT JOIN PresidenteClub pc ON pc.club_id = c.id AND pc.delegado = 'N' AND pc.activo = 1
+    JOIN Persona pp ON pp.id = pc.presidente_id
+    LEFT JOIN Jugador j ON j.club_id = c.id AND j.jugador_id = :jugador_id AND j.activo = 1
+    WHERE 
+        j.id IS NULL
+        AND NOT EXISTS (
+            SELECT 1 FROM Traspaso t
+            WHERE t.jugador_id = :jugador_id
+            AND t.club_destino_id = c.id
+            AND t.eliminado = 'N'
+            AND (
+                (t.estado_club_receptor = 'PENDIENTE' AND t.estado_club_origen = 'PENDIENTE')
+                OR (t.estado_club_receptor = 'APROBADO' AND t.estado_club_origen = 'APROBADO')
+            )
+        );
+    `,
       {
         replacements: { jugador_id },
         type: sequelize.QueryTypes.SELECT

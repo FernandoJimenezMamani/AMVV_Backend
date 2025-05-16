@@ -139,7 +139,6 @@ exports.createPagoTraspaso = async (req, res) => {
         type: 'PAGO_TRASPASO',
         pagoId: nuevoPago.id,
         traspasoId: traspaso_id,
-        screen: 'detalle_jugador'
       }
     );
 
@@ -152,7 +151,6 @@ exports.createPagoTraspaso = async (req, res) => {
         type: 'PAGO_TRASPASO',
         pagoId: nuevoPago.id,
         traspasoId: traspaso_id,
-        screen: 'detalle_presidente'
       }
     );
 
@@ -165,7 +163,6 @@ exports.createPagoTraspaso = async (req, res) => {
         type: 'PAGO_TRASPASO',
         pagoId: nuevoPago.id,
         traspasoId: traspaso_id,
-        screen: 'detalle_solicitante'
       }
     );
 
@@ -311,5 +308,27 @@ exports.obtenerPagosTraspasoPorCampeonato = async (req, res) => {
   } catch (error) {
     console.error('Error en el controlador de pagos por traspaso:', error);
     res.status(500).json({ message: 'Error al obtener historial de pagos por traspaso' });
+  }
+};
+
+exports.obtenerPagosInscripcionPorClub = async (req, res) => {
+  const { clubId , campeonatoId} = req.params;
+
+  try {
+    const pagos = await pagoService.getPagosInscripcionPorClub(clubId, campeonatoId);
+    res.status(200).json(pagos);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.obtenerPagosTraspasoPorClub = async (req, res) => {
+  const { clubId, campeonatoId } = req.params;
+
+  try {
+    const pagos = await pagoService.getPagosTraspasoPorClub(clubId,campeonatoId);
+    res.status(200).json(pagos);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

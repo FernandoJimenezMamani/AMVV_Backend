@@ -838,3 +838,124 @@ exports.getPagosTraspasoPorCampeonato = async (campeonatoId) => {
   }
 };
 
+exports.getPagosInscripcionPorClub = async (clubId, campeonatoId) => {
+  try {
+    const query = `
+      SELECT 
+        p.id,
+        p.monto,
+        p.fecha,
+        p.referencia,
+        p.estado,
+        p.tipo_pago,
+        e.nombre AS equipo,
+        e.id AS equipoId,
+        ec.campeonatoId,
+        c.nombre AS nombre_club,
+        cat.nombre AS categoria,
+        cat.genero,
+        ic.club_imagen AS imagen_club
+      FROM PagoInscripcion pi
+      JOIN Pago p ON pi.id = p.id
+      JOIN EquipoCampeonato ec ON pi.equipoCampeonatoId = ec.id
+      JOIN Equipo e ON ec.equipoId = e.id
+      JOIN Club c ON e.club_id = c.id
+      LEFT JOIN ImagenClub ic ON ic.club_id = c.id
+      LEFT JOIN Categoria cat ON ec.categoria_id = cat.id
+      WHERE 
+        p.tipo_pago = 'Inscripción'
+        AND c.id = :clubId
+        AND ec.campeonatoId = :campeonatoId
+    `;
+
+    const results = await sequelize.query(query, {
+      replacements: { clubId, campeonatoId },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    return results;
+
+  } catch (error) {
+    console.error('Error al obtener pagos de inscripción por club:', error);
+    throw new Error('No se pudo obtener el historial de pagos de inscripción');
+  }
+};
+
+
+exports.getPagosTraspasoPorClub = async (clubId, campeonatoId) => {
+  try {
+    const query = `
+      SELECT
+        t.id AS traspaso_id,
+        clubOrigen.id AS club_origen_id,
+        clubOrigen.nombre AS club_origen_nombre,
+        clubDestino.id AS club_destino_id,
+        clubDestino.nombre AS club_destino_nombre,
+        j.id AS jugador_id,
+        j.jugador_id AS jugador_persona_id,
+        p.nombre AS jugador_nombre,
+        p.apellido AS jugador_apellido,
+        p.ci AS jugador_ci,
+        p.genero AS jugador_genero,
+        p.fecha_nacimiento AS jugador_fecha_nacimiento,
+        ppcd.id AS id_persona_presi_det,
+        ppcd.nombre AS nombre_presi_club_dest,
+        ppcd.apellido AS apellido_presi_club_dest,
+        ppco.id AS id_persona_presi_origen,
+        ppco.nombre AS nombre_presi_club_origen,
+        ppco.apellido AS apellido_presi_club_origen,
+        c.id AS campeonato_id,
+        c.nombre AS nombre_campeonato,
+        t.estado_deuda,
+        cat.costo_traspaso,
+        ico.club_imagen AS club_origen_imagen,
+        icd.club_imagen AS club_destino_imagen,
+        impj.persona_imagen,
+        pgo.id AS pago_id,
+        pgo.monto AS pago_monto,
+        pgo.fecha AS pago_fecha,
+        pgo.referencia AS pago_referencia
+      FROM PagoTraspaso pt
+      JOIN Pago pgo ON pt.id = pgo.id
+      JOIN Traspaso t ON pt.traspaso_id = t.id
+      LEFT JOIN Club clubOrigen ON t.club_origen_id = clubOrigen.id
+      LEFT JOIN ImagenClub ico ON ico.club_id = clubOrigen.id
+      LEFT JOIN Club clubDestino ON t.club_destino_id = clubDestino.id
+      LEFT JOIN ImagenClub icd ON icd.club_id = clubDestino.id
+      LEFT JOIN Jugador j ON t.jugador_id = j.id
+      LEFT JOIN JugadorEquipo je ON je.jugador_id = j.id
+      LEFT JOIN Equipo e ON e.id = je.equipo_id
+      LEFT JOIN EquipoCampeonato ec ON ec.equipoId = e.id AND ec.campeonatoId = t.campeonato_id
+      LEFT JOIN Categoria cat ON cat.id = ec.categoria_id
+      LEFT JOIN Persona p ON j.jugador_id = p.id
+      LEFT JOIN ImagenPersona impj ON impj.persona_id = p.id
+      LEFT JOIN PresidenteClub pcd ON pcd.id = t.presidente_club_id_destino
+      LEFT JOIN Persona ppcd ON ppcd.id = pcd.presidente_id
+      LEFT JOIN PresidenteClub pco ON pco.id = t.presidente_club_id_origen
+      LEFT JOIN Persona ppco ON ppco.id = pco.presidente_id
+      LEFT JOIN Campeonato c ON c.id = t.campeonato_id
+      WHERE 
+        t.estado_club_origen = 'APROBADO'
+        AND t.estado_jugador = 'APROBADO'
+        AND t.estado_deuda = 'FINALIZADO'
+        AND t.eliminado = 'N'
+        AND t.club_destino_id = :clubId
+        AND c.id = :campeonatoId;
+    `;
+
+    const results = await sequelize.query(query, {
+      replacements: { clubId, campeonatoId },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    const resultadosConMontos = await Promise.all(results.map(async (row) => {
+      const montoReal = await getMontoTraspasoPorTraspasoId(row.traspaso_id);
+      return { ...row, monto_real: montoReal };
+    }));
+
+    return resultadosConMontos;
+  } catch (error) {
+    console.error('Error al obtener pagos de traspaso por club:', error);
+    throw new Error('No se pudo obtener el historial de pagos por traspaso');
+  }
+};

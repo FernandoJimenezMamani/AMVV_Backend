@@ -103,7 +103,7 @@ exports.getTraspasosPorJugador = async (jugador_id,CampeonatoId) => {
           clubOrigen.nombre AS club_origen_nombre,
           clubDestino.id AS club_destino_id,
           clubDestino.nombre AS club_destino_nombre,
-          t.fecha_solicitud,
+          CONVERT(VARCHAR(10), t.fecha_solicitud, 120) AS fecha_solicitud,
           p.nombre,
           p.apellido,
 		      t.estado_jugador,
@@ -143,7 +143,7 @@ exports.getTraspasosPorPresidente = async (presidente_id,CampeonatoId) => {
           clubOrigen.nombre AS club_origen_nombre,
           clubDestino.id AS club_destino_id,
           clubDestino.nombre AS club_destino_nombre,
-          t.fecha_solicitud,
+          CONVERT(VARCHAR(10), t.fecha_solicitud, 120) AS fecha_solicitud,
           p.nombre,
           p.apellido,
           p.genero,
@@ -193,14 +193,14 @@ exports.getTraspasosRelacionadosConPresidente = async (presidente_id, Campeonato
     if (!presidenteId) throw new Error('Presidente no encontrado o inactivo.');
 
     const traspasos = await sequelize.query(
-      `SELECT 
+      `SELECT DISTINCT
           t.id AS traspaso_id,
           t.jugador_id,
           clubOrigen.id AS club_origen_id,
           clubOrigen.nombre AS club_origen_nombre,
           clubDestino.id AS club_destino_id,
           clubDestino.nombre AS club_destino_nombre,
-          t.fecha_solicitud,
+          CONVERT(VARCHAR(10), t.fecha_solicitud, 120) AS fecha_solicitud,
           p.nombre,
           p.apellido,
           p.genero,
