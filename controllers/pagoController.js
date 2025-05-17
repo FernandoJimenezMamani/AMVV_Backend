@@ -47,7 +47,7 @@ exports.createPagoInscripcion = async (req, res) => {
       type: 'PAGO_INSCRIPCION',
       pagoId: nuevoPago.id,
       equipoId: EquipoId,
-      screen: 'detalle_pago' // Ajusta según tu routing
+      screen: 'historial_pago_presidente_inscripcion' // Ajusta según tu routing
     }
   );
     return res.status(201).json({ 
@@ -139,6 +139,7 @@ exports.createPagoTraspaso = async (req, res) => {
         type: 'PAGO_TRASPASO',
         pagoId: nuevoPago.id,
         traspasoId: traspaso_id,
+        screen: 'home'
       }
     );
 
@@ -151,6 +152,7 @@ exports.createPagoTraspaso = async (req, res) => {
         type: 'PAGO_TRASPASO',
         pagoId: nuevoPago.id,
         traspasoId: traspaso_id,
+        screen: 'solicitud_presidente'
       }
     );
 
@@ -163,6 +165,7 @@ exports.createPagoTraspaso = async (req, res) => {
         type: 'PAGO_TRASPASO',
         pagoId: nuevoPago.id,
         traspasoId: traspaso_id,
+        screen: 'historial_pago_presidente'
       }
     );
 

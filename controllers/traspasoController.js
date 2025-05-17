@@ -104,7 +104,7 @@ exports.createTraspaso = async (req, res) => {
             traspasoData.usuario_jugador_id, 
             'Nueva solicitud de traspaso',
             `Tienes una nueva solicitud de traspaso del club ${traspasoData.club_destino_nombre}`,
-            { type: 'TRASPASO', traspasoId: traspaso.id, screen: 'detalle_jugador' }
+            { type: 'TRASPASO', traspasoId: traspaso.id, screen: 'solicitud_jugador' }
         );
         console.log(traspasoData.usuario_presidente_origen_id);
         // Notificar al PRESIDENTE CLUB ORIGEN (Club B)
@@ -113,7 +113,7 @@ exports.createTraspaso = async (req, res) => {
             traspasoData.usuario_presidente_origen_id, 
             'Solicitud de traspaso de tu jugador',
             `El club ${traspasoData.club_destino_nombre} quiere traspasar a ${traspasoData.jugador_nombre}`,
-            { type: 'TRASPASO', traspasoId: traspaso.id, screen: 'detalle_presidente' }
+            { type: 'TRASPASO', traspasoId: traspaso.id, screen: 'solicitud_presidente' }
         );
         res.status(201).json({ message: 'Traspaso creado con éxito', traspaso });
     } catch (error) {
@@ -138,7 +138,7 @@ exports.createTraspasoJugador = async (req, res) => {
                     { 
                         type: 'TRASPASO_JUGADOR_INICIADO', 
                         traspasoId: traspaso.id, 
-                        screen: 'detalle_presidente' 
+                        screen: 'solicitud_presidente' 
                     }
                 );
         
@@ -150,7 +150,7 @@ exports.createTraspasoJugador = async (req, res) => {
                     { 
                         type: 'TRASPASO_JUGADOR_INICIADO', 
                         traspasoId: traspaso.id, 
-                        screen: 'detalle_presidente' 
+                        screen: 'solicitud_presidente' 
                     }
                 );
         res.status(201).json({ message: 'Traspaso creado con éxito', traspaso });
@@ -171,13 +171,13 @@ exports.aprobarTraspasoPorJugador = async (req, res) => {
                     traspasoCompleto.usuario_presidente_origen_id,
                     'Jugador aceptó traspaso',
                     `${traspasoCompleto.jugador_nombre} aceptó el traspaso a ${traspasoCompleto.club_destino_nombre}`,
-                    { type: 'TRASPASO', traspasoId: id, screen: 'detalle_presidente' }
+                    { type: 'TRASPASO', traspasoId: id, screen: 'solicitud_presidente' }
                 );
                 await notificationService.sendPushNotification(
                     traspasoCompleto.usuario_presidente_destino_id,
                     'Jugador aceptó traspaso',
                     `${traspasoCompleto.jugador_nombre} aceptó unirse a tu club`,
-                    { type: 'TRASPASO', traspasoId: id, screen: 'detalle_solicitante' }
+                    { type: 'TRASPASO', traspasoId: id, screen: 'mis_solicitudes_presidente' }
                 );
         res.status(200).json({ message: 'Traspaso aprobado por el jugador' });
     } catch (error) {
@@ -197,7 +197,7 @@ exports.aprobarTraspasoPorClub = async (req, res) => {
             traspasoCompleto.usuario_jugador_id,
             'Traspaso aprobado por tu club',
             `Tu club actual aprobó tu traspaso a ${traspasoCompleto.club_destino_nombre}`,
-            { type: 'TRASPASO', traspasoId: id, screen: 'detalle_jugador' }
+            { type: 'TRASPASO', traspasoId: id, screen: 'solicitud_jugador' }
         );
 
         // Notificar al PRESIDENTE DESTINO (A)
@@ -205,7 +205,7 @@ exports.aprobarTraspasoPorClub = async (req, res) => {
             traspasoCompleto.usuario_presidente_destino_id,
             'Traspaso aprobado por club origen',
             `El club ${traspasoCompleto.club_origen_nombre} aprobó el traspaso de ${traspasoCompleto.jugador_nombre}`,
-            { type: 'TRASPASO', traspasoId: id, screen: 'detalle_solicitante' }
+            { type: 'TRASPASO', traspasoId: id, screen: 'mis_solicitudes_presidente' }
         );
         res.status(200).json({ message: 'Traspaso aprobado por el club de origen' });
     } catch (error) {
@@ -225,13 +225,13 @@ exports.rechazarTraspasoPorJugador = async (req, res) => {
             traspasoCompleto.usuario_presidente_origen_id,
             'Jugador rechazó traspaso',
             `${traspasoCompleto.jugador_nombre} rechazó el traspaso a ${traspasoCompleto.club_destino_nombre}`,
-            { type: 'TRASPASO', traspasoId: id, screen: 'detalle_presidente' }
+            { type: 'TRASPASO', traspasoId: id, screen: 'solicitud_presidente' }
         );
         await notificationService.sendPushNotification(
             traspasoCompleto.usuario_presidente_destino_id,
             'Jugador rechazó traspaso',
             `${traspasoCompleto.jugador_nombre} no aceptó unirse a tu club`,
-            { type: 'TRASPASO', traspasoId: id, screen: 'detalle_solicitante' }
+            { type: 'TRASPASO', traspasoId: id, screen: 'mis_solicitudes_presidente' }
         );
         res.status(200).json({ message: 'Traspaso rechazado por el jugador' });
     } catch (error) {
@@ -251,7 +251,7 @@ exports.rechazarTraspasoPorClub = async (req, res) => {
             traspasoCompleto.usuario_jugador_id,
             'Traspaso rechazado por tu club',
             `Tu club actual rechazó tu traspaso a ${traspasoCompleto.club_destino_nombre}`,
-            { type: 'TRASPASO', traspasoId: id, screen: 'detalle_jugador' }
+            { type: 'TRASPASO', traspasoId: id, screen: 'solicitud_jugador' }
         );
 
         // Notificar al PRESIDENTE DESTINO (A)
@@ -259,7 +259,7 @@ exports.rechazarTraspasoPorClub = async (req, res) => {
             traspasoCompleto.usuario_presidente_destino_id,
             'Traspaso rechazado por club origen',
             `El club ${traspasoCompleto.club_origen_nombre} rechazó el traspaso de ${traspasoCompleto.jugador_nombre}`,
-            { type: 'TRASPASO', traspasoId: id, screen: 'detalle_solicitante' }
+            { type: 'TRASPASO', traspasoId: id, screen: 'mis_solicitudes_presidente' }
         );
         res.status(200).json({ message: 'Traspaso rechazado por el club de origen' });
     } catch (error) {
@@ -384,13 +384,13 @@ exports.aprobarTraspasoJugador = async (req, res) => {
           traspasoCompleto.usuario_presidente_destino_id,
           'Traspaso aprobado por club origen',
           `El club ${traspasoCompleto.club_origen_nombre} aprobó el traspaso de ${traspasoCompleto.jugador_nombre}`,
-          { type: 'TRASPASO', traspasoId: id, screen: 'detalle_presidente' }
+          { type: 'TRASPASO', traspasoId: id, screen: 'solicitud_presidente' }
         );
         await notificationService.sendPushNotification(
           traspasoCompleto.usuario_jugador_id,
           'Actualización de traspaso',
           `Tu club actual aprobó tu traspaso a ${traspasoCompleto.club_destino_nombre}`,
-          { type: 'TRASPASO', traspasoId: id, screen: 'detalle_solicitante' }
+          { type: 'TRASPASO', traspasoId: id, screen: 'mis_solicitudes_jugador' }
         );
       } else if (traspasoCompleto.presidente_club_id_destino === presidente.id) {
         // Presidente destino aprobó - notificar al presidente origen y jugador
@@ -398,13 +398,13 @@ exports.aprobarTraspasoJugador = async (req, res) => {
           traspasoCompleto.usuario_presidente_origen_id,
           'Traspaso aprobado por club destino',
           `El club ${traspasoCompleto.club_destino_nombre} aprobó recibir a ${traspasoCompleto.jugador_nombre}`,
-          { type: 'TRASPASO', traspasoId: id, screen: 'detalle_presidente' }
+          { type: 'TRASPASO', traspasoId: id, screen: 'solicitud_presidente' }
         );
         await notificationService.sendPushNotification(
           traspasoCompleto.usuario_jugador_id,
           'Actualización de traspaso',
           `El club ${traspasoCompleto.club_destino_nombre} aprobó tu traspaso`,
-          { type: 'TRASPASO', traspasoId: id, screen: 'detalle_solicitante' }
+          { type: 'TRASPASO', traspasoId: id, screen: 'mis_solicitudes_jugador' }
         );
       }
 
@@ -435,26 +435,26 @@ exports.rechazarTraspasoJugador = async (req, res) => {
           traspasoCompleto.usuario_presidente_destino_id,
           'Traspaso rechazado por club origen',
           `El club ${traspasoCompleto.club_origen_nombre} rechazó el traspaso de ${traspasoCompleto.jugador_nombre}`,
-          { type: 'TRASPASO', traspasoId: id, screen: 'detalle_presidente' }
+          { type: 'TRASPASO', traspasoId: id, screen: 'solicitud_presidente' }
         );
         await notificationService.sendPushNotification(
           traspasoCompleto.usuario_jugador_id,
           'Actualización de traspaso',
           `Tu club actual rechazó tu traspaso a ${traspasoCompleto.club_destino_nombre}`,
-          { type: 'TRASPASO', traspasoId: id, screen: 'detalle_solicitante' }
+          { type: 'TRASPASO', traspasoId: id, screen: 'mis_solicitudes_jugador' }
         );
       } else if (traspasoCompleto.presidente_club_id_destino === presidente.id) {
         await notificationService.sendPushNotification(
           traspasoCompleto.usuario_presidente_origen_id,
           'Traspaso rechazado por club destino',
           `El club ${traspasoCompleto.club_destino_nombre} rechazó recibir a ${traspasoCompleto.jugador_nombre}`,
-          { type: 'TRASPASO', traspasoId: id, screen: 'detalle_presidente' }
+          { type: 'TRASPASO', traspasoId: id, screen: 'solicitud_presidente' }
         );
         await notificationService.sendPushNotification(
           traspasoCompleto.usuario_jugador_id,
           'Actualización de traspaso',
           `El club ${traspasoCompleto.club_destino_nombre} rechazó tu traspaso`,
-          { type: 'TRASPASO', traspasoId: id, screen: 'detalle_solicitante' }
+          { type: 'TRASPASO', traspasoId: id, screen: 'mis_solicitudes_presidente' }
         );
       }
 

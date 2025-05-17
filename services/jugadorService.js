@@ -564,7 +564,7 @@ exports.getJugadoresAbleToExchange = async (club_presidente , idTraspasoPresiden
           c.descripcion AS descripcion_club,
           im.persona_imagen AS imagen_persona,
           p.eliminado,
-          pp.nombre AS presidente_nombre
+          pp.nombre AS presidente_nombre   
         FROM 
           Jugador j
         JOIN 
