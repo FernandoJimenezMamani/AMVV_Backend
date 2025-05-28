@@ -42,17 +42,17 @@ exports.getAllPersonas = async () => {
       INNER JOIN Rol ON Rol.id= PersonaRol.rol_id AND PersonaRol.eliminado = 0
       LEFT JOIN PresidenteClub ON PresidenteClub.id = Persona.id
       GROUP BY Persona.id,
-              Persona.nombre,
-              Persona.apellido,
-              Persona.fecha_nacimiento,
-              Persona.ci,
-              Persona.genero,
-              Persona.direccion,
-              Persona.fecha_registro,
-              Persona.fecha_actualizacion,
-              Persona.eliminado,
-              ImagenPersona.persona_imagen,
-              Usuario.correo;
+        Persona.nombre,
+        Persona.apellido,
+        Persona.fecha_nacimiento,
+        Persona.ci,
+        Persona.genero,
+        Persona.direccion,
+        Persona.fecha_registro,
+        Persona.fecha_actualizacion,
+        Persona.eliminado,
+        ImagenPersona.persona_imagen,
+        Usuario.correo;
   `, { type: sequelize.QueryTypes.SELECT });
   return personas;
 };

@@ -335,3 +335,22 @@ exports.obtenerPagosTraspasoPorClub = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+exports.revertirPagoTraspasoController = async (req, res) => {
+  try {
+    const result = await pagoService.revertirPagoTraspaso(req.body);
+    return res.status(200).json({ success: true, message: 'Reversión de traspaso exitosa.', data: result });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.revertirPagoInscripcionController = async (req, res) => {
+  try {
+    const resultado = await pagoService.revertirPagoInscripcion(req.body);
+    res.status(200).json({ success: true, message: 'Pago de inscripción revertido exitosamente', data: resultado });
+  } catch (error) {
+    console.error('Error en revertirPagoInscripcionController:', error);
+    res.status(500).json({ success: false, message: error.message || 'Error al revertir el pago de inscripción' });
+  }
+};

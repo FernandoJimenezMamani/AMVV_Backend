@@ -6,9 +6,9 @@ const pagoEstadosMapping = require('../constants/pagoEstados');
 const traspasoEstados = require('../constants/estadoTraspasos')
 const { sendEmail } = require('../services/emailService');
 const { loadEmailTemplate } = require('../utils/emailTemplate');
-const { sendTraspasoEmail, sendJugadorEmail, sendPresidenteEmail } = require('../services/sendEmailTraspaso');
+const { sendTraspasoEmail, sendJugadorEmail, sendPresidenteEmail,sendTraspasoRevertidoEmail, sendPagoInscripcionRevertidoEmail } = require('../services/sendEmailTraspaso');
 const {broadcastRegistroPagoInscripcion} = require('../utils/websocket');
-
+const estadosMapping = require('../constants/campeonatoEstados');
 exports.obtenerEquiposPorCampeonatoById = async (id) => {
   try {
     const equipo = await sequelize.query(
@@ -32,7 +32,7 @@ exports.obtenerEquiposPorCampeonatoById = async (id) => {
       JOIN Equipo e ON ec.equipoId = e.id
       JOIN Campeonato c ON ec.campeonatoId = c.id
       JOIN Club cl ON cl.id = e.club_id
-      JOIN PresidenteClub pc ON pc.club_id = cl.id
+      JOIN PresidenteClub pc ON pc.club_id = cl.id and pc.activo = 1
       JOIN Persona p ON p.id = pc.presidente_id
       JOIN Usuario u ON u.id = p.id
       LEFT JOIN ImagenClub ic ON ic.club_id = cl.id
@@ -308,6 +308,7 @@ exports.createPagoTraspaso = async (data) => {
       { transaction }
     );
 
+
     // Desactivar al jugador globalmente
     await Jugador.update(
       { activo: 0 },
@@ -327,6 +328,7 @@ exports.createPagoTraspaso = async (data) => {
       },
       { transaction }
     );
+
 
     // Registrar el pago de traspaso
     await PagoTraspaso.create({
@@ -743,6 +745,7 @@ exports.getPagosInscripcionPorCampeonato = async (campeonatoId) => {
       LEFT JOIN Categoria cat ON ec.categoria_id = cat.id
       WHERE ec.campeonatoId = :campeonatoId
         AND p.tipo_pago = 'Inscripción'
+        AND p.estado = 'Activo'
     `;
 
     const results = await sequelize.query(query, {
@@ -815,7 +818,8 @@ exports.getPagosTraspasoPorCampeonato = async (campeonatoId) => {
         AND t.estado_jugador = 'APROBADO'
         AND t.estado_deuda = 'FINALIZADO'
         AND t.eliminado = 'N'
-        AND c.id = :campeonatoId;
+        AND c.id = :campeonatoId
+        AND pgo.estado = 'Activo'
     `;
 
     const results = await sequelize.query(query, {
@@ -866,6 +870,7 @@ exports.getPagosInscripcionPorClub = async (clubId, campeonatoId) => {
         p.tipo_pago = 'Inscripción'
         AND c.id = :clubId
         AND ec.campeonatoId = :campeonatoId
+        AND p.estado = 'Activo'
     `;
 
     const results = await sequelize.query(query, {
@@ -940,7 +945,8 @@ exports.getPagosTraspasoPorClub = async (clubId, campeonatoId) => {
         AND t.estado_deuda = 'FINALIZADO'
         AND t.eliminado = 'N'
         AND t.club_destino_id = :clubId
-        AND c.id = :campeonatoId;
+        AND c.id = :campeonatoId
+        AND pgo.estado = 'Activo';
     `;
 
     const results = await sequelize.query(query, {
@@ -957,5 +963,211 @@ exports.getPagosTraspasoPorClub = async (clubId, campeonatoId) => {
   } catch (error) {
     console.error('Error al obtener pagos de traspaso por club:', error);
     throw new Error('No se pudo obtener el historial de pagos por traspaso');
+  }
+};
+
+exports.revertirPagoTraspaso = async (data) => {
+  const {
+    traspaso_id,
+    pago_id,
+    userId,
+    jugador_id,
+    club_origen_id,
+    club_destino_id,
+    jugador_nombre,
+    jugador_apellido,
+    jugador_ci,
+    jugador_genero,
+    jugador_fecha_nacimiento,
+    nombre_campeonato,
+    club_origen_nombre,
+    club_destino_nombre,
+    id_persona_presi_origen,
+    nombre_presi_club_origen,
+    apellido_presi_club_origen,
+    id_persona_presi_det,
+    nombre_presi_club_dest,
+    apellido_presi_club_dest
+  } = data;
+
+  console.log(data, 'Datos de reversión de pago de traspaso');
+  const transaction = await sequelize.transaction();
+
+  try {
+    // Verificar campeonato en proceso
+    const traspaso = await Traspaso.findOne({
+      where: { id: traspaso_id },
+      include: [{ model: Campeonato, as: 'campeonato' }],
+      transaction
+    });
+
+    if (!traspaso || traspaso.campeonato.estado !== estadosMapping.transaccionProceso) {
+      throw new Error('El campeonato no está en proceso.');
+    }
+
+    // Obtener correos de involucrados
+    const correoJugador = await Usuario.findByPk(jugador_id, { transaction });
+    const correoPresidenteOrigen = await Usuario.findByPk(id_persona_presi_origen, { transaction });
+    const correoPresidenteDestino = await Usuario.findByPk(id_persona_presi_det, { transaction });
+    console.log(correoJugador, correoPresidenteOrigen, correoPresidenteDestino, 'Correos de involucrados');
+    if (!correoJugador || !correoPresidenteOrigen || !correoPresidenteDestino) {
+      throw new Error('No se pudieron recuperar los correos necesarios.');
+    }
+
+    // Marcar pago como anulado
+    await Pago.update(
+      { estado: pagoEstadosMapping.Eliminado },
+      { where: { id: pago_id }, transaction }
+    );
+
+    // Revertir estado del traspaso
+    await Traspaso.update(
+      { estado_deuda: traspasoEstados.PENDIENTE },
+      { where: { id: traspaso_id }, transaction }
+    );
+
+    // Desactivar en club destino
+    await Jugador.update(
+      { activo: 0 },
+      { where: { jugador_id, club_id: club_destino_id }, transaction }
+    );
+
+    // Activar en club origen
+    const jugadorPrevio = await Jugador.findOne({
+      where: { jugador_id, club_id: club_origen_id },
+      transaction
+    });
+
+    if (jugadorPrevio) {
+      await Jugador.update(
+        { activo: 1 },
+        { where: { jugador_id, club_id: club_origen_id }, transaction }
+      );
+    } else {
+      await Jugador.create(
+        { jugador_id, club_id: club_origen_id, activo: 1 },
+        { transaction }
+      );
+    }
+
+    // Enviar correos fuera del hilo principal
+    setImmediate(() => {
+      const datosCorreo = {
+        club_origen_nombre,
+        nombre_presi_club_origen,
+        apellido_presi_club_origen,
+        club_destino_nombre,
+        nombre_presi_club_dest,
+        apellido_presi_club_dest,
+        jugador_nombre,
+        jugador_apellido,
+        jugador_genero,
+        jugador_ci,
+        jugador_fecha_nacimiento,
+        nombre_campeonato
+      };
+
+      sendTraspasoRevertidoEmail(datosCorreo, correoJugador.correo).catch(err =>
+        console.error('❌ Error al enviar correo al jugador:', err.message)
+      );
+
+      sendTraspasoRevertidoEmail(datosCorreo, correoPresidenteOrigen.correo).catch(err =>
+        console.error('❌ Error al enviar correo al presidente origen:', err.message)
+      );
+
+      sendTraspasoRevertidoEmail(datosCorreo, correoPresidenteDestino.correo).catch(err =>
+        console.error('❌ Error al enviar correo al presidente destino:', err.message)
+      );
+    });
+
+    await transaction.commit();
+    console.log('✅ Traspaso revertido correctamente.');
+    return { success: true };
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error('❌ Error al revertir traspaso:', error);
+    throw error;
+  }
+};
+
+exports.revertirPagoInscripcion = async (data) => {
+  const {
+    pago_id,
+    equipo_id,
+    monto,
+    fecha,
+    referencia,
+    campeonatoId
+  } = data;
+
+
+    const equipoInfo = await exports.obtenerEquiposPorCampeonatoById(equipo_id);
+    if (!equipoInfo || equipoInfo.length === 0) throw new Error("No se encontró información del equipo");
+  const transaction = await sequelize.transaction();
+
+  try {
+    // Verificar existencia del pago
+    const pago = await Pago.findByPk(pago_id, { transaction });
+    if (!pago) throw new Error("El pago no existe");
+
+    // Verificar estado activo del pago
+    if (pago.estado !== pagoEstadosMapping.Activo) {
+      throw new Error("El pago ya fue revertido o anulado");
+    }
+
+    // Marcar el pago como eliminado
+    await Pago.update(
+      { estado: pagoEstadosMapping.Eliminado },
+      { where: { id: pago_id }, transaction }
+    );
+
+    // Cambiar estado del equipo en el campeonato a 'PENDIENTE'
+    await EquipoCampeonato.update(
+      { estado: campeonatoEstado.DeudaInscripcion },
+      {
+        where: {
+          equipoId: equipo_id,
+          campeonatoId: campeonatoId
+        },
+        transaction
+      }
+    );
+
+
+
+    const equipo = equipoInfo[0];
+
+    // Acceder a los datos directamente
+    const presidente_id = equipo.presidente_id;
+    const nombre_presidente = `${equipo.nombre_presidente} ${equipo.apellido_presidente}`;
+    const equipo_nombre = equipo.equipo_nombre;
+    const campeonato_nombre = equipo.campeonato_nombre;
+    const correo_presidente = equipo.correo_presidente;
+
+
+    // Enviar correo fuera del hilo principal
+    setImmediate(() => {
+      const dataCorreo = {
+        PRESIDENTE_NOMBRE: nombre_presidente,
+        EQUIPO_NOMBRE: equipo_nombre,
+        CAMPEONATO_NOMBRE: campeonato_nombre,
+        MONTO: monto,
+        FECHA: fecha,
+        REFERENCIA: referencia
+      };
+
+      sendPagoInscripcionRevertidoEmail(dataCorreo, correo_presidente).catch(err =>
+        console.error("❌ Error al enviar correo:", err)
+      );
+    });
+
+    await transaction.commit();
+    console.log("✅ Pago de inscripción revertido correctamente");
+    return { success: true };
+  } catch (error) {
+    await transaction.rollback();
+    console.error("❌ Error al revertir pago de inscripción:", error);
+    throw error;
   }
 };

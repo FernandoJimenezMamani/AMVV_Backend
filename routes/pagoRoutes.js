@@ -13,5 +13,6 @@ router.get('/historial-inscripcion/:campeonatoId', pagoController.getPagosInscri
 router.get('/historial-traspasos/:campeonatoId', pagoController.obtenerPagosTraspasoPorCampeonato);
 router.get('/inscripcion/por-club/:clubId/:campeonatoId', pagoController.obtenerPagosInscripcionPorClub);
 router.get('/traspasos/por-club/:clubId/:campeonatoId', pagoController.obtenerPagosTraspasoPorClub);
-
+router.post('/revertir-traspaso',pagoController.revertirPagoTraspasoController);
+router.post('/revertir-inscripcion', pagoController.revertirPagoInscripcionController);
 module.exports = router;

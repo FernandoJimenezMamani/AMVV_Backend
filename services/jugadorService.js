@@ -586,7 +586,7 @@ exports.getJugadoresAbleToExchange = async (club_presidente , idTraspasoPresiden
           AND NOT EXISTS (
             SELECT 1
             FROM Traspaso t2
-            WHERE t2.jugador_id = j.id
+            WHERE t2.jugador_id = j.jugador_id
               AND t2.eliminado = 'N'
               AND t2.club_destino_id = :club_presidente
               AND (
