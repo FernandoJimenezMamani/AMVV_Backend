@@ -485,7 +485,11 @@ const obtenerListaTraspasos = async () => {
 exports.aprobarTraspasoDeJugadorPorPresidente = async (id, presidenteId) => {
   try {
     const presidente = await PresidenteClub.findOne({
-      where: { presidente_id: presidenteId },
+      where: {
+        presidente_id: presidenteId,
+        activo: 1,
+        delegado: 'N'
+      },
       attributes: ['id']
     });
     console.log('seewf', presidente.id);
