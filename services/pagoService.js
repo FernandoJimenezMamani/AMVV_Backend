@@ -607,7 +607,7 @@ exports.obtenerEquiposPorCampeonato = async () => {
 exports.obtenerTraspasosPorCampeonato = async () => {
   try {
     const traspasos = await sequelize.query(
-      `SELECT 
+      `SELECT DISTINCT
           t.id AS traspaso_id,
           clubOrigen.id AS club_origen_id,
           clubOrigen.nombre AS club_origen_nombre,
