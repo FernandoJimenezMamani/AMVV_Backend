@@ -8,7 +8,7 @@ const seedArbitros = async () => {
     console.log('⏳ Iniciando la transacción para insertar árbitros...');
     const transaction = await sequelize.transaction();
 
-    const hashedPassword = await bcrypt.hash('12345', 10);
+    const hashedPassword = await bcrypt.hash('univalle100', 10);
 
     // Lista de árbitros de ejemplo
     const arbitros = [

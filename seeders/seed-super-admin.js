@@ -10,7 +10,7 @@ const seedSuperAdmin = async () => {
 
     // Encriptar la contraseña
     console.log('Encriptando la contraseña...');
-    const hashedPassword = await bcrypt.hash('12345', 10);
+    const hashedPassword = await bcrypt.hash('univalle100', 10);
     console.log('Contraseña encriptada:', hashedPassword);
 
     // 1. Insertar en la tabla Persona

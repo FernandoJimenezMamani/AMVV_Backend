@@ -3,11 +3,26 @@ const { sequelize } = require('../models');
 const { Persona, Usuario, PersonaRol, Jugador, Club } = require('../models');
 
 const gruposNombres = [
-  { hombres: ['Elias', 'Dante', 'Axel', 'Oliver', 'Thiago'], mujeres: ['Camila', 'Lara', 'Valentina', 'Fiona', 'Isidora'] },
-  { hombres: ['Adrian', 'Enzo', 'Gael', 'Marco', 'Matías'], mujeres: ['Martina', 'Zoe', 'Celeste', 'Mireya', 'Abril'] },
-  { hombres: ['Damian', 'Iker', 'Bruno', 'Emiliano', 'Lorenzo'], mujeres: ['Renata', 'Alma', 'Paulina', 'Luciana', 'Emilia'] },
-  { hombres: ['Franco', 'Rafael', 'Hugo', 'Salvador', 'Esteban'], mujeres: ['Bianca', 'Delfina', 'Ambar', 'Alexa', 'Antonella'] },
-  { hombres: ['Benjamin', 'Ivan', 'Noel', 'Samuel', 'Leonardo'], mujeres: ['Jazmin', 'Thalia', 'Cassandra', 'Ximena', 'Aitana'] }
+  {
+    hombres: ['Elias', 'Dante', 'Axel', 'Oliver', 'Thiago', 'Lucio', 'Gabriel', 'Julian', 'Santiago', 'Mateo', 'Sebastian', 'Facundo'],
+    mujeres: ['Camila', 'Lara', 'Valentina', 'Fiona', 'Isidora', 'Julieta', 'Carla', 'Agustina', 'Daniela', 'Renata', 'Josefina', 'Martina']
+  },
+  {
+    hombres: ['Adrian', 'Enzo', 'Gael', 'Marco', 'Matías', 'Tobias', 'Andres', 'Leandro', 'Cristian', 'Alan', 'Nahuel', 'Luciano'],
+    mujeres: ['Martina', 'Zoe', 'Celeste', 'Mireya', 'Abril', 'Florencia', 'Paula', 'Milena', 'Catalina', 'Noelia', 'Tamara', 'Romina']
+  },
+  {
+    hombres: ['Damian', 'Iker', 'Bruno', 'Emiliano', 'Lorenzo', 'Nicolas', 'Kevin', 'Franco', 'Axel', 'Tomás', 'Bautista', 'Iván'],
+    mujeres: ['Renata', 'Alma', 'Paulina', 'Luciana', 'Emilia', 'Violeta', 'Antonella', 'Melina', 'Luz', 'Juliana', 'Cecilia', 'Carolina']
+  },
+  {
+    hombres: ['Franco', 'Rafael', 'Hugo', 'Salvador', 'Esteban', 'Gaspar', 'Matheo', 'Ezequiel', 'Agustin', 'Gonzalo', 'Ramiro', 'Mauricio'],
+    mujeres: ['Bianca', 'Delfina', 'Ambar', 'Alexa', 'Antonella', 'Milagros', 'Abril', 'Brenda', 'Lorena', 'Victoria', 'Sofia', 'Aldana']
+  },
+  {
+    hombres: ['Benjamin', 'Ivan', 'Noel', 'Samuel', 'Leonardo', 'Andres', 'Marcos', 'Brian', 'Federico', 'Lucas', 'Joaquin', 'Emanuel'],
+    mujeres: ['Jazmin', 'Thalia', 'Cassandra', 'Ximena', 'Aitana', 'Melina', 'Nadia', 'Camila', 'Elena', 'Aylen', 'Belen', 'Lucia']
+  }
 ];
 
 const generarFechaNacimiento = () => {
@@ -75,7 +90,7 @@ const seedJugadores = async () => {
 
     transaction = await sequelize.transaction(); // 🚀 Iniciamos la transacción AQUÍ
 
-    const hashedPassword = await bcrypt.hash('12345', 10);
+    const hashedPassword = await bcrypt.hash('univalle100', 10);
 
     for (const club of clubes) {
       console.log(`⚽ Registrando jugadores para el club ID: ${club.id}`);

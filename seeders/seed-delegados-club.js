@@ -7,7 +7,7 @@ const seeDelegadosClub = async () => {
     console.log('⏳ Iniciando la transacción para insertar presidentes de club...');
     const transaction = await sequelize.transaction();
 
-    const hashedPassword = await bcrypt.hash('12345', 10);
+    const hashedPassword = await bcrypt.hash('univalle100', 10);
 
     // Lista de presidentes de club de ejemplo
     const presidentes = [

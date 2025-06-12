@@ -4,7 +4,7 @@
  */
 function generatePassword(length = 6) {
     const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    const aux = '12345';
+    const aux = 'univalle100';
     let password = '';
     for (let i = 0; i < length; i++) {
       const randomIndex = Math.floor(Math.random() * charset.length);
