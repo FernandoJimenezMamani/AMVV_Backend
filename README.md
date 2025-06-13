@@ -1,25 +1,25 @@
 # EJEMPLO DE VARIABLES DE ENTORNO PARA EL PROYECTO 
 
-DB_NAME=AMVV_DB
-DB_USER=sa
-DB_PASSWORD=Univalle
+DB_NAME=xxxx
+DB_USER=xxxxx
+DB_PASSWORD=xxxxxxx
 DB_HOST=localhost 
-JWT_SECRET= 12345
+JWT_SECRET= xxxxxxx
 JWT_EXPIRATION=72h
-CORS_ORIGIN=http://localhost:3000
+CORS_ORIGIN=http://xxxxxx:3000
 PORT= 5002
 
-API_KEY = "AIzaSyD3DxbS07OvCEjjsnbeDwyBSh-ge3PazBg"
-AUTH_DOMAIN ="amvv-dbf.firebaseapp.com"
-PROJECT_ID = "amvv-dbf"
-STORAGE_BUCKET = "amvv-dbf.appspot.com"
-MESSAGING_SENDER_ID = "760689455022"
-APP_ID = "1:760689455022:web:0e81544f671bc581e4223f"
+API_KEY = "xxxxxxxxxxxxx"
+AUTH_DOMAIN ="xxxxxxxx"
+PROJECT_ID = "xxxxxx"
+STORAGE_BUCKET = "xxxxxxxxx"
+MESSAGING_SENDER_ID = "xxxxxxxxx"
+APP_ID = "xxxxxxxxxxxxxxxx"
 
-EMAIL_USER = 'ferjimenezm933@gmail.com'
-EMAIL_PASS = 'rssd pwxw cpuh jpwc'
+EMAIL_USER = 'xxxxxxxxxx'
+EMAIL_PASS = 'xxxxxxxxxxxxx'
 
-SESSION_SECRET=4uN4Cl4v3D1f1c1lDeAdivinar
+SESSION_SECRET=xxxxxxxxxxxxxxxxxxxxx
 NODE_ENV=development
 
 
