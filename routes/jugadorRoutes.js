@@ -1,13 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const jugadorController = require('../controllers/jugadorController');
+const { upload } = require('../config/multer');
 
 router.get('/jugadores', jugadorController.getAllJugadores);
 router.post('/post_jugador', jugadorController.createJugador);
+router.get('/get_jugadorById/:id', jugadorController.getJugadorById);
+router.post('/post_new_jugador', upload.single('image'), jugadorController.createNewJugador);
 router.post('/asignar_jugador_equipo', jugadorController.asignarJugadorAEquipo);
 router.get('/get_jugador_club/:club_id', jugadorController.getJugadoresByClubId);
-router.get('/getJugadoresByEquipo/:equipo_id', jugadorController.getJugadoresByEquipo);
+router.post('/get_jugador_club_Category', jugadorController.getJugadoresByClubIdAndCategory);
 router.get('/search_jugadores_club/:club_id', jugadorController.searchJugadoresByClubId);
-router.get('/get_jugadores_equipo/:equipo_id', jugadorController.getJugadoresByEquipoId);
-
+router.get('/get_jugadores_equipo/:equipo_id/:campeonato_id', jugadorController.getJugadoresByEquipoId);
+router.get('/getJugadoresByEquipo/:equipo_id', jugadorController.getJugadoresByEquipo);
+router.post('/post_jugadorEquipo', jugadorController.createJugadorEquipo);
+router.post('/intercambio', jugadorController.getJugadoresAbleToExchange);
+router.post('/intercambioEstado', jugadorController.getJugadoresPendingExchange);
+router.get('/ObtenerJugadoresPreviousClubs/:PersonaId', jugadorController.getJugadoresOtherClubs);
+router.delete('/delete_jugador_equipo/:jugador_id/:equipo_id', jugadorController.removeJugadorEquipoController);
+router.get('/:personaId/club-categoria', jugadorController.obtenerClubYCategoriaJugador);
+router.get('/:id/carnet', jugadorController.generarCarnetJugador);
+router.get('/partidos/jugador/:jugadorId/:campeonatoId', jugadorController.obtenerPartidosJugador);
+router.get('/clubActual/:jugadorId', jugadorController.getClubActualJugador);
 module.exports = router;

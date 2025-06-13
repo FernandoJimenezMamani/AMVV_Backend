@@ -22,7 +22,11 @@ const PersonaRol = sequelize.define('PersonaRol', {
       model: Rol,
       key: 'id'
     }
-  }
+  },
+  eliminado:{
+  type: DataTypes.TINYINT,
+  allowNull:true
+}
 }, {
   tableName: 'PersonaRol',
   timestamps: false,

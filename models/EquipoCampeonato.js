@@ -2,6 +2,7 @@ const { Model, DataTypes } = require('sequelize');
 const sequelize = require('../config/sequelize');
 const Campeonato = require('./Campeonato');
 const Equipo = require('./Equipo');
+const Categoria = require('./Categoria');
 
 class EquipoCampeonato extends Model {}
 
@@ -14,13 +15,29 @@ EquipoCampeonato.init({
   equipoId: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: Equipo,
+      key: 'id',
+    }
   },
   campeonatoId: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: Campeonato,
+      key: 'id',
+    }
+  },
+  categoria_id: {
+    type: DataTypes.SMALLINT,
+    allowNull: true,
+    references: {
+      model: Categoria,
+      key: 'id',
+    }
   },
   estado: {
-    type: DataTypes.CHAR(1),
+    type: DataTypes.STRING(30),
     allowNull: false,
   }
 }, {
@@ -35,5 +52,9 @@ Campeonato.hasMany(EquipoCampeonato, { foreignKey: 'campeonatoId', as: 'equipos'
 
 EquipoCampeonato.belongsTo(Equipo, { foreignKey: 'equipoId', as: 'equipo' });
 Equipo.hasMany(EquipoCampeonato, { foreignKey: 'equipoId', as: 'campeonato' });
+
+EquipoCampeonato.belongsTo(Categoria, { foreignKey: 'categoria_id', as: 'categoria' });
+Categoria.hasMany(EquipoCampeonato, { foreignKey: 'categoria_id', as: 'categorias' });
+
 
 module.exports = EquipoCampeonato;

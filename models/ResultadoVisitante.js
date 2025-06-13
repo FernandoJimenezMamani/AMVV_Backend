@@ -18,11 +18,11 @@ const ResultadoVisitante = sequelize.define('ResultadoVisitante', {
   },
   set1: {
     type: DataTypes.TINYINT,
-    allowNull: false,
+    allowNull: true,
   },
   set2: {
     type: DataTypes.TINYINT,
-    allowNull: false,
+    allowNull: true,
   },
   set3: {
     type: DataTypes.TINYINT,
@@ -33,7 +33,7 @@ const ResultadoVisitante = sequelize.define('ResultadoVisitante', {
     allowNull: true,
   },
   walkover: {
-    type: DataTypes.CHAR(1),
+    type: DataTypes.CHAR(10),
     allowNull: true,
   },
 }, {

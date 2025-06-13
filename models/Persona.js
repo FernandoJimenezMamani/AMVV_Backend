@@ -24,6 +24,7 @@ const Persona = sequelize.define('Persona', {
   ci: {
     type: DataTypes.STRING(255),
     allowNull: true,
+    unique:true,
   },
   genero: {  // Nuevo campo agregado
     type: DataTypes.STRING(20),

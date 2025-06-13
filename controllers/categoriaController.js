@@ -48,15 +48,16 @@ exports.createCategoria = async (req, res) => {
     const nuevaCategoria = await categoriaService.createCategoria(nombre, genero, division, edad_minima, edad_maxima, costo_traspaso, user_id);
     res.status(201).json({ message: 'Categoría creada', categoriaId: nuevaCategoria.id });
   } catch (err) {
-    res.status(500).json({ message: 'Error al crear categoría', error: err.message });
+    res.status(500).json({ message: err.message || 'Error al crear categoría' });
   }
 };
 
 exports.updateCategoria = async (req, res) => {
   const { id } = req.params;
   const { nombre, genero, division, edad_minima, edad_maxima, costo_traspaso, user_id } = req.body;
+  console.log('req.body:', req.body);
 
-  if (!id || !nombre || !user_id || costo_traspaso === undefined) {
+  if (!id || !nombre  || costo_traspaso === undefined) {
     return res.status(400).json({ message: 'ID, nombre, user_id y costo_traspaso son necesarios' });
   }
 
@@ -91,3 +92,39 @@ exports.deleteCategoria = async (req, res) => {
     res.status(500).json({ message: 'Error al eliminar categoría', error: err.message });
   }
 };
+
+exports.activateCategoria = async (req, res) => {
+  const { id } = req.params;
+  const { user_id } = req.body;
+
+  if (!id || !user_id) {
+    return res.status(400).json({ message: 'ID y user_id son necesarios' });
+  }
+
+  try {
+    const deleted = await categoriaService.activateCategoria(id, user_id);
+    if (deleted[0] > 0) {
+      res.status(200).json({ message: 'Categoría actvida correctamente' });
+    } else {
+      res.status(404).json({ message: 'Categoría no encontrada' });
+    }
+  } catch (err) {
+    res.status(500).json({ message: 'Error al actvida categoría', error: err.message });
+  }
+};
+
+exports.getNombresCategorias = async (req, res) => {
+  try {
+    const categorias = await categoriaService.getNombresCategorias();
+
+    if (!categorias.length) {
+      return res.status(404).json({ message: "No hay categorías registradas." });
+    }
+
+    return res.json({ categorias });
+  } catch (error) {
+    console.error("Error al obtener los nombres de las categorías:", error);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+};
+

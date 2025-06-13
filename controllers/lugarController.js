@@ -1,15 +1,15 @@
 const lugarService = require('../services/lugarService');
 
 exports.createLugar = async (req, res) => {
-  const { nombre, longitud, latitud } = req.body;
+  const { nombre, longitud, latitud ,direccion} = req.body;
 
-  if (!nombre || !longitud || !latitud) {
+  if (!nombre || !longitud || !latitud || !direccion) {
     console.log('Error: Todos los campos deben ser proporcionados');
     return res.status(400).json({ message: 'Todos los campos deben ser proporcionados' });
   }
 
   try {
-    await lugarService.createLugar(nombre, longitud, latitud);
+    await lugarService.createLugar(nombre, longitud, latitud,direccion);
     res.status(201).json({ message: 'Lugar creado exitosamente' });
   } catch (err) {
     res.status(500).json({ message: 'Error al crear el Lugar', error: err.message });
@@ -41,14 +41,14 @@ exports.getLugarById = async (req, res) => {
 
 exports.updateLugar = async (req, res) => {
   const { id } = req.params;
-  const { nombre, longitud, latitud } = req.body;
+  const { nombre, longitud, latitud , direccion } = req.body;
 
-  if (!nombre || !longitud || !latitud) {
+  if (!nombre || !longitud || !latitud || !direccion) {
     return res.status(400).json({ message: 'Todos los campos deben ser proporcionados' });
   }
 
   try {
-    await lugarService.updateLugar(id, nombre, longitud, latitud);
+    await lugarService.updateLugar(id, nombre, longitud, latitud, direccion);
     res.status(200).json({ message: 'Lugar editado exitosamente' });
   } catch (err) {
     res.status(500).json({ message: 'Error al editar el Lugar', error: err.message });
@@ -63,5 +63,16 @@ exports.deleteLugar = async (req, res) => {
     res.status(200).json({ message: 'Lugar eliminado exitosamente' });
   } catch (err) {
     res.status(500).json({ message: 'Error al eliminar el Lugar', error: err.message });
+  }
+};
+
+exports.activateLugar = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    await lugarService.activateLugar(id);
+    res.status(200).json({ message: 'Lugar activado exitosamente' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error al activar el Lugar', error: err.message });
   }
 };

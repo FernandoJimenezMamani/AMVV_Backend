@@ -3,8 +3,7 @@ const { Categoria, sequelize, Sequelize } = require('../models');
 // Obtener todas las categorías
 exports.getCategorias = async () => {
   const categorias = await Categoria.findAll({
-    where: { eliminado: 'N' },
-    attributes: ['id', 'nombre', 'genero', 'division', 'fecha_registro', 'fecha_actualizacion', 'eliminado', 'user_id'],
+    attributes: ['id', 'nombre', 'genero', 'division', 'edad_minima', 'edad_maxima', 'costo_traspaso', 'fecha_registro', 'fecha_actualizacion', 'eliminado', 'user_id' ,'es_ascenso'],
   });
   return categorias;
 };
@@ -22,7 +21,7 @@ exports.getCategoriaById = async (id) => {
   try {
     const categoria = await Categoria.findOne({
       where: { id, eliminado: 'N' },
-      attributes: ['id', 'nombre', 'genero', 'division', 'costo_traspaso', 'fecha_registro', 'fecha_actualizacion', 'eliminado', 'user_id'],
+      attributes: ['id', 'nombre', 'genero', 'division', 'edad_minima', 'edad_maxima', 'costo_traspaso', 'fecha_registro', 'fecha_actualizacion', 'eliminado', 'user_id'],
     });
     return categoria;
   } catch (error) {
@@ -85,8 +84,8 @@ exports.updateCategoria = async (id, nombre, genero, division, edad_minima, edad
       division,
       edad_minima,
       edad_maxima,
-      costo_traspaso,  // Actualizar el costo de traspaso
-      fecha_actualizacion: Sequelize.fn('GETDATE'),  // Cambiado a GETDATE() para SQL Server
+      costo_traspaso,  
+      fecha_actualizacion: Sequelize.fn('GETDATE'), 
       user_id,
     },
     {
@@ -107,4 +106,33 @@ exports.deleteCategoria = async (id, user_id) => {
       where: { id }
     }
   );
+};
+
+exports.activateCategoria = async (id, user_id) => {
+  return await Categoria.update(
+    {
+      eliminado: 'N',
+      fecha_actualizacion: Sequelize.fn('GETDATE'),  // Cambiado a GETDATE() para SQL Server
+      user_id,
+    },
+    {
+      where: { id }
+    }
+  );
+};
+
+exports.getNombresCategorias = async () => {
+  try {
+    const categorias = await Categoria.findAll({
+      attributes: ["nombre"], 
+      group: ["nombre"], 
+      order: [["nombre", "ASC"]], 
+    });
+
+    return categorias.map((cat) => cat.nombre); 
+
+  } catch (error) {
+    console.error("Error al obtener los nombres de las categorías:", error);
+    throw new Error("Error al obtener los nombres de las categorías");
+  }
 };

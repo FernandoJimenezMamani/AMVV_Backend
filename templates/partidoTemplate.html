@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Rol de Partidos</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+    
+    .header { 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      padding: 10px; 
+    }
+
+    .header img { 
+      width: 180px;
+      height: auto; 
+    }
+
+    .title { 
+      flex-grow: 1; 
+      text-align: center; 
+    }
+
+    .title h1 { 
+      margin: 5px 0; 
+      font-size: 26px; 
+    }
+
+    .subtitle { 
+      font-size: 20px; 
+      font-weight: bold; 
+    }
+
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 20px; 
+    }
+
+    th, td { 
+      border: 2px solid #2c2b2b;
+      padding: 10px; 
+      text-align: center; 
+    }
+
+    th { 
+      background-color: #4CAF50; 
+      color: white; 
+      font-size: 18px;
+    }
+
+    td { 
+      background-color: #000000; 
+      font-size: 16px;
+    }
+
+    img { 
+      width: 180px; 
+      height: auto; 
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <img src="{{logo}}" alt="Logo">
+    <div class="title">
+      <h3>ASOCIACIÓN MUNICIPAL DE VOLEIBOL VINTO</h3>
+      <h3>{{campeonato_nombre}}</h3>
+      <h1>ROL DE PARTIDOS</h1>
+    </div>
+  </div>
+
+  {{partidos}}
+
+</body>
+</html>

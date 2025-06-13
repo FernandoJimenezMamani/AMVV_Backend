@@ -14,20 +14,13 @@ Equipo.init({
   nombre: {
     type: DataTypes.STRING(255),
     allowNull: true,
+    unique: true
   },
   club_id: {
     type: DataTypes.INTEGER,
     allowNull: true,
     references: {
       model: Club,
-      key: 'id',
-    }
-  },
-  categoria_id: {
-    type: DataTypes.SMALLINT,
-    allowNull: true,
-    references: {
-      model: Categoria,
       key: 'id',
     }
   },
@@ -54,8 +47,7 @@ Equipo.init({
   timestamps: false,
 });
 
-Equipo.belongsTo(Categoria, { foreignKey: 'categoria_id', as: 'categoria' });
-Categoria.hasMany(Equipo, { foreignKey: 'categoria_id', as: 'equipos' });
+
 
 
 Equipo.belongsTo(Club, { foreignKey: 'club_id', as: 'club' });

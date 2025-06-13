@@ -12,13 +12,14 @@ Campeonato.init({
   nombre: {
     type: DataTypes.STRING(255),
     allowNull: true,
+    unique: true
   },
-  fecha_inicio: {
-    type: DataTypes.DATEONLY,
+  fecha_inicio_campeonato: {
+    type: DataTypes.DATE,
     allowNull: true,
   },
-  fecha_fin: {
-    type: DataTypes.DATEONLY,
+  fecha_fin_campeonato: {
+    type: DataTypes.DATE,
     allowNull: true,
   },
   fecha_registro: {
@@ -37,6 +38,18 @@ Campeonato.init({
     type: DataTypes.INTEGER,
     allowNull: true,
   },
+  fecha_inicio_transaccion: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  fecha_fin_transaccion: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  estado: {
+    type: DataTypes.TINYINT,
+    allowNull: true,
+  }
 }, {
   sequelize,
   modelName: 'Campeonato',

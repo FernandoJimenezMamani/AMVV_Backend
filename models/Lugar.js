@@ -10,6 +10,7 @@ const Lugar = sequelize.define('Lugar', {
   nombre: {
     type: DataTypes.STRING(80),
     allowNull: false,
+    unique: true
   },
   longitud: {
     type: DataTypes.DECIMAL(9, 6),
@@ -21,6 +22,10 @@ const Lugar = sequelize.define('Lugar', {
   },
   eliminado: {
     type: DataTypes.CHAR(1),
+    allowNull: true,
+  },
+  direccion: {
+    type: DataTypes.STRING(150),
     allowNull: true,
   },
 }, {

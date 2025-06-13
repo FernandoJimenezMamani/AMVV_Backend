@@ -18,6 +18,21 @@ const Usuario = sequelize.define('Usuario', {
   correo: {
     type: DataTypes.STRING(250),
     allowNull: true,
+    unique: true,
+  },
+  intentosFallidos: {
+    type: DataTypes.TINYINT,
+    defaultValue: 0,
+  },
+  bloqueadoHasta: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  push_token: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    defaultValue: null,
+    comment: 'Token para notificaciones push de Expo',
   },
 }, {
   tableName: 'Usuario',

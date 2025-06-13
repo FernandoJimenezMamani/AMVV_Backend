@@ -49,7 +49,7 @@ const Partido = sequelize.define('Partido', {
   estado: {
     type: DataTypes.CHAR(1),
     allowNull: true,
-  },
+  }
 }, {
   tableName: 'Partido',
   timestamps: false,
