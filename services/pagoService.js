@@ -301,13 +301,20 @@ exports.createPagoTraspaso = async (data) => {
       estado: pagoEstadosMapping.Activo
     }, { transaction });
 
-    // Desactivar al jugador en su equipo anterior
-    await JugadorEquipo.update(
-      { activo: 0 },
-      { where: { jugador_id: jugador_traspaso_id } },
-      { transaction }
-    );
+    const campeonato = await Campeonato.findOne({
+      where: { estado: 1 }
+    });
 
+
+   if (campeonato) {
+      await JugadorEquipo.destroy({
+        where: { 
+          jugador_id: jugador_id,
+          campeonato_id: campeonato.id 
+        },
+        transaction
+      });
+    }
 
     // Desactivar al jugador globalmente
     await Jugador.update(

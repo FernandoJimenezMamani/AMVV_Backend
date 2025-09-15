@@ -20,7 +20,9 @@ const seedPresidentesClub = async () => {
       { nombre: 'Manuel', apellido: 'Molina', ci: '2000007', genero: 'V' },
       { nombre: 'Patricia', apellido: 'Rojas', ci: '2000008', genero: 'D' },
       { nombre: 'Gustavo', apellido: 'Paredes', ci: '2000009', genero: 'V' },
-      { nombre: 'Veronica', apellido: 'Santos', ci: '2000010', genero: 'D' }
+      { nombre: 'Veronica', apellido: 'Santos', ci: '2000010', genero: 'D' },
+      { nombre: 'Carlos', apellido: 'Vargas', ci: '2000011', genero: 'V' },
+      { nombre: 'Elena', apellido: 'Gutierrez', ci: '2000012', genero: 'D' }
     ];
 
     for (const presidente of presidentes) {
