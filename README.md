@@ -1,27 +1,8 @@
-# EJEMPLO DE VARIABLES DE ENTORNO PARA EL PROYECTO 
+# AMVV Backend
 
-DB_NAME=xxxx
-DB_USER=xxxxx
-DB_PASSWORD=xxxxxxx
-DB_HOST=localhost 
-JWT_SECRET= xxxxxxx
-JWT_EXPIRATION=72h
-CORS_ORIGIN=http://xxxxxx:3000
-PORT= 5002
-
-API_KEY = "xxxxxxxxxxxxx"
-AUTH_DOMAIN ="xxxxxxxx"
-PROJECT_ID = "xxxxxx"
-STORAGE_BUCKET = "xxxxxxxxx"
-MESSAGING_SENDER_ID = "xxxxxxxxx"
-APP_ID = "xxxxxxxxxxxxxxxx"
-
-EMAIL_USER = 'xxxxxxxxxx'
-EMAIL_PASS = 'xxxxxxxxxxxxx'
-
-SESSION_SECRET=xxxxxxxxxxxxxxxxxxxxx
-NODE_ENV=development
-
+## Desarrollo Normal (Sin Docker)
+npm install
+npm run dev
 
 # COMANDO PARA EJECUTAR SEEDERS
 
@@ -36,11 +17,6 @@ node seeders/seed-jugadores.js
 node seeders/seed-presidente-club.js
 node seeders/seed-delegados-club.js
 
-# CREDENCIALES PARA SUPERADMIN
-
-usuario: Admin@example.com
-contraseña: 12345
-
 # Eslint Comando
 
 npx eslint nombre del archivo --fix
@@ -52,4 +28,19 @@ npx eslint src/pages/Partidos/RegistrarResultado.js --fix
 # Opcional
 
 npx prettier --write src/pages/Partidos/PartidoDetalle.js
+
+# DOCKER
+
+# Primera vez
+docker-compose up --build
+
+# Iniciar  
+
+docker-compose up
+
+# Detener
+docker-compose down
+
+# Ver logs
+docker-compose logs -f
 

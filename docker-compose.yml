@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "5002:5002"
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=host.docker.internal
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - PORT=${PORT}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+      - API_KEY=${API_KEY}
+      - AUTH_DOMAIN=${AUTH_DOMAIN}
+      - PROJECT_ID=${PROJECT_ID}
+      - STORAGE_BUCKET=${STORAGE_BUCKET}
+      - MESSAGING_SENDER_ID=${MESSAGING_SENDER_ID}
+      - APP_ID=${APP_ID}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - SESSION_SECRET=${SESSION_SECRET}
+    volumes:
+      - .:/app
+      - /app/node_modules
