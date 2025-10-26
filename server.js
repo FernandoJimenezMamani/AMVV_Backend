@@ -4,7 +4,7 @@ const app = require("./app");
 const { setupWebSocket } = require("./utils/websocket");
 const { iniciarTareasProgramadas } = require("./utils/cronJobs");
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5002;
 
 const server = http.createServer(app);
 setupWebSocket(server);
